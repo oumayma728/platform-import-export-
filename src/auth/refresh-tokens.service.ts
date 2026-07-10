@@ -1,68 +1,55 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-
-// ──────────────────────────────────────────────
-// This mirrors the future Prisma model:
-//
-//   model RefreshToken {
-//     id        String   @id @default(uuid())
-//     userId    String
-//     tokenHash String
-//     isRevoked Boolean  @default(false)
-//     expiresAt DateTime
-//     createdAt DateTime @default(now())
-//   }
-//
-// When you add Prisma, replace each method body
-// with the equivalent prisma.refreshToken.* call.
-// ──────────────────────────────────────────────
-
-export interface RefreshTokenRecord {
-  id: string;
-  userId: string;
-  tokenHash: string;
-  isRevoked: boolean;
-  expiresAt: Date;
-  createdAt: Date;
-}
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class RefreshTokensService {
-  private readonly tokens: RefreshTokenRecord[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
   /** Persist a new refresh-token hash. */
-  create(userId: string, tokenHash: string, expiresAt: Date): RefreshTokenRecord {
-    const record: RefreshTokenRecord = {
-      id: randomUUID(),
-      userId,
-      tokenHash,
-      isRevoked: false,
-      expiresAt,
-      createdAt: new Date(),
-    };
-
-    this.tokens.push(record);
-    return record;
+  async create(userId: string, tokenHash: string, expiresAt: Date) {
+    return this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt,
+      },
+    });
   }
 
   /** Look up a stored token by its jti (the record id). */
-  findById(id: string): RefreshTokenRecord | undefined {
-    return this.tokens.find((t) => t.id === id);
+  async findById(id: string) {
+    return this.prisma.refreshToken.findUnique({
+      where: {
+        id,
+      },
+    });
   }
 
   /** Mark a single token as revoked (used during normal rotation). */
-  revoke(id: string): void {
-    const token = this.findById(id);
-    if (token) token.isRevoked = true;
+  async revoke(id: string): Promise<void> {
+    await this.prisma.refreshToken.update({
+      where: {
+        id,
+      },
+      data: {
+        isRevoked: true,
+      },
+    });
   }
 
   /**
    * Revoke every refresh token for a user.
    * Called when reuse is detected — assumes the token family is compromised.
    */
-  revokeAllForUser(userId: string): void {
-    this.tokens
-      .filter((t) => t.userId === userId)
-      .forEach((t) => (t.isRevoked = true));
+  async revokeAllForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        userId,
+      },
+      data: {
+        isRevoked: true,
+      },
+    });
   }
 }
+

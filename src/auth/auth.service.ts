@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'crypto';
 import * as argon2 from 'argon2';
 
-import { UsersService } from '../users/users.service';
+import { UsersRepository } from '../users/users.repository';
 import { RefreshTokensService } from './refresh-tokens.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -16,7 +16,7 @@ export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly usersRepository: UsersRepository,
     private readonly refreshTokensService: RefreshTokensService,
   ) {}
 
@@ -27,14 +27,14 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password);
 
     // check if there's a user with this credentials
-    const existingUser = this.usersService.findByEmail(dto.email);
+    const existingUser = await this.usersRepository.findByEmail(dto.email);
     if (existingUser) throw new ConflictException('User already exists');
 
-    const user = this.usersService.create({
+    const user = await this.usersRepository.createUser({
       email: dto.email,
       name: dto.name,
-      phoneNumber: dto.phone_number,
-      role: dto.role,
+      phone: dto.phone_number,
+      roles: dto.role,
       passwordHash,
     });
 
@@ -43,7 +43,7 @@ export class AuthService {
 
   /** Validate credentials and return a token pair. */
   async login(dto: LoginDto): Promise<Tokens> {
-    const user = this.usersService.findByEmail(dto.email);
+    const user = await this.usersRepository.findByEmail(dto.email);
     if (!user) throw new NotFoundException('Invalid credentials');
 
     const passwordValid = await argon2.verify(user.passwordHash, dto.password);
@@ -75,14 +75,14 @@ export class AuthService {
     if (!tokenId) throw new UnauthorizedException('Malformed refresh token');
 
     // 2. Find the stored record
-    const stored = this.refreshTokensService.findById(tokenId);
+    const stored = await this.refreshTokensService.findById(tokenId);
     if (!stored) throw new UnauthorizedException('Refresh token not recognised');
 
     // 3. Reuse detection — a revoked token being presented again
     //    means an attacker may have stolen the previous token.
     //    Kill every session for this user as a precaution.
     if (stored.isRevoked) {
-      this.refreshTokensService.revokeAllForUser(userId);
+      await this.refreshTokensService.revokeAllForUser(userId);
       throw new UnauthorizedException('Refresh token reuse detected — all sessions revoked. Please log in again.');
     }
 
@@ -97,9 +97,9 @@ export class AuthService {
     }
 
     // 6. Rotate: revoke the old token and issue a new pair
-    this.refreshTokensService.revoke(tokenId);
+    await this.refreshTokensService.revoke(tokenId);
 
-    const user = this.usersService.findById(userId);
+    const user = await this.usersRepository.findById(userId);
     if (!user) throw new NotFoundException('User no longer exists');
 
     return this.generateTokens(user.id, user.name);
@@ -116,9 +116,8 @@ export class AuthService {
       // Token is invalid/expired — nothing to revoke, just return.
       return;
     }
-    // TODO: revoke all tokens for the user in the DB
     if (payload.jti) {
-      this.refreshTokensService.revoke(payload.jti);
+      await this.refreshTokensService.revoke(payload.jti);
     }
   }
 
@@ -139,24 +138,24 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, name } as JwtPayload,
+        { sub: userId, name } as any,
         {
           secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-          expiresIn: this.configService.get<string>('JWT_ACCESS_TTL'),
+          expiresIn: this.configService.get<string>('JWT_ACCESS_TTL') as any,
         },
       ),
       this.jwtService.signAsync(
-        { sub: userId, jti: refreshTokenId } as JwtPayload,
+        { sub: userId, jti: refreshTokenId } as any,
         {
           secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-          expiresIn: this.configService.get<string>('JWT_REFRESH_TTL'),
+          expiresIn: this.configService.get<string>('JWT_REFRESH_TTL') as any,
         },
       ),
     ]);
 
     // Store only the hash — never the raw token
     const ttlMs = this.refreshCookieMaxAgeMs;
-    this.refreshTokensService.create(
+    await this.refreshTokensService.create(
       userId,
       this.hashToken(refreshToken),
       new Date(Date.now() + ttlMs),
