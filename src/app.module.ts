@@ -15,17 +15,17 @@ import { PrismaModule } from './prisma/prisma.module';
       envFilePath: ['.env', 'src/.env'],
       isGlobal: true,
     }),
-    // AuthModule,
+    AuthModule,
     UsersModule,
     PrismaModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-
-    // Every route is protected by default.
-    // Use @Public() to opt out individual routes.
-    { provide: APP_GUARD, useClass: AccessTokenGuard },
+    {
+      provide: APP_GUARD,
+      useClass: AccessTokenGuard,
+    },
   ],
 })
 export class AppModule {}
