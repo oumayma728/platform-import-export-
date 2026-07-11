@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import argon2 from 'argon2';
 import { UsersRepository } from './users.repository';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -7,18 +8,20 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  /** Create a new user. Throws if the email is already taken. */
   async create(data: CreateUserDto) {
     const existing = await this.usersRepository.findByEmail(data.email);
     if (existing) throw new ConflictException('Email already in use');
 
-    return this.usersRepository.createUser({
+    const passwordHash = await argon2.hash(data.password);
+
+    await this.usersRepository.createUser({
       email: data.email,
       name: data.name,
       phone: data.phoneNumber,
-      roles: data.role,
-      passwordHash: data.passwordHash,
+      passwordHash,
     });
+
+    return "user have been created !"
   }
 
   async findByEmail(email: string) {
@@ -40,22 +43,24 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    // If updating email, check if it's already in use by another user
     if (updateUserDto.email) {
       const existing = await this.usersRepository.findByEmail(updateUserDto.email);
       if (existing && existing.id !== id) {
         throw new ConflictException('Email already in use');
       }
     }
-    
-    // Map DTO properties if necessary
-    const { phoneNumber, role, ...rest } = updateUserDto as any;
+
+    const { phoneNumber, roles, password, ...rest } = updateUserDto as any;
     const updateData: any = { ...rest };
+
     if (phoneNumber) {
       updateData.phone = phoneNumber;
     }
-    // Note: Roles creation/linking for company is skipped or handled on update context.
-    
+
+    if (password) {
+      updateData.passwordHash = await argon2.hash(password);
+    }
+
     return this.usersRepository.updateUser(id, updateData);
   }
 

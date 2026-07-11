@@ -22,12 +22,33 @@ export class UsersRepository {
       where: {
         id,
       },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        companyId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
   // Find all users (standard Admin query)
   async findAll() {
-    return this.prisma.user.findMany();
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        companyId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 
   // Create new user (register)
@@ -63,6 +84,16 @@ export class UsersRepository {
         phone: data.phone,
         companyId,
       },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        companyId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
@@ -83,6 +114,16 @@ export class UsersRepository {
     return this.prisma.user.update({
       where: { id },
       data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        companyId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
@@ -91,6 +132,16 @@ export class UsersRepository {
     return this.prisma.user.delete({
       where: {
         id,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        companyId: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
   }
@@ -108,4 +159,4 @@ export class UsersRepository {
 
     return !!user;
   }
-}
+}
