@@ -20,6 +20,9 @@ export class UserEntity {
   @ApiProperty({ example: '+21612345678' })
   phone: string;
 
+  @ApiProperty({ example: 'jhgsjgdiLQFOAZFKscqsvze' })
+  hashedPassword: string;
+
   @ApiProperty({ example: 'EN_ATTENTE_VALIDATION', enum: ValidationStatus })
   status: string;
 

@@ -5,7 +5,7 @@ export class AuthResponseDto {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     description: 'JWT access token',
   })
-  accessToken: string;
+  accessToken!: string;
 }
 
 export class LogoutResponseDto {
@@ -13,5 +13,5 @@ export class LogoutResponseDto {
     example: 'Logged out',
     description: 'Logout confirmation message',
   })
-  message: string;
+  message!: string;
 }

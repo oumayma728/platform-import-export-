@@ -71,7 +71,7 @@ model User {
   email        String           @unique
   passwordHash String           @map("password_hash")
   name         String           @map("name")
-  phone        String
+  phone        String           @unique
   status       ValidationStatus @default(EN_ATTENTE_VALIDATION)
 
   companyId String?  @map("company_id")
@@ -107,7 +107,7 @@ model Company {
   isExporter          Boolean          @default(false) @map("is_exporter")
   isImporter          Boolean          @default(false) @map("is_importer")
   country             String
-  description         String?
+  description         String
   website             String?
   logoUrl             String?          @map("logo_url")
   registrationNumber  String?          @map("registration_number")

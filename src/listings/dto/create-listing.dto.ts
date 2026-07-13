@@ -5,27 +5,27 @@ import { IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-vali
 export class CreateListingDto {
   @ApiProperty({ example: 'clm123example' })
   @IsString()
-  companyId: string;
+  companyId!: string;
 
   @ApiProperty({ enum: ListingType, example: ListingType.OFFRE })
   @IsEnum(ListingType)
-  type: ListingType;
+  type!: ListingType;
 
   @ApiProperty({ example: 'Copper wire' })
   @IsString()
-  title: string;
+  title!: string;
 
   @ApiProperty({ example: 'Metals' })
   @IsString()
-  category: string;
+  category!: string;
 
   @ApiProperty({ example: 1200 })
   @IsNumber()
-  price: number;
+  price!: number;
 
   @ApiProperty({ example: 'USD' })
   @IsString()
-  currency: string;
+  currency!: string;
 
   @ApiPropertyOptional({ example: 1230 })
   @IsOptional()
@@ -34,24 +34,24 @@ export class CreateListingDto {
 
   @ApiProperty({ example: 50 })
   @IsNumber()
-  quantity: number;
+  quantity!: number;
 
   @ApiProperty({ example: 'kg' })
   @IsString()
-  unit: string;
+  unit!: string;
 
   @ApiProperty({ example: 'Tunisia' })
   @IsString()
-  country: string;
+  country!: string;
 
   @ApiProperty({ example: 'FOB' })
   @IsString()
-  incoterm: string;
+  incoterm!: string;
 
   @ApiPropertyOptional({ example: '2026-08-01' })
   @IsOptional()
   @IsDateString()
-  deadline?: string;
+  deadline!: string;
 
   @ApiPropertyOptional({ enum: ListingStatus, example: ListingStatus.ACTIVE })
   @IsOptional()

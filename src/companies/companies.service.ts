@@ -61,6 +61,8 @@ export class CompaniesService {
       throw new NotFoundException('Company not found');
     }
 
-    return this.companiesRepository.remove(id);
+    await this.companiesRepository.remove(id);
+
+    return true;
   }
 }

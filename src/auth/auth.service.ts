@@ -6,7 +6,7 @@ import * as argon2 from 'argon2';
 
 import { UsersRepository } from '../users/users.repository';
 import { RefreshTokensService } from './refresh-tokens.service';
-import { RegisterDto } from './dto/register.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { Tokens } from './interfaces/tokens.interface';
 import { JwtPayload } from './interfaces/jwt-payload';
@@ -23,7 +23,7 @@ export class AuthService {
   // ─── Public API ────────────────────────────────────────
 
   /** Register a new user and return a token pair. */
-  async register(registerDto: RegisterDto): Promise<Tokens> {
+  async register(registerDto: CreateUserDto): Promise<Tokens> {
     const passwordHash = await argon2.hash(registerDto.password);
 
     // check if there's a user with this credentials
@@ -33,7 +33,7 @@ export class AuthService {
     const user = await this.usersRepository.createUser({
       email: registerDto.email,
       name: registerDto.name,
-      phone: registerDto.phone_number,
+      phone: registerDto.phone,
       passwordHash,
     });
 

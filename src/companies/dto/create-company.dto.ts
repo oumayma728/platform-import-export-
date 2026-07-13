@@ -4,7 +4,7 @@ import { IsBoolean, IsOptional, IsString } from 'class-validator';
 export class CreateCompanyDto {
   @ApiProperty({ example: 'Acme Export' })
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()
@@ -18,12 +18,12 @@ export class CreateCompanyDto {
 
   @ApiProperty({ example: 'Tunisia' })
   @IsString()
-  country: string;
+  country!: string;
 
   @ApiPropertyOptional({ example: 'Leading exporter of industrial goods' })
   @IsOptional()
   @IsString()
-  description?: string;
+  description!: string;
 
   @ApiPropertyOptional({ example: 'https://example.com' })
   @IsOptional()

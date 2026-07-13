@@ -17,11 +17,6 @@ import {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // @Post()
-  // create(@Body() createUserDto: CreateUserDto) {
-  //   return this.usersService.create(createUserDto);
-  // }
-
   @ApiOperation({
     summary: 'Get all users',
     description: 'Returns all users. Requires a valid bearer access token.',
@@ -48,7 +43,7 @@ export class UsersController {
 
   @ApiOperation({
     summary: 'Update a user',
-    description: 'Updates a user by ID. Requires a valid bearer access token.',
+    description: 'Updates a user by ID. Requires a valid bearer access token',
   })
   @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
   @ApiBody({ type: UpdateUserDto })

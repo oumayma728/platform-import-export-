@@ -20,7 +20,7 @@ import {
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { AuthResponseDto, LogoutResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
 import { RefreshJwtGuard } from './guard/refresh-jwt.guard';
@@ -38,7 +38,7 @@ export class AuthController {
     description:
       'Registers a new user, returns an access token, and sets a refresh token cookie.',
   })
-  @ApiBody({ type: RegisterDto })
+  @ApiBody({ type: CreateUserDto })
   @ApiResponse({
     status: 201,
     description: 'User registered successfully.',
@@ -49,7 +49,7 @@ export class AuthController {
   @Public()
   @Post('register')
   async register(
-    @Body() dto: RegisterDto,
+    @Body() dto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { accessToken, refreshToken } = await this.authService.register(dto);
