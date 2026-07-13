@@ -8,21 +8,21 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  async create(data: CreateUserDto) {
-    const existing = await this.usersRepository.findByEmail(data.email);
-    if (existing) throw new ConflictException('Email already in use');
+  // async create(data: CreateUserDto) {
+  //   const existing = await this.usersRepository.findByEmail(data.email);
+  //   if (existing) throw new ConflictException('Email already in use');
 
-    const passwordHash = await argon2.hash(data.password);
+  //   const passwordHash = await argon2.hash(data.password);
 
-    await this.usersRepository.createUser({
-      email: data.email,
-      name: data.name,
-      phone: data.phoneNumber,
-      passwordHash,
-    });
+  //   await this.usersRepository.createUser({
+  //     email: data.email,
+  //     name: data.name,
+  //     phone: data.phone,
+  //     passwordHash,
+  //   });
 
-    return "user have been created !"
-  }
+  //   return "user have been created !"
+  // }
 
   async findByEmail(email: string) {
     return this.usersRepository.findByEmail(email);
@@ -45,16 +45,17 @@ export class UsersService {
   async update(id: string, updateUserDto: UpdateUserDto) {
     if (updateUserDto.email) {
       const existing = await this.usersRepository.findByEmail(updateUserDto.email);
+      if (!existing) throw new NotFoundException('User not found');
       if (existing && existing.id !== id) {
         throw new ConflictException('Email already in use');
       }
     }
 
-    const { phoneNumber, roles, password, ...rest } = updateUserDto as any;
+    const { phone, roles, password, ...rest } = updateUserDto as any;
     const updateData: any = { ...rest };
 
-    if (phoneNumber) {
-      updateData.phone = phoneNumber;
+    if (phone) {
+      updateData.phone = phone;
     }
 
     if (password) {

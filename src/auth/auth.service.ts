@@ -23,18 +23,17 @@ export class AuthService {
   // ─── Public API ────────────────────────────────────────
 
   /** Register a new user and return a token pair. */
-  async register(dto: RegisterDto): Promise<Tokens> {
-    const passwordHash = await argon2.hash(dto.password);
+  async register(registerDto: RegisterDto): Promise<Tokens> {
+    const passwordHash = await argon2.hash(registerDto.password);
 
     // check if there's a user with this credentials
-    const existingUser = await this.usersRepository.findByEmail(dto.email);
+    const existingUser = await this.usersRepository.findByEmail(registerDto.email);
     if (existingUser) throw new ConflictException('User already exists');
 
     const user = await this.usersRepository.createUser({
-      email: dto.email,
-      name: dto.name,
-      phone: dto.phone_number,
-      roles: dto.role,
+      email: registerDto.email,
+      name: registerDto.name,
+      phone: registerDto.phone_number,
       passwordHash,
     });
 
@@ -42,11 +41,11 @@ export class AuthService {
   }
 
   /** Validate credentials and return a token pair. */
-  async login(dto: LoginDto): Promise<Tokens> {
-    const user = await this.usersRepository.findByEmail(dto.email);
+  async login(loginDto: LoginDto): Promise<Tokens> {
+    const user = await this.usersRepository.findByEmail(loginDto.email);
     if (!user) throw new NotFoundException('Invalid credentials');
 
-    const passwordValid = await argon2.verify(user.passwordHash, dto.password);
+    const passwordValid = await argon2.verify(user.passwordHash, loginDto.password);
     if (!passwordValid) throw new UnauthorizedException('Invalid credentials');
 
     return this.generateTokens(user.id, user.name);
@@ -156,6 +155,7 @@ export class AuthService {
     // Store only the hash — never the raw token
     const ttlMs = this.refreshCookieMaxAgeMs;
     await this.refreshTokensService.create(
+      refreshTokenId,
       userId,
       this.hashToken(refreshToken),
       new Date(Date.now() + ttlMs),

@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AccessTokenGuard } from './auth/guard/access-token.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { CompaniesModule } from './companies/companies.module';
+import { ListingsModule } from './listings/listings.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     UsersModule,
     PrismaModule,
+    CompaniesModule,
+    ListingsModule,
   ],
   controllers: [AppController],
   providers: [

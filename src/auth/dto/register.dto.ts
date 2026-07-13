@@ -1,20 +1,24 @@
-import { UserRole } from '../../constants/role';
-import { IsArray, IsEmail, IsEnum, IsPhoneNumber, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsEmail,
+  IsPhoneNumber,
+  IsString,
+} from 'class-validator';
 
 export class RegisterDto {
-    @IsString()
-    password: string;
+  @ApiProperty({ example: 'user@example.com', description: 'User email' })
+  @IsEmail()
+  email: string;
 
-    @IsEmail()
-    email: string;
+  @ApiProperty({ example: 'password123', description: 'User password' })
+  @IsString()
+  password: string;
 
-    @IsString()
-    name: string;
+  @ApiProperty({ example: 'John Doe', description: 'Full name' })
+  @IsString()
+  name: string;
 
-    @IsPhoneNumber()
-    phone_number: string;
-
-    @IsArray()
-    @IsEnum(UserRole, { each: true })
-    role: UserRole[];
+  @ApiProperty({ example: '+21612345678', description: 'Phone number' })
+  @IsPhoneNumber()
+  phone_number: string;
 }

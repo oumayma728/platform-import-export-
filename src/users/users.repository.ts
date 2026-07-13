@@ -61,20 +61,21 @@ export class UsersRepository {
   }) {
     let companyId: string | undefined;
 
-    if (data.roles && data.roles.length > 0) {
-      const isExporter = data.roles.includes('EXPORTEUR');
-      const isImporter = data.roles.includes('IMPORTEUR');
+    // TODO: see erlation between user and company
+    // if (data.roles && data.roles.length > 0) {
+    //   const isExporter = data.roles.includes('EXPORTEUR');
+    //   const isImporter = data.roles.includes('IMPORTEUR');
 
-      const company = await this.prisma.company.create({
-        data: {
-          name: `${data.name}'s Company`,
-          isExporter,
-          isImporter,
-          country: 'Unknown',
-        },
-      });
-      companyId = company.id;
-    }
+    //   const company = await this.prisma.company.create({
+    //     data: {
+    //       name: `${data.name}'s Company`,
+    //       isExporter,
+    //       isImporter,
+    //       country: 'Unknown',
+    //     },
+    //   });
+    //   companyId = company.id;
+    // }
 
     return this.prisma.user.create({
       data: {

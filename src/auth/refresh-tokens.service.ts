@@ -6,9 +6,10 @@ export class RefreshTokensService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Persist a new refresh-token hash. */
-  async create(userId: string, tokenHash: string, expiresAt: Date) {
+  async create(id: string, userId: string, tokenHash: string, expiresAt: Date) {
     return this.prisma.refreshToken.create({
       data: {
+        id,
         userId,
         tokenHash,
         expiresAt,
