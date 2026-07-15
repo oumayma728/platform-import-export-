@@ -101,6 +101,40 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+
+  // @ApiOperation({
+  //   summary: 'Update a user',
+  //   description:
+  //     'Updates one or more user fields. Only the provided fields are modified.',
+  // })
+  // @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
+  // @ApiBody({ type: UpdateUserDto })
+  // @ApiOkResponse({
+  //   description: 'User updated successfully.',
+  //   type: UserEntity,
+  // })
+  // @ApiBadRequestResponse({
+  //   description:
+  //     'Request body validation failed. Unknown properties are rejected by the global ValidationPipe.',
+  //   type: ValidationErrorResponseDto,
+  // })
+  // @ApiUnauthorizedResponse({
+  //   description: 'Access token is missing or invalid.',
+  //   type: UnauthorizedErrorResponseDto,
+  // })
+  // @ApiNotFoundResponse({
+  //   description: 'No user exists for the provided identifier.',
+  //   type: NotFoundErrorResponseDto,
+  // })
+  // @ApiConflictResponse({
+  //   description: 'A conflicting unique value already exists.',
+  //   type: ConflictErrorResponseDto,
+  // })
+  // @Patch('/:id/role')
+  // updateRole(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  //   return this.usersService.update(id, updateUserDto);
+  // }
+
   @ApiOperation({
     summary: 'Delete a user',
     description: 'Deletes the user identified by the provided ID.',

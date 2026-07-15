@@ -31,4 +31,11 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   password!: string;
+
+  // @ApiProperty({
+  //   example: 'MEMBER',
+  //   description: 'User role in the system. Default is MEMBER. Possible values: ADMIN, MEMBER. Only Admin users can create other Admin users.',
+  // })
+  // @IsString()
+  // role!: string;
 }

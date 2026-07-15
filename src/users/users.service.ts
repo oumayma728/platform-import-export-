@@ -40,7 +40,9 @@ export class UsersService {
       }
     }
 
+    // extract password and role from updateUserDto, and prepare the updateData object
     const { password, ...rest } = updateUserDto;
+    // const { password, role, ...rest } = updateUserDto;
     const updateData: Record<string, unknown> = { ...rest };
 
     if (password) {
@@ -49,6 +51,23 @@ export class UsersService {
 
     return this.usersRepository.updateUser(id, updateData);
   }
+
+  // async updateRole(id: string, updateUserDto: UpdateUserDto) {
+  //   const user = await this.usersRepository.findById(id);
+
+  //   if (!user) {
+  //     throw new NotFoundException('User not found');
+  //   }
+
+  //   const { password, ...rest } = updateUserDto;
+  //   const updateData: Record<string, unknown> = { ...rest };
+
+  //   if (password) {
+  //     updateData.passwordHash = await argon2.hash(password);
+  //   }
+
+  //   return this.usersRepository.updateUser(id, updateData);
+  // }
 
   async remove(id: string) {
     await this.findOne(id);

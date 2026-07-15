@@ -6,13 +6,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 enum UserRole {
-  // EXPORTATEUR
-  // IMPORTATEUR
-  // ADMIN
-  // MEMBER
-  pass
+  ADMIN
+  MEMBER
 }
 
 enum ValidationStatus {
@@ -73,6 +69,7 @@ model User {
   name         String           @map("name")
   phone        String           @unique
   status       ValidationStatus @default(EN_ATTENTE_VALIDATION)
+  // role         UserRole         @default(MEMBER)
 
   companyId String?  @map("company_id")
   company   Company? @relation(fields: [companyId], references: [id])

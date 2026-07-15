@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
+// the selected fields for a user in the response of GET endpoints
 type CreateUserRepositoryInput = {
   email: string;
   passwordHash: string;

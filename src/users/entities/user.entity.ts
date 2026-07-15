@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum ValidationStatus {
-  EN_ATTENTE_VALIDATION = 'EN_ATTENTE_VALIDATION',
-  VALIDE = 'VALIDE',
-  REJETE = 'REJETE',
-  SUSPENDU = 'SUSPENDU',
-}
+import { ValidationStatus } from '@prisma/client';
 
 export class UserEntity {
   @ApiProperty({ example: '3203f19e-e763-426b-9c24-b14316d84878' })

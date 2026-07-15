@@ -1,7 +1,7 @@
 import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
 
-import { ValidationStatus } from '../entities/user.entity';
+import { ValidationStatus } from '@prisma/client';
 import { CreateUserDto } from './create-user.dto';
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
