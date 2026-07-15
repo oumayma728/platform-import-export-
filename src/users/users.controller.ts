@@ -1,15 +1,26 @@
 import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserEntity } from './entities/user.entity';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConflictResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+
+import {
+  ConflictErrorResponseDto,
+  NotFoundErrorResponseDto,
+  UnauthorizedErrorResponseDto,
+  ValidationErrorResponseDto,
+} from '../common/dto/api-error-response.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserEntity } from './entities/user.entity';
+import { UsersService } from './users.service';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -21,8 +32,15 @@ export class UsersController {
     summary: 'Get all users',
     description: 'Returns all users. Requires a valid bearer access token.',
   })
-  @ApiResponse({ status: 200, description: 'List of all users.', type: [UserEntity] })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiOkResponse({
+    description: 'List of users returned successfully.',
+    type: UserEntity,
+    isArray: true,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -30,12 +48,21 @@ export class UsersController {
 
   @ApiOperation({
     summary: 'Get a user by ID',
-    description: 'Returns one user by ID. Requires a valid bearer access token.',
+    description: 'Returns a single user by its identifier.',
   })
   @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
-  @ApiResponse({ status: 200, description: 'User found.', type: UserEntity })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
+  @ApiOkResponse({
+    description: 'User returned successfully.',
+    type: UserEntity,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No user exists for the provided identifier.',
+    type: NotFoundErrorResponseDto,
+  })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
@@ -43,28 +70,57 @@ export class UsersController {
 
   @ApiOperation({
     summary: 'Update a user',
-    description: 'Updates a user by ID. Requires a valid bearer access token',
+    description:
+      'Updates one or more user fields. Only the provided fields are modified.',
   })
   @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
   @ApiBody({ type: UpdateUserDto })
-  @ApiResponse({ status: 200, description: 'User updated.', type: UserEntity })
-  @ApiResponse({ status: 400, description: 'Invalid request payload.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  @ApiResponse({ status: 409, description: 'Email already in use.' })
+  @ApiOkResponse({
+    description: 'User updated successfully.',
+    type: UserEntity,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Request body validation failed. Unknown properties are rejected by the global ValidationPipe.',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No user exists for the provided identifier.',
+    type: NotFoundErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description: 'A conflicting unique value already exists.',
+    type: ConflictErrorResponseDto,
+  })
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 
   @ApiOperation({
-    summary: 'Remove a user',
-    description: 'Deletes a user by ID. Requires a valid bearer access token.',
+    summary: 'Delete a user',
+    description: 'Deletes the user identified by the provided ID.',
   })
   @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
-  @ApiResponse({ status: 200, description: 'User removed.', type: UserEntity })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 404, description: 'User not found.' })
+  @ApiOkResponse({
+    description: 'User deleted successfully.',
+    schema: {
+      type: 'boolean',
+      example: true,
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No user exists for the provided identifier.',
+    type: NotFoundErrorResponseDto,
+  })
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

@@ -1,44 +1,73 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ListingStatus, ListingType } from '@prisma/client';
+import { Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class SearchListingsDto {
-  @ApiPropertyOptional({ example: 'Tunisia' })
+  @ApiPropertyOptional({
+    example: 'Tunisia',
+    description: 'Filter by listing country.',
+  })
   @IsOptional()
   @IsString()
   country?: string;
 
-  @ApiPropertyOptional({ example: 'Metals' })
+  @ApiPropertyOptional({
+    example: 'Metals',
+    description: 'Filter by product category.',
+  })
   @IsOptional()
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional({ example: 'OFFRE' })
+  @ApiPropertyOptional({
+    enum: ListingType,
+    example: ListingType.OFFRE,
+    description: 'Filter by listing type.',
+  })
   @IsOptional()
   @IsEnum(ListingType)
   type?: ListingType;
 
-  @ApiPropertyOptional({ example: 'ACTIVE' })
+  @ApiPropertyOptional({
+    enum: ListingStatus,
+    example: ListingStatus.ACTIVE,
+    description: 'Filter by listing status.',
+  })
   @IsOptional()
   @IsEnum(ListingStatus)
   status?: ListingStatus;
 
-  @ApiPropertyOptional({ example: 100 })
+  @ApiPropertyOptional({
+    example: 100,
+    description: 'Minimum price filter.',
+  })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   minPrice?: number;
 
-  @ApiPropertyOptional({ example: 500 })
+  @ApiPropertyOptional({
+    example: 500,
+    description: 'Maximum price filter.',
+  })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   maxPrice?: number;
 
-  @ApiPropertyOptional({ example: 'ISO 9001' })
+  @ApiPropertyOptional({
+    example: 'ISO 9001',
+    description: 'Certification keyword filter applied against company data.',
+  })
   @IsOptional()
   @IsString()
   certification?: string;
 
-  @ApiPropertyOptional({ example: 'Copper wire' })
+  @ApiPropertyOptional({
+    example: 'Copper wire',
+    description: 'Free-text search across selected listing fields.',
+  })
   @IsOptional()
   @IsString()
   q?: string;

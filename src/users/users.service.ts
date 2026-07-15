@@ -1,7 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import argon2 from 'argon2';
-import { UsersRepository } from './users.repository';
+
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
@@ -25,10 +30,19 @@ export class UsersService {
     const existing = await this.usersRepository.findById(id);
     if (!existing) throw new NotFoundException('User not found');
 
-    // extract roles and password 
-    // changing the role must be from the admin only ; password must be hashed first
-    const { roles, password, ...rest } = updateUserDto as any;
-    const updateData: any = { ...rest };
+    if (updateUserDto.email) {
+      const userWithSameEmail = await this.usersRepository.findByEmail(
+        updateUserDto.email,
+      );
+
+      if (userWithSameEmail && userWithSameEmail.id !== id) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+
+    const { password, ...rest } = updateUserDto;
+    const updateData: Record<string, unknown> = { ...rest };
+
     if (password) {
       updateData.passwordHash = await argon2.hash(password);
     }
@@ -42,4 +56,3 @@ export class UsersService {
     return true;
   }
 }
-
