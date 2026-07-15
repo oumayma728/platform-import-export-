@@ -1,13 +1,31 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
+
+type CreateUserRepositoryInput = {
+  email: string;
+  passwordHash: string;
+  name: string;
+  phone: string;
+  roles?: string[];
+};
+
+const userPublicSelect = {
+  id: true,
+  email: true,
+  name: true,
+  phone: true,
+  companyId: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
 
 @Injectable()
 export class UsersRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // Find user by email (login, register checks)
   async findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: {
@@ -16,49 +34,22 @@ export class UsersRepository {
     });
   }
 
-  // Find user by id (JWT validation)
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: {
         id,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        companyId: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userPublicSelect,
     });
   }
 
-  // Find all users (standard Admin query)
   async findAll() {
     return this.prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        companyId: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userPublicSelect,
     });
   }
 
-  // Create new user (register)
-  async createUser(data: {
-    email: string;
-    passwordHash: string;
-    name: string;
-    phone: string;
-    roles?: string[];
-  }) {
+  async createUser(data: CreateUserRepositoryInput) {
     let companyId: string | undefined;
 
     // TODO: see erlation between user and company
@@ -85,20 +76,10 @@ export class UsersRepository {
         phone: data.phone,
         companyId,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        companyId: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userPublicSelect,
     });
   }
 
-  // Update password (reset password)
   async updatePassword(id: string, passwordHash: string) {
     return this.prisma.user.update({
       where: {
@@ -110,44 +91,23 @@ export class UsersRepository {
     });
   }
 
-  // Update user fields
-  async updateUser(id: string, data: any) {
+  async updateUser(id: string, data: Prisma.UserUncheckedUpdateInput) {
     return this.prisma.user.update({
       where: { id },
       data,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        companyId: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userPublicSelect,
     });
   }
 
-  // Delete user
   async deleteUser(id: string) {
     return this.prisma.user.delete({
       where: {
         id,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        companyId: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userPublicSelect,
     });
   }
 
-  // Check if email exists
   async emailExists(email: string) {
     const user = await this.prisma.user.findUnique({
       where: {

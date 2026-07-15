@@ -8,22 +8,7 @@ export class CompaniesService {
   constructor(private readonly companiesRepository: CompaniesRepository) {}
 
   async create(createCompanyDto: CreateCompanyDto) {
-    const data: any = {
-      name: createCompanyDto.name,
-      isExporter: createCompanyDto.isExporter,
-      isImporter: createCompanyDto.isImporter,
-      country: createCompanyDto.country,
-      description: createCompanyDto.description,
-      website: createCompanyDto.website,
-      logoUrl: createCompanyDto.logoUrl,
-      registrationNumber: createCompanyDto.registrationNumber,
-    };
-
-    if (createCompanyDto.certificationDocs !== undefined) {
-      data.certificationDocs = createCompanyDto.certificationDocs;
-    }
-
-    return this.companiesRepository.create(data);
+    return this.companiesRepository.create(createCompanyDto);
   }
 
   async findAll() {
@@ -44,15 +29,7 @@ export class CompaniesService {
       throw new NotFoundException('Company not found');
     }
 
-    const data: any = {
-      ...updateCompanyDto,
-    };
-
-    if (updateCompanyDto.certificationDocs !== undefined) {
-      data.certificationDocs = updateCompanyDto.certificationDocs;
-    }
-
-    return this.companiesRepository.update(id, data);
+    return this.companiesRepository.update(id, updateCompanyDto);
   }
 
   async remove(id: string) {

@@ -1,25 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ListingStatus, ListingType } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateListingDto } from './dto/create-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
-
-type ListingCreateInput = {
-  companyId: string;
-  type: ListingType;
-  title: string;
-  category: string;
-  price: number;
-  currency: string;
-  priceUsd?: number | null;
-  quantity: number;
-  unit: string;
-  country: string;
-  incoterm: string;
-  deadline?: Date | string | null;
-  status?: ListingStatus;
-};
-
-type ListingUpdateInput = Partial<ListingCreateInput>;
+import { UpdateListingDto } from './dto/update-listing.dto';
 
 @Injectable()
 export class ListingsRepository {
@@ -33,7 +18,7 @@ export class ListingsRepository {
   }
 
   async search(filters: SearchListingsDto) {
-    const where: any = {};
+    const where: Prisma.ListingWhereInput = {};
 
     if (filters.country) {
       where.country = { contains: filters.country, mode: 'insensitive' };
@@ -52,13 +37,17 @@ export class ListingsRepository {
     }
 
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      where.price = {};
+      const priceFilter: Prisma.DecimalFilter = {};
+
       if (filters.minPrice !== undefined) {
-        where.price.gte = filters.minPrice;
+        priceFilter.gte = filters.minPrice;
       }
+
       if (filters.maxPrice !== undefined) {
-        where.price.lte = filters.maxPrice;
+        priceFilter.lte = filters.maxPrice;
       }
+
+      where.price = priceFilter;
     }
 
     if (filters.q) {
@@ -82,15 +71,20 @@ export class ListingsRepository {
     const certificationFilter = filters.certification.trim().toLowerCase();
 
     return listings.filter((listing) => {
-      const company = listing.company as { description?: string | null; registrationNumber?: string | null; certificationDocs?: unknown };
       const docsText =
-        typeof company.certificationDocs === 'string'
-          ? company.certificationDocs
-          : JSON.stringify(company.certificationDocs ?? '');
+        typeof listing.company.certificationDocs === 'string'
+          ? listing.company.certificationDocs
+          : JSON.stringify(listing.company.certificationDocs ?? '');
 
-      return [company.description, company.registrationNumber, docsText]
+      return [
+        listing.company.description,
+        listing.company.registrationNumber,
+        docsText,
+      ]
         .filter(Boolean)
-        .some((value) => value?.toString().toLowerCase().includes(certificationFilter));
+        .some((value) =>
+          value?.toString().toLowerCase().includes(certificationFilter),
+        );
     });
   }
 
@@ -101,27 +95,31 @@ export class ListingsRepository {
     });
   }
 
-  async create(data: ListingCreateInput) {
-    const normalizedData: Record<string, unknown> = { ...data };
-    if ('deadline' in data) {
-      normalizedData.deadline = data.deadline ? new Date(data.deadline) : null;
+  async create(data: CreateListingDto) {
+    const normalizedData: Prisma.ListingUncheckedCreateInput = { ...data };
+
+    if (data.deadline !== undefined) {
+      normalizedData.deadline = data.deadline
+        ? new Date(data.deadline)
+        : undefined;
     }
 
     return this.prisma.listing.create({
-      data: normalizedData as any,
+      data: normalizedData,
       include: { company: true },
     });
   }
 
-  async update(id: string, data: ListingUpdateInput) {
-    const normalizedData: Record<string, unknown> = { ...data };
-    if ('deadline' in data) {
+  async update(id: string, data: UpdateListingDto) {
+    const normalizedData: Prisma.ListingUncheckedUpdateInput = { ...data };
+
+    if (data.deadline !== undefined) {
       normalizedData.deadline = data.deadline ? new Date(data.deadline) : null;
     }
 
     return this.prisma.listing.update({
       where: { id },
-      data: normalizedData as any,
+      data: normalizedData,
       include: { company: true },
     });
   }

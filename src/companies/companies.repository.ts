@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
-type CompanyCreateInput = any;
-type CompanyUpdateInput = any;
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateCompanyDto } from './dto/create-company.dto';
+import { UpdateCompanyDto } from './dto/update-company.dto';
 
 @Injectable()
 export class CompaniesRepository {
@@ -18,12 +19,28 @@ export class CompaniesRepository {
     return this.prisma.company.findUnique({ where: { id } });
   }
 
-  async create(data: CompanyCreateInput) {
-    return this.prisma.company.create({ data });
+  async create(data: CreateCompanyDto) {
+    const { certificationDocs, ...rest } = data;
+    const normalizedData: Prisma.CompanyCreateInput = { ...rest };
+
+    if (certificationDocs !== undefined) {
+      normalizedData.certificationDocs =
+        certificationDocs as Prisma.InputJsonValue;
+    }
+
+    return this.prisma.company.create({ data: normalizedData });
   }
 
-  async update(id: string, data: CompanyUpdateInput) {
-    return this.prisma.company.update({ where: { id }, data });
+  async update(id: string, data: UpdateCompanyDto) {
+    const { certificationDocs, ...rest } = data;
+    const normalizedData: Prisma.CompanyUpdateInput = { ...rest };
+
+    if (certificationDocs !== undefined) {
+      normalizedData.certificationDocs =
+        certificationDocs as Prisma.InputJsonValue;
+    }
+
+    return this.prisma.company.update({ where: { id }, data: normalizedData });
   }
 
   async remove(id: string) {
