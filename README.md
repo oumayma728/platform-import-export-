@@ -1,3 +1,5 @@
+# platform-import-export-
+
 # Import Export Platform API
 
 Backend API développé avec FastAPI pour la gestion d’une plateforme d’échanges internationaux. Le service couvre les fonctionnalités d’authentification, de gestion des annonces, de messagerie, de facturation et d’intégrations métiers.
