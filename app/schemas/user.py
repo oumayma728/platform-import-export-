@@ -71,19 +71,3 @@ class ValidationUpdate(BaseModel):
 
     class Config:
         from_attributes = True
-
-@field_validator('mot_de_passe')
-@classmethod
-def password_strength(cls, v):
-    if not re.search(r'[A-Z]', v):
-        raise ValueError('Le mot de passe doit contenir au moins une majuscule')
-    if not re.search(r'[0-9]', v):
-        raise ValueError('Le mot de passe doit contenir au moins un chiffre')
-    return v
-
-@field_validator('nom')
-@classmethod
-def nom_validator(cls, v):
-    if not v.strip():
-        raise ValueError('Le nom ne peut pas être vide')
-    return v.strip()

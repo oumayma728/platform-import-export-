@@ -36,7 +36,28 @@ def suspend(listing_id: int, current_user: dict = Depends(verify_token), db: Ses
 @router.patch("/{listing_id}/resume", summary="Réactiver une annonce", description="Réactiver une annonce suspendue.", responses={200: {"description": "Annonce réactivée"}, 401: {"description": "Non authentifié"}, 404: {"description": "Annonce introuvable"}})
 def resume(listing_id: int, current_user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     return set_listing_state(listing_id, current_user["id"], db, "resume")
-
+@router.get(
+    "/search",
+    summary="Recherche avancée d'annonces",
+    description="Recherche avec filtres multiples : pays, catégorie, prix, certification et pagination"
+)
+def search_listings(
+    country: Optional[str] = None,
+    category: Optional[str] = None,
+    type: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    certification: Optional[str] = None,
+    incoterm: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    return get_all_listings(
+        db, country, category, type,
+        min_price, max_price, certification,
+        page, page_size
+    )
 @router.delete("/{listing_id}", summary="Supprimer une annonce", description="Supprimer une annonce appartenant à l'utilisateur connecté.", responses={200: {"description": "Annonce supprimée"}, 401: {"description": "Non authentifié"}, 404: {"description": "Annonce introuvable"}})
 def delete(listing_id: int, current_user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     return delete_listing(listing_id, current_user["id"], db)

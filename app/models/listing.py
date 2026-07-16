@@ -27,3 +27,5 @@ class Listing(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     owner = relationship("User", backref="annonces")
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    company = relationship("Company", backref="annonces")

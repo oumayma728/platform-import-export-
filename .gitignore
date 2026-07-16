@@ -21,3 +21,6 @@ Thumbs.db
 
 # Nested local clone/repo that should not be tracked
 Indeed-_import_export/
+
+*.egg-info/
+.DS_Store

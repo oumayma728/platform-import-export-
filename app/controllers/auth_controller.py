@@ -46,31 +46,31 @@ def register_user(user: UserRegister, db: Session):
 
 
 def login_user(credentials: UserLogin, db: Session):
-    user = db.query(User).filter(
-        User.email == credentials.email).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou mot de passe incorrect"
-                            )
-    if not pwd_context.verify(credentials.mot_de_passe, user.mot_de_passe):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Email ou mot de passe incorrect"
-                            )
+    user = db.query(User).filter(User.email == credentials.email).first()
+    
+    # Vérifier AVANT de créer le token
+    if not user or not pwd_context.verify(credentials.mot_de_passe, user.mot_de_passe):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
     if user.statut_validation == "SUSPENDU":
         raise HTTPException(status_code=403, detail="Compte suspendu")
-    access_token = create_token({"id": user.id, "email": user.email, "role": user.role})
-    refresh_token = create_refresh_token()
-
-    db.add(RefreshToken(user_id=user.id, token=refresh_token, expire_at=datetime.utcnow() + timedelta(days=30)))
+    
+    # Créer refresh token APRÈS vérification
+    refresh = create_refresh_token()
+    db.add(RefreshToken(
+        user_id=user.id, 
+        token=refresh, 
+        expire_at=datetime.utcnow() + timedelta(days=30)
+    ))
     db.commit()
-
+    
     return {
         "message": "Connexion réussie",
-        "access_token": access_token,
-        "refresh_token": refresh_token,
+        "access_token": create_token({"id": user.id, "email": user.email, "role": user.role}),
+        "refresh_token": refresh,
         "token_type": "bearer",
         "user": user_payload(user)
     }
-    
-   
 
 
 def update_profile(user: User, data: UserUpdate, db: Session):
