@@ -20,7 +20,7 @@ __pycache__/
 Thumbs.db
 
 # Nested local clone/repo that should not be tracked
-Indeed-_import_export/
+platform-import-export/
 
 *.egg-info/
 .DS_Store
