@@ -1,0 +1,18 @@
+{
+  "info": {"name": "Import Export Platform API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"},
+  "variable": [{"key": "baseUrl", "value": "http://127.0.0.1:8000"}, {"key": "token", "value": ""}],
+  "item": [
+    {"name": "Auth", "item": [
+      {"name": "Register", "request": {"method": "POST", "url": "{{baseUrl}}/api/auth/register", "body": {"mode":"raw", "raw":"{\"nom\":\"Test User\",\"email\":\"test@example.com\",\"mot_de_passe\":\"password123\",\"type_compte\":\"EXPORTATEUR\",\"pays\":\"NG\"}"}}},
+      {"name": "Login", "request": {"method": "POST", "url": "{{baseUrl}}/api/auth/login"}}
+    ]},
+    {"name": "Listings", "item": [
+      {"name": "Search", "request": {"method": "GET", "url": "{{baseUrl}}/api/listings"}},
+      {"name": "Create", "request": {"method": "POST", "url": "{{baseUrl}}/api/listings", "header":[{"key":"Authorization","value":"Bearer {{token}}"}]}}
+    ]},
+    {"name": "Integrations", "item": [
+      {"name": "Currency", "request": {"method": "GET", "url": "{{baseUrl}}/api/currency/convert?amount=100&from=EUR&to=USD"}},
+      {"name": "Logistics", "request": {"method": "GET", "url": "{{baseUrl}}/api/logistics/estimate?from=NG&to=FR"}}
+    ]}
+  ]
+}
