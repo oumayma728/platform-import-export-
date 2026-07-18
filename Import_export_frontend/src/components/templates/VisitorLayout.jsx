@@ -6,7 +6,6 @@ import { colors, spacing, typography } from "../../styles/tokens";
 const NAV_ITEMS = [
   { to: "/listings", label: "Annonces" },
   { to: "/Vmessages", label: "Messagerie" },
-  { to: "/billing", label: "Facturation" },
   { to: "/contact", label: "Contact" },
 ];
 

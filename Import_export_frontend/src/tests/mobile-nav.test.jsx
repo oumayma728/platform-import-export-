@@ -57,8 +57,9 @@ describe("Menu burger mobile — VisitorLayout (non connecté)", () => {
     expect(panel).toBeInTheDocument();
 
     const linksInPanel = within(panel).getAllByRole("link");
-    // 5 liens de nav (Accueil, Annonces, Messagerie, Facturation, Contact) + Connexion + Inscription
-    expect(linksInPanel.length).toBe(7);
+    // 3 liens de nav (Annonces, Messagerie, Contact) + Connexion + Inscription
+    // — Accueil et Facturation ne sont pas pertinents pour un visiteur non connecté
+    expect(linksInPanel.length).toBe(5);
 
     // Le bouton devient "Fermer le menu" une fois ouvert
     expect(screen.getByRole("button", { name: /fermer le menu/i })).toBeInTheDocument();

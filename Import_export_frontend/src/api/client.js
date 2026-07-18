@@ -10,8 +10,7 @@ const apiClient = axios.create({
   },
 });
 
-// Intercepteur : injecte le token d'auth automatiquement (localStorage ou
-// sessionStorage selon l'option "rester connecté" choisie à la connexion)
+
 apiClient.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
@@ -20,7 +19,6 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Intercepteur : gestion centralisée des erreurs 401 (session expirée ou invalide)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -8,77 +8,6 @@ export default function MessagesPage() {
         margin: "0 auto",
       }}
     >
-      {/* HERO */}
-
-      <div
-        style={{
-          background:
-            "linear-gradient(135deg,#14161C,#312e81)",
-          borderRadius: "32px",
-          padding: "60px",
-          color: "white",
-          textAlign: "center",
-          marginBottom: "40px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "16px",
-            marginBottom: "24px",
-            fontSize: "64px",
-          }}
-        >
-          🌍
-        </div>
-
-        <p
-          style={{
-            maxWidth: "700px",
-            margin: "0 auto",
-            fontSize: "21px",
-            color: "#c7d2fe",
-            lineHeight: 1.8,
-          }}
-        >
-          Échangez directement avec vos futurs
-          partenaires internationaux et transformez
-          vos opportunités commerciales en contrats.
-        </p>
-      </div>
-
-      {/* AVANTAGES */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(260px,1fr))",
-          gap: "20px",
-          marginBottom: "40px",
-        }}
-      >
-        <FeatureCard
-          icon="💬"
-          title="Messagerie directe"
-          description="Discutez instantanément avec vos partenaires."
-        />
-
-        <FeatureCard
-          icon="📎"
-          title="Partage de documents"
-          description="Échangez contrats, certificats et fiches techniques."
-        />
-
-        <FeatureCard
-          icon="🤝"
-          title="Suivi des négociations"
-          description="Gérez facilement chaque opportunité commerciale."
-        />
-      </div>
-
       {/* APERÇU */}
 
       <div
@@ -222,7 +151,7 @@ export default function MessagesPage() {
               négociations commerciales.
             </p>
 
-            <Link to="/billing">
+            <Link to="/auth/login">
               <button
                 style={{
                   border: "none",
@@ -243,6 +172,77 @@ export default function MessagesPage() {
           </div>
         </div>
       </div>
+
+      {/* <div
+        style={{
+          background:
+            "linear-gradient(135deg,#14161C,#312e81)",
+          borderRadius: "32px",
+          padding: "60px",
+          color: "white",
+          textAlign: "center",
+          marginBottom: "40px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "24px",
+            fontSize: "64px",
+          }}
+        >
+          🌍
+        </div>
+
+        <p
+          style={{
+            maxWidth: "700px",
+            margin: "0 auto",
+            fontSize: "21px",
+            color: "#c7d2fe",
+            lineHeight: 1.8,
+          }}
+        >
+          Échangez directement avec vos futurs
+          partenaires internationaux et transformez
+          vos opportunités commerciales en contrats.
+        </p>
+      </div> */}
+
+      {/* AVANTAGES */}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(260px,1fr))",
+          gap: "20px",
+          marginBottom: "40px",
+        }}
+      >
+        <FeatureCard
+          icon="💬"
+          title="Messagerie directe"
+          description="Discutez instantanément avec vos partenaires."
+        />
+
+        <FeatureCard
+          icon="📎"
+          title="Partage de documents"
+          description="Échangez contrats, certificats et fiches techniques."
+        />
+
+        <FeatureCard
+          icon="🤝"
+          title="Suivi des négociations"
+          description="Gérez facilement chaque opportunité commerciale."
+        />
+      </div>
+
+
 
     </div>
   );

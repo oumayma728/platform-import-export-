@@ -162,76 +162,10 @@ export default function ListingsShowcasePage() {
                 🚀 Voir les annonces
               </button>
             </Link>
-          </div>
-        </div>
-      </div>
-      {/* BENEFICES */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(260px,1fr))",
-          gap: "20px",
-          marginBottom: "40px",
-        }}
-      >
-        <FeatureCard
-          icon="🌍"
-          title="Portée internationale"
-          description="Accédez à des opportunités commerciales provenant de plusieurs pays."
-        />
-
-        <FeatureCard
-          icon="🔍"
-          title="Recherche intelligente"
-          description="Filtrez rapidement les annonces selon votre secteur et vos besoins."
-        />
-
-        <FeatureCard
-          icon="🤝"
-          title="Matching IA"
-          description="Identifiez automatiquement les partenaires les plus pertinents."
-        />
-      </div>
-
-
-
-      {/* CTA */}
-
-      <div
-        style={{
-          background: "#FBF0DC",
-          borderRadius: "24px",
-          padding: "40px",
-          textAlign: "center",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "34px",
-            marginBottom: "16px",
-          }}
-        >
-          📢 Publiez votre première annonce
-        </h2>
-
-        <p
-          style={{
-            color: "#4b5563",
-            maxWidth: "700px",
-            margin: "0 auto 24px auto",
-            lineHeight: 1.8,
-          }}
-        >
-          Présentez vos produits ou vos besoins à un
-          réseau international d'importateurs et
-          d'exportateurs.
-        </p>
-
-        <Link to="/listings/create">
+                    <Link to="/listings/create">
           <button
             style={{
+              marginLeft: "20px",
               border: "none",
               borderRadius: "14px",
               padding: "16px 28px",
@@ -245,7 +179,11 @@ export default function ListingsShowcasePage() {
             ➕ Publier une annonce
           </button>
         </Link>
+          </div>
+        </div>
       </div>
+
+
     </div>
   );
 }
