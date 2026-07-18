@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Camera } from "lucide-react";
 import { colors, typography } from "../../styles/tokens";
 
@@ -20,6 +20,7 @@ export default function CompanyLogoUpload({
   size = 84,
 }) {
   const inputRef = useRef(null);
+  const inputId = useId();
   const [error, setError] = useState("");
 
   const initial = (companyName || "?").trim().charAt(0).toUpperCase();
@@ -40,10 +41,9 @@ export default function CompanyLogoUpload({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div
+      <label
+        htmlFor={isUploading ? undefined : inputId}
         className="hover-lift"
-        onClick={() => !isUploading && inputRef.current?.click()}
-        role="button"
         aria-label="Changer le logo de l'entreprise"
         style={{
           position: "relative",
@@ -60,6 +60,10 @@ export default function CompanyLogoUpload({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          // -webkit-tap-highlight-color par défaut peut laisser un flash gris
+          // disgracieux sur Android/iOS lors du tap ; on le neutralise ici
+          // puisque l'overlay caméra sert déjà de retour visuel.
+          WebkitTapHighlightColor: "transparent",
         }}
       >
         {logoUrl ? (
@@ -81,7 +85,7 @@ export default function CompanyLogoUpload({
           </span>
         )}
 
-        {/* Overlay au survol pour indiquer l'action */}
+        {/* Overlay au survol/tap pour indiquer l'action */}
         <div
           style={{
             position: "absolute",
@@ -93,17 +97,18 @@ export default function CompanyLogoUpload({
             color: "#fff",
             opacity: isUploading ? 1 : 0,
             transition: "opacity 0.15s ease",
+            // pointer-events désactivé : cet overlay ne doit jamais devenir
+            // la cible du tap à la place du <label> qui l'englobe.
+            pointerEvents: "none",
           }}
           className="logo-upload-overlay"
         >
           <Camera size={20} />
         </div>
-      </div>
+      </label>
 
-      <button
-        type="button"
-        onClick={() => !isUploading && inputRef.current?.click()}
-        disabled={isUploading}
+      <label
+        htmlFor={isUploading ? undefined : inputId}
         style={{
           border: "none",
           background: "none",
@@ -114,10 +119,11 @@ export default function CompanyLogoUpload({
           cursor: isUploading ? "default" : "pointer",
           padding: 0,
           marginBottom: 4,
+          display: "inline-block",
         }}
       >
         {isUploading ? "Envoi en cours..." : logoUrl ? "Changer le logo" : "Ajouter un logo"}
-      </button>
+      </label>
 
       {error && (
         <p style={{ color: colors.danger, fontFamily: typography.body, fontSize: 12, margin: 0 }}>
@@ -126,10 +132,24 @@ export default function CompanyLogoUpload({
       )}
 
       <input
+        id={inputId}
         ref={inputRef}
         type="file"
         accept={ACCEPTED_LOGO_TYPES.join(",")}
-        hidden
+        // On mobile, `capture` n'est PAS forcé ici : laisser l'attribut de
+        // côté permet au navigateur de proposer le choix entre "Galerie" et
+        // "Appareil photo", plutôt que d'ouvrir directement la caméra.
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          padding: 0,
+          margin: -1,
+          overflow: "hidden",
+          clip: "rect(0,0,0,0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleFile(file);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Elements } from "@stripe/react-stripe-js";
 import { Plus } from "lucide-react";
 import AsyncState from "../../../components/organisms/AsyncState";
 import SectionCard from "../../../components/molecules/SectionCard";
@@ -8,6 +9,8 @@ import Select from "../../../components/atoms/Select";
 import Button from "../../../components/atoms/Button";
 import BillingSubNav from "../components/BillingSubNav";
 import PaymentMethodCard from "../components/PaymentMethodCard";
+import AddCardForm from "../components/AddCardForm";
+import { stripePromise } from "../stripe/stripeClient";
 import {
   getPaymentMethods,
   addPaymentMethod,
@@ -45,20 +48,19 @@ export default function PaymentMethodsPage() {
 
   useEffect(load, []);
 
+  // Branche PayPal : formulaire react-hook-form classique, un seul champ.
   async function onSubmit(data) {
-    const payload =
-      type === "card"
-        ? {
-            type: "card",
-            brand: "Visa",
-            last4: data.cardNumber.slice(-4),
-            expiry: data.expiry,
-            holder: data.holder,
-          }
-        : { type: "paypal", email: data.email };
-
-    await addPaymentMethod(payload);
+    await addPaymentMethod({ type: "paypal", email: data.email });
     reset();
+    setShowForm(false);
+    load();
+  }
+
+  // Branche carte : le paiement est déjà tokenisé par Stripe dans
+  // AddCardForm (numéro/expiration/CVC réels), on reçoit ici les infos
+  // publiques (marque, 4 derniers chiffres, expiration) prêtes à stocker.
+  async function handleCardAdded(cardMethod) {
+    await addPaymentMethod(cardMethod);
     setShowForm(false);
     load();
   }
@@ -123,35 +125,12 @@ export default function PaymentMethodsPage() {
             />
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {type === "card" ? (
-              <>
-                <FormField
-                  label="Nom sur la carte"
-                  name="holder"
-                  register={register}
-                  rules={{ required: "Nom requis" }}
-                  error={errors.holder}
-                />
-                <FormField
-                  label="Numéro de carte"
-                  name="cardNumber"
-                  register={register}
-                  rules={{
-                    required: "Numéro requis",
-                    pattern: { value: /^\d{13,19}$/, message: "Numéro invalide" },
-                  }}
-                  error={errors.cardNumber}
-                />
-                <FormField
-                  label="Expiration (MM/AA)"
-                  name="expiry"
-                  register={register}
-                  rules={{ required: "Requis" }}
-                  error={errors.expiry}
-                />
-              </>
-            ) : (
+          {type === "card" ? (
+            <Elements stripe={stripePromise}>
+              <AddCardForm onSuccess={handleCardAdded} onCancel={() => setShowForm(false)} />
+            </Elements>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)}>
               <FormField
                 label="Email PayPal"
                 name="email"
@@ -160,15 +139,15 @@ export default function PaymentMethodsPage() {
                 rules={{ required: "Email requis" }}
                 error={errors.email}
               />
-            )}
 
-            <div style={{ display: "flex", gap: spacing.sm, marginTop: spacing.md }}>
-              <Button type="submit">Enregistrer</Button>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>
-                Annuler
-              </Button>
-            </div>
-          </form>
+              <div style={{ display: "flex", gap: spacing.sm, marginTop: spacing.md }}>
+                <Button type="submit">Enregistrer</Button>
+                <Button variant="secondary" onClick={() => setShowForm(false)}>
+                  Annuler
+                </Button>
+              </div>
+            </form>
+          )}
         </SectionCard>
       )}
     </div>

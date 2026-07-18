@@ -1,4 +1,4 @@
-import { colors, radius, spacing, typography } from "../../styles/tokens";
+import { colors, radius, spacing, shadow, typography } from "../../styles/tokens";
 
 const variants = {
   primary: { backgroundColor: colors.primary, color: "#fff", border: "1px solid transparent" },
@@ -24,6 +24,7 @@ export default function Button({ children, variant = "primary", onClick, type = 
         fontSize: typography.fontSizeBase,
         fontWeight: 700,
         letterSpacing: "-0.01em",
+        boxShadow: disabled ? "none" : shadow.card,
         transition: "background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease",
         width: fullWidth ? "100%" : "auto",
       }}
@@ -32,10 +33,12 @@ export default function Button({ children, variant = "primary", onClick, type = 
         if (variant === "primary") e.currentTarget.style.backgroundColor = colors.primaryHover;
         if (variant === "secondary") e.currentTarget.style.backgroundColor = colors.surface;
         if (variant === "dark") e.currentTarget.style.backgroundColor = colors.inkSoft;
+        e.currentTarget.style.boxShadow = shadow.raised;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.backgroundColor = style.backgroundColor;
         e.currentTarget.style.transform = "scale(1)";
+        e.currentTarget.style.boxShadow = disabled ? "none" : shadow.card;
       }}
       onMouseDown={(e) => !disabled && (e.currentTarget.style.transform = "scale(0.97)")}
       onMouseUp={(e) => !disabled && (e.currentTarget.style.transform = "scale(1)")}

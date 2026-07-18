@@ -22,7 +22,7 @@ export default function PricingCard({
         flexDirection: "column",
         height: "100%",
         border: highlighted ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-        boxShadow: highlighted ? "0 20px 40px rgba(79,70,229,.15)" : shadow.card,
+        boxShadow: highlighted ? shadow.highlight : shadow.card,
       }}
     >
       {isCurrent && (

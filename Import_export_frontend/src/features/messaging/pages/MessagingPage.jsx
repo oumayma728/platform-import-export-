@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Paperclip, Send, ArrowLeft, Lock } from "lucide-react";
 import { useResourceList } from "../../../hooks/useResourceList";
+import { useIsMobile } from "../../../hooks/useIsMobile";
 import { useAuth } from "../../../context/AuthContext";
 import {
   getConversations,
@@ -43,6 +44,7 @@ import { isImageAttachment, getAttachmentUrl } from "../../../utils/attachments"
 export default function MessagingPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { items: conversations, isLoading, error, refetch } = useResourceList(getConversations);
 
   const sorted = [...conversations].sort(
@@ -50,14 +52,21 @@ export default function MessagingPage() {
   );
   const selected = sorted.find((c) => c.id === id) || null;
 
+  // Sur mobile : une seule vue à la fois (liste OU conversation), comme
+  // Messenger — la liste n'est même pas montée dans le DOM une fois une
+  // conversation ouverte, plutôt que simplement masquée en CSS.
+  const showList = !isMobile || !selected;
+  const showThread = !isMobile || !!selected;
+
   return (
     <div className="messaging-shell" data-has-selection={selected ? "true" : "false"}>
-      {/* Liste des conversations - Sidebar gauche */}
+      {/* Liste des conversations - Sidebar gauche (plein écran sur mobile) */}
+      {showList && (
       <div
         style={{
-          width: "300px",
+          width: isMobile ? "100%" : "300px",
           backgroundColor: "white",
-          borderRight: "1px solid #E4E2DC",
+          borderRight: isMobile ? "none" : "1px solid #E4E2DC",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -169,8 +178,10 @@ export default function MessagingPage() {
           </div>
         </AsyncState>
       </div>
+      )}
 
-      {/* Fil de discussion - Zone principale */}
+      {/* Fil de discussion - Zone principale (plein écran sur mobile) */}
+      {showThread && (
       <div
         style={{
           flex: 1,
@@ -197,6 +208,7 @@ export default function MessagingPage() {
           <ConversationThread key={selected.id} conversation={selected} onRefetch={refetch} />
         )}
       </div>
+      )}
     </div>
   );
 }
