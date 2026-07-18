@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from app.config.database import Base
+from sqlalchemy.orm import relationship
 
 class Company(Base):
     __tablename__ = "companies"
@@ -15,3 +16,8 @@ class Company(Base):
     telephone = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    user = relationship("User", back_populates="company")
+    annonces = relationship("Listing", back_populates="company")
+    
+    

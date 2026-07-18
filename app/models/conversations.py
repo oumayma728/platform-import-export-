@@ -14,7 +14,10 @@ class Conversation(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    messages = relationship("Message", backref="conversation")
+    initiateur = relationship("User", foreign_keys=[initiateur_id], backref="conversations_initiees")
+    destinataire = relationship("User", foreign_keys=[destinataire_id], backref="conversations_recues")
+    listing = relationship("Listing", backref="conversations")
+    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
 class Message(Base):
     __tablename__ = "messages"
@@ -26,3 +29,6 @@ class Message(Base):
     document_url = Column(String(500), nullable=True)
     lu = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
+    
+    conversation = relationship("Conversation", back_populates="messages")
+    expediteur = relationship("User", foreign_keys=[expediteur_id], backref="messages_envoyes")

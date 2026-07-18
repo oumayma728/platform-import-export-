@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Float
 from sqlalchemy.sql import func
 from app.config.database import Base
+from sqlalchemy.orm import relationship
 
 class BillingEvent(Base):
     __tablename__ = "billing_events"
@@ -10,6 +11,8 @@ class BillingEvent(Base):
     event_type = Column(String(100), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=func.now())
+    
+    user = relationship("User", backref="billing_events")
 
 class UserQuota(Base):
     __tablename__ = "user_quotas"
@@ -23,3 +26,5 @@ class UserQuota(Base):
     depense_usage = Column(Float, default=0.0)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    user = relationship("User", back_populates="quota")

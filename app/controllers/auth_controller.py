@@ -10,8 +10,9 @@ from app.schemas.user import UserLogin, UserRegister, UserUpdate
 from uuid import uuid4
 from app.models.user import RefreshToken
 
-
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET non défini dans les variables d'environnement")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -56,10 +57,10 @@ def login_user(credentials: UserLogin, db: Session):
         raise HTTPException(status_code=403, detail="Compte suspendu")
     
     # Créer refresh token APRÈS vérification
-    refresh = create_refresh_token()
+    raw_token, hashed_token = create_refresh_token()
     db.add(RefreshToken(
-        user_id=user.id, 
-        token=refresh, 
+        user_id=user.id,
+        token=hashed_token,
         expire_at=datetime.utcnow() + timedelta(days=30)
     ))
     db.commit()
@@ -67,7 +68,7 @@ def login_user(credentials: UserLogin, db: Session):
     return {
         "message": "Connexion réussie",
         "access_token": create_token({"id": user.id, "email": user.email, "role": user.role}),
-        "refresh_token": refresh,
+        "refresh_token": raw_token,
         "token_type": "bearer",
         "user": user_payload(user)
     }
@@ -91,9 +92,15 @@ def require_admin(payload: dict):
         raise HTTPException(status_code=403, detail="Accès administrateur requis")
 
 def refresh_access_token(refresh_token: str, db: Session):
-    token_db = db.query(RefreshToken).filter(
-        RefreshToken.token == refresh_token
-    ).first()
+    tokens = db.query(RefreshToken).filter(
+        RefreshToken.expire_at > datetime.utcnow()
+    ).all()
+    
+    token_db = None
+    for t in tokens:
+        if pwd_context.verify(refresh_token, t.token):
+            token_db = t
+            break
 
     if not token_db:
         raise HTTPException(
@@ -101,27 +108,14 @@ def refresh_access_token(refresh_token: str, db: Session):
             detail="Refresh token invalide"
         )
 
-    if token_db.expire_at < datetime.utcnow():
-        raise HTTPException(
-            status_code=401,
-            detail="Refresh token expiré"
-        )
-
     user = db.query(User).filter(User.id == token_db.user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="Utilisateur associé au refresh token non trouvé"
-        )
-
-    access_token = create_token({"id": user.id, "email": user.email, "role": user.role})
+    new_token = create_token({"id": user.id, "email": user.email, "role": user.role})
     return {
-        "access_token": access_token,
+        "access_token": new_token,
         "token_type": "bearer",
     }
-   
-   
-
 def create_refresh_token():
-    return str(uuid4())
+    raw_token = str(uuid4())
+    hashed=pwd_context.hash(raw_token)
+    return raw_token, hashed
 
