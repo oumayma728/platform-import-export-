@@ -8,53 +8,7 @@ export default function ListingsShowcasePage() {
         margin: "0 auto",
       }}
     >
-      {/* HERO */}
-
-      {/* <div
-        style={{
-          background:
-            "linear-gradient(135deg,#14161C,#312e81)",
-          borderRadius: "32px",
-          padding: "60px",
-          color: "white",
-          textAlign: "center",
-          marginBottom: "40px",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "70px",
-            marginBottom: "24px",
-          }}
-        >
-          📦 🌍 📦
-        </div>
-
-        <h1
-          style={{
-            fontSize: "48px",
-            fontWeight: "800",
-            marginBottom: "20px",
-          }}
-        >
-          Opportunités commerciales mondiales
-        </h1>
-
-        <p
-          style={{
-            maxWidth: "750px",
-            margin: "0 auto",
-            fontSize: "22px",
-            color: "#c7d2fe",
-            lineHeight: 1.8,
-          }}
-        >
-          Publiez vos offres ou vos demandes et
-          découvrez des partenaires stratégiques
-          partout dans le monde.
-        </p>
-      </div> */}
-      {/* APERÇU CATALOGUE */}
+      
 
       <div
         style={{
@@ -166,6 +120,7 @@ export default function ListingsShowcasePage() {
           <button
             style={{
               marginLeft: "20px",
+              marginTop: "20px",
               border: "none",
               borderRadius: "14px",
               padding: "16px 28px",

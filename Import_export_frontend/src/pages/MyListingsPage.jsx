@@ -285,7 +285,7 @@ const filteredItems = items.filter(
           fontWeight: 700,
           cursor: "pointer",
           boxShadow:
-            "0 8px 20px rgba(79,70,229,.25)",
+            "0 8px 20px rgba(184,114,10,0.45)",
         }}
       >
         + Nouvelle annonce
@@ -312,15 +312,6 @@ const filteredItems = items.filter(
     </div>
   )}
 
-  {/* <div
-    style={{
-      background: "#fff",
-      padding: "20px",
-      borderRadius: "20px",
-      border: `1px solid ${colors.border}`,
-      boxShadow: shadow.card,
-    }}
-  > */}
     <FilterBar
       fields={filterFields}
       filters={filters}

@@ -163,7 +163,7 @@ export default function MessagesPage() {
                   color: "#fff",
                   cursor: "pointer",
                   boxShadow:
-                    "0 15px 40px rgba(79,70,229,.25)",
+                    "0 15px 40px rgba(184,114,10,0.45)",
                 }}
               >
                 🚀 Débloquer la messagerie

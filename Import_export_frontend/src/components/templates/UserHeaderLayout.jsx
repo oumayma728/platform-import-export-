@@ -14,8 +14,6 @@ const NAV_ITEMS = [
   { to: "/profile", label: "Profil" },
 ];
 
-// Routes qui doivent occuper toute la largeur/hauteur disponible,
-// sans le padding/max-width applique par defaut au contenu (ex: messagerie).
 const FULL_BLEED_PATHS = ["/messages"];
 
 export default function UserHeaderLayout() {
@@ -118,7 +116,6 @@ export default function UserHeaderLayout() {
             Déconnexion
           </button>
 
-          {/* Bouton burger (mobile uniquement via CSS) */}
           <button
             className="mobile-burger-button"
             onClick={() => setIsMenuOpen((open) => !open)}
@@ -141,7 +138,6 @@ export default function UserHeaderLayout() {
           </button>
         </div>
 
-        {/* Panneau de navigation mobile (déplié par le bouton burger) */}
         {isMenuOpen && (
           <nav
             className="mobile-nav-panel"
