@@ -8,7 +8,7 @@ generator client {
 
 enum UserRole {
   ADMIN
-  MEMBER
+  MEMBRE
 }
 
 enum ValidationStatus {
@@ -69,7 +69,7 @@ model User {
   name         String           @map("name")
   phone        String           @unique
   status       ValidationStatus @default(EN_ATTENTE_VALIDATION)
-  // role         UserRole         @default(MEMBER)
+  role         UserRole         @default(MEMBRE)
 
   companyId String?  @map("company_id")
   company   Company? @relation(fields: [companyId], references: [id])

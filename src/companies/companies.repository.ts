@@ -19,16 +19,21 @@ export class CompaniesRepository {
     return this.prisma.company.findUnique({ where: { id } });
   }
 
-  async create(data: CreateCompanyDto) {
+  async create(data: CreateCompanyDto, tx: Prisma.TransactionClient) {
     const { certificationDocs, ...rest } = data;
-    const normalizedData: Prisma.CompanyCreateInput = { ...rest };
+
+    const normalizedData: Prisma.CompanyCreateInput = {
+      ...rest,
+    };
 
     if (certificationDocs !== undefined) {
       normalizedData.certificationDocs =
         certificationDocs as Prisma.InputJsonValue;
     }
 
-    return this.prisma.company.create({ data: normalizedData });
+    return tx.company.create({
+      data: normalizedData,
+    });
   }
 
   async update(id: string, data: UpdateCompanyDto) {

@@ -4,19 +4,15 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AuthRequest } from '../interfaces/auth-request';
 import { JwtPayload } from '../interfaces/jwt-payload';
 
-/**
- * Global guard that protects every route by default.
- * Routes decorated with @Public() are excluded.
- */
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
   constructor(
@@ -26,14 +22,12 @@ export class AccessTokenGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Skip verification for routes marked @Public()
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) return true;
 
-    // verification
     const request = context.switchToHttp().getRequest<AuthRequest>();
     const token = this.extractToken(request);
     if (!token) throw new UnauthorizedException('Missing access token');
@@ -43,8 +37,15 @@ export class AccessTokenGuard implements CanActivate {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
-      // Attach user info so controllers can use @CurrentUser()
-      request.user = { id: payload.sub, name: payload.name };
+      if (!payload.role) {
+        throw new UnauthorizedException('Invalid access token payload');
+      }
+
+      request.user = {
+        id: payload.sub,
+        name: payload.name,
+        role: payload.role,
+      };
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }

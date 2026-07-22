@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ListingStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -120,6 +120,14 @@ export class ListingsRepository {
     return this.prisma.listing.update({
       where: { id },
       data: normalizedData,
+      include: { company: true },
+    });
+  }
+
+  async updateStatus(id: string, status: ListingStatus) {
+    return this.prisma.listing.update({
+      where: { id },
+      data: { status },
       include: { company: true },
     });
   }

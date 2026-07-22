@@ -32,13 +32,12 @@ export class CreateCompanyDto {
   @IsString()
   country!: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 'Leading exporter of industrial goods.',
     description: 'Company description.',
   })
-  @IsOptional()
   @IsString()
-  description?: string;
+  description!: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com',

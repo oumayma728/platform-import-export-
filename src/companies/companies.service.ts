@@ -1,14 +1,50 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
+import { PrismaService } from '../prisma/prisma.service';
+import { CompaniesRepository } from './companies.repository';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
-import { CompaniesRepository } from './companies.repository';
 
 @Injectable()
 export class CompaniesService {
-  constructor(private readonly companiesRepository: CompaniesRepository) {}
+  constructor(
+    private readonly companiesRepository: CompaniesRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  async create(createCompanyDto: CreateCompanyDto) {
-    return this.companiesRepository.create(createCompanyDto);
+  async create(userId: string, createCompanyDto: CreateCompanyDto) {
+    // Only users with valide Id (exist) and dont have company can create a company
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { id: true, companyId: true },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.companyId) {
+        throw new ConflictException('User already belongs to a company');
+      }
+
+      const company = await this.companiesRepository.create(
+        createCompanyDto,
+        tx,
+      );
+
+      // affect the company id to the user who made the request
+      await tx.user.update({
+        where: { id: userId },
+        data: { companyId: company.id },
+      });
+
+      return company;
+    });
   }
 
   async findAll() {

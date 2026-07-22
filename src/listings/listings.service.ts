@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto } from './dto/create-listing.dto';
-import { UpdateListingDto } from './dto/update-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
+import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
 import { ListingsRepository } from './listings.repository';
 
 @Injectable()
@@ -21,21 +23,7 @@ export class ListingsService {
       throw new NotFoundException('Company not found');
     }
 
-    return this.listingsRepository.create({
-      companyId: createListingDto.companyId,
-      type: createListingDto.type,
-      title: createListingDto.title,
-      category: createListingDto.category,
-      price: createListingDto.price,
-      currency: createListingDto.currency,
-      priceUsd: createListingDto.priceUsd,
-      quantity: createListingDto.quantity,
-      unit: createListingDto.unit,
-      country: createListingDto.country,
-      incoterm: createListingDto.incoterm,
-      deadline: createListingDto.deadline,
-      status: createListingDto.status,
-    });
+    return this.listingsRepository.create(createListingDto);
   }
 
   async findAll() {
@@ -60,9 +48,16 @@ export class ListingsService {
       throw new NotFoundException('Listing not found');
     }
 
-    return this.listingsRepository.update(id, {
-      ...updateListingDto,
-    });
+    return this.listingsRepository.update(id, updateListingDto);
+  }
+
+  async updateStatus(id: string, dto: UpdateListingStatusDto) {
+    const existing = await this.listingsRepository.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    return this.listingsRepository.updateStatus(id, dto.status);
   }
 
   async remove(id: string) {

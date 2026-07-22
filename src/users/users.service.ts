@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma, UserRole } from '@prisma/client';
 import argon2 from 'argon2';
 
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -40,10 +41,8 @@ export class UsersService {
       }
     }
 
-    // extract password and role from updateUserDto, and prepare the updateData object
     const { password, ...rest } = updateUserDto;
-    // const { password, role, ...rest } = updateUserDto;
-    const updateData: Record<string, unknown> = { ...rest };
+    const updateData: Prisma.UserUncheckedUpdateInput = { ...rest };
 
     if (password) {
       updateData.passwordHash = await argon2.hash(password);
@@ -52,22 +51,12 @@ export class UsersService {
     return this.usersRepository.updateUser(id, updateData);
   }
 
-  // async updateRole(id: string, updateUserDto: UpdateUserDto) {
-  //   const user = await this.usersRepository.findById(id);
+  async updateRole(id: string, role: UserRole) {
+    const existing = await this.usersRepository.findById(id);
+    if (!existing) throw new NotFoundException('User not found');
 
-  //   if (!user) {
-  //     throw new NotFoundException('User not found');
-  //   }
-
-  //   const { password, ...rest } = updateUserDto;
-  //   const updateData: Record<string, unknown> = { ...rest };
-
-  //   if (password) {
-  //     updateData.passwordHash = await argon2.hash(password);
-  //   }
-
-  //   return this.usersRepository.updateUser(id, updateData);
-  // }
+    return this.usersRepository.updateUser(id, { role });
+  }
 
   async remove(id: string) {
     await this.findOne(id);

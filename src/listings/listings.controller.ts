@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -31,8 +32,10 @@ import {
 } from '../common/dto/api-error-response.dto';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
+import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { ListingEntity } from './entities/listing.entity';
+import { CompanyWorkersGuard } from './guards/company-workers.guard';
 import { ListingsService } from './listings.service';
 
 @ApiTags('Listings')
@@ -43,6 +46,7 @@ export class ListingsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(CompanyWorkersGuard)
   @ApiOperation({
     summary: 'Create a listing',
     description: 'Creates a new listing for an existing company.',
@@ -88,6 +92,7 @@ export class ListingsController {
   }
 
   @Get('search')
+  @UseGuards(CompanyWorkersGuard)
   @ApiOperation({
     summary: 'Search listings',
     description: 'Searches listings using optional filters.',
@@ -144,9 +149,11 @@ export class ListingsController {
   }
 
   @Patch(':id')
+  @UseGuards(CompanyWorkersGuard)
   @ApiOperation({
     summary: 'Update a listing',
-    description: 'Updates one or more listing fields.',
+    description:
+      'Updates one or more non-status listing fields. The company and status are not changed here.',
   })
   @ApiParam({ name: 'id', type: String, description: 'Listing identifier.' })
   @ApiBody({ type: UpdateListingDto })
@@ -171,7 +178,40 @@ export class ListingsController {
     return this.listingsService.update(id, updateListingDto);
   }
 
+  @Patch(':id/status')
+  @UseGuards(CompanyWorkersGuard)
+  @ApiOperation({
+    summary: 'Update listing status',
+    description: 'Updates only the lifecycle status of a listing.',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'Listing identifier.' })
+  @ApiBody({ type: UpdateListingStatusDto })
+  @ApiOkResponse({
+    description: 'Listing status updated successfully.',
+    type: ListingEntity,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Request body validation failed. Unknown properties are rejected by the global ValidationPipe.',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No listing exists for the provided identifier.',
+    type: NotFoundErrorResponseDto,
+  })
+  updateStatus(
+    @Param('id') id: string,
+    @Body() updateListingStatusDto: UpdateListingStatusDto,
+  ) {
+    return this.listingsService.updateStatus(id, updateListingStatusDto);
+  }
+
   @Delete(':id')
+  @UseGuards(CompanyWorkersGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Delete a listing',

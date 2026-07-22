@@ -13,6 +13,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -22,7 +23,10 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthRequest } from '../auth/interfaces/auth-request';
 import {
+  ConflictErrorResponseDto,
   NotFoundErrorResponseDto,
   UnauthorizedErrorResponseDto,
   ValidationErrorResponseDto,
@@ -42,7 +46,8 @@ export class CompaniesController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a company',
-    description: 'Creates a new company profile.',
+    description:
+      'Creates a new company profile and links it to the current authenticated user. the id (of the user) in the request will be used to update the companyId in the user table.',
   })
   @ApiBody({ type: CreateCompanyDto })
   @ApiCreatedResponse({
@@ -58,8 +63,20 @@ export class CompaniesController {
     description: 'Access token is missing or invalid.',
     type: UnauthorizedErrorResponseDto,
   })
-  create(@Body() createCompanyDto: CreateCompanyDto) {
-    return this.companiesService.create(createCompanyDto);
+  @ApiConflictResponse({
+    description: 'The current user already belongs to a company.',
+    type: ConflictErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'The authenticated user no longer exists.',
+    type: NotFoundErrorResponseDto,
+  })
+  // Only users with valide Id (exist) and dont have company can create a company
+  create(
+    @CurrentUser() user: AuthRequest['user'],
+    @Body() createCompanyDto: CreateCompanyDto,
+  ) {
+    return this.companiesService.create(user.id, createCompanyDto);
   }
 
   @Get()

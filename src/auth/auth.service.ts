@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '@prisma/client';
 import { createHash, randomUUID } from 'crypto';
 import type { StringValue } from 'ms';
 import * as argon2 from 'argon2';
@@ -26,7 +27,6 @@ export class AuthService {
     private readonly refreshTokensService: RefreshTokensService,
   ) {}
 
-  /** Register a new user and return a token pair. */
   async register(registerDto: RegisterDto): Promise<Tokens> {
     const passwordHash = await argon2.hash(registerDto.password);
 
@@ -42,10 +42,9 @@ export class AuthService {
       passwordHash,
     });
 
-    return this.generateTokens(user.id, user.name);
+    return this.generateTokens(user.id, user.name, user.role);
   }
 
-  /** Validate credentials and return a token pair. */
   async login(loginDto: LoginDto): Promise<Tokens> {
     const user = await this.usersRepository.findByEmail(loginDto.email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
@@ -56,17 +55,9 @@ export class AuthService {
     );
     if (!passwordValid) throw new UnauthorizedException('Invalid credentials');
 
-    return this.generateTokens(user.id, user.name);
+    return this.generateTokens(user.id, user.name, user.role);
   }
 
-  /**
-   * Rotate the refresh token:
-   *  1. Verify the JWT signature
-   *  2. Look up the stored record by jti
-   *  3. If already revoked → reuse detected → revoke ALL for user
-   *  4. Verify hash match & expiry
-   *  5. Revoke old token, issue a fresh pair
-   */
   async refreshTokens(rawRefreshToken: string): Promise<Tokens> {
     let payload: JwtPayload;
     try {
@@ -105,10 +96,9 @@ export class AuthService {
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new NotFoundException('User no longer exists');
 
-    return this.generateTokens(user.id, user.name);
+    return this.generateTokens(user.id, user.name, user.role);
   }
 
-  /** Revoke a single refresh token (logout current device). */
   async logout(rawRefreshToken: string): Promise<void> {
     let payload: JwtPayload;
     try {
@@ -124,13 +114,16 @@ export class AuthService {
     }
   }
 
-  /** The max-age value (in ms) for the refresh-token cookie. */
   get refreshCookieMaxAgeMs(): number {
     const ttl = this.configService.get<string>('JWT_REFRESH_TTL', '15d');
     return this.parseTtlToMs(ttl);
   }
 
-  private async generateTokens(userId: string, name: string): Promise<Tokens> {
+  private async generateTokens(
+    userId: string,
+    name: string,
+    role: UserRole,
+  ): Promise<Tokens> {
     const refreshTokenId = randomUUID();
 
     const accessSecret = this.configService.get<string>(
@@ -148,7 +141,7 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, name },
+        { sub: userId, name, role },
         {
           secret: accessSecret,
           expiresIn: accessTtl,

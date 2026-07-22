@@ -1,9 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -12,12 +14,15 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { Roles } from '../auth/decorators/roles.decorator';
 import {
   ConflictErrorResponseDto,
+  ForbiddenErrorResponseDto,
   NotFoundErrorResponseDto,
   UnauthorizedErrorResponseDto,
   ValidationErrorResponseDto,
 } from '../common/dto/api-error-response.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
@@ -71,7 +76,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'Update a user',
     description:
-      'Updates one or more user fields. Only the provided fields are modified.',
+      'Updates one or more non-role user fields. Only the provided fields are modified.',
   })
   @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
   @ApiBody({ type: UpdateUserDto })
@@ -101,39 +106,37 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-
-  // @ApiOperation({
-  //   summary: 'Update a user',
-  //   description:
-  //     'Updates one or more user fields. Only the provided fields are modified.',
-  // })
-  // @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
-  // @ApiBody({ type: UpdateUserDto })
-  // @ApiOkResponse({
-  //   description: 'User updated successfully.',
-  //   type: UserEntity,
-  // })
-  // @ApiBadRequestResponse({
-  //   description:
-  //     'Request body validation failed. Unknown properties are rejected by the global ValidationPipe.',
-  //   type: ValidationErrorResponseDto,
-  // })
-  // @ApiUnauthorizedResponse({
-  //   description: 'Access token is missing or invalid.',
-  //   type: UnauthorizedErrorResponseDto,
-  // })
-  // @ApiNotFoundResponse({
-  //   description: 'No user exists for the provided identifier.',
-  //   type: NotFoundErrorResponseDto,
-  // })
-  // @ApiConflictResponse({
-  //   description: 'A conflicting unique value already exists.',
-  //   type: ConflictErrorResponseDto,
-  // })
-  // @Patch('/:id/role')
-  // updateRole(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  //   return this.usersService.update(id, updateUserDto);
-  // }
+  @ApiOperation({
+    summary: 'Update a user role',
+    description: 'Admin-only endpoint for changing a user role.',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'User identifier.' })
+  @ApiBody({ type: UpdateUserRoleDto })
+  @ApiOkResponse({
+    description: 'User role updated successfully.',
+    type: UserEntity,
+  })
+  @ApiBadRequestResponse({
+    description: 'Request body validation failed.',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Only admins can change roles.',
+    type: ForbiddenErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No user exists for the provided identifier.',
+    type: NotFoundErrorResponseDto,
+  })
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/role')
+  updateRole(@Param('id') id: string, @Body() dto: UpdateUserRoleDto) {
+    return this.usersService.updateRole(id, dto.role);
+  }
 
   @ApiOperation({
     summary: 'Delete a user',

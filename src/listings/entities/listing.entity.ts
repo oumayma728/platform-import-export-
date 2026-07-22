@@ -3,6 +3,10 @@ import { ListingStatus, ListingType } from '@prisma/client';
 
 import { CompanyEntity } from '../../companies/entities/company.entity';
 
+
+/**
+ * This File Exists Only To Add Clarity In Type Of Response In Swagger Docs
+ */
 export class ListingEntity {
   @ApiProperty({ example: '3203f19e-e763-426b-9c24-b14316d84878' })
   id!: string;

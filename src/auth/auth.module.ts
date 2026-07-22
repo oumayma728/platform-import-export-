@@ -1,22 +1,25 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 
-import { AuthService } from './auth.service';
+import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
-import { RefreshTokensService } from './refresh-tokens.service';
+import { AuthService } from './auth.service';
 import { AccessTokenGuard } from './guard/access-token.guard';
 import { RefreshJwtGuard } from './guard/refresh-jwt.guard';
-import { UsersModule } from '../users/users.module';
+import { RolesGuard } from './guard/roles.guard';
+import { RefreshTokensService } from './refresh-tokens.service';
 
 @Module({
-  imports: [
-    ConfigModule,          // gives ConfigService to our providers
-    UsersModule,           // gives us UsersService
-    JwtModule.register({}), // empty — we pass secrets per signAsync call
-  ],
+  imports: [ConfigModule, UsersModule, JwtModule.register({})],
   controllers: [AuthController],
-  providers: [AuthService, RefreshTokensService, AccessTokenGuard, RefreshJwtGuard],
-  exports: [JwtModule, AccessTokenGuard], // other modules may need the guard/jwt
+  providers: [
+    AuthService,
+    RefreshTokensService,
+    AccessTokenGuard,
+    RefreshJwtGuard,
+    RolesGuard,
+  ],
+  exports: [JwtModule, AccessTokenGuard, RolesGuard],
 })
 export class AuthModule {}

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ListingStatus, ListingType } from '@prisma/client';
+import { ListingType } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
@@ -95,13 +95,4 @@ export class CreateListingDto {
   @IsOptional()
   @IsDateString()
   deadline!: string;
-
-  @ApiPropertyOptional({
-    enum: ListingStatus,
-    example: ListingStatus.ACTIVE,
-    description: 'Initial listing status.',
-  })
-  @IsOptional()
-  @IsEnum(ListingStatus)
-  status?: ListingStatus;
 }

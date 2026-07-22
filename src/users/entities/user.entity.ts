@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ValidationStatus } from '@prisma/client';
+import { UserRole, ValidationStatus } from '@prisma/client';
 
+/**
+ * This File Exists Only To Add Clarity In Type Of Response In Swagger Docs
+ */
 export class UserEntity {
   @ApiProperty({ example: '3203f19e-e763-426b-9c24-b14316d84878' })
   id!: string;
@@ -20,6 +23,13 @@ export class UserEntity {
     description: 'Current account validation status.',
   })
   status!: ValidationStatus;
+
+  @ApiProperty({
+    enum: UserRole,
+    example: UserRole.MEMBRE,
+    description: 'Current user role.',
+  })
+  role!: UserRole;
 
   @ApiPropertyOptional({
     example: '3203f19e-e763-426b-9c24-b14316d84879',

@@ -3,13 +3,11 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
-// the selected fields for a user in the response of GET endpoints
 type CreateUserRepositoryInput = {
   email: string;
   passwordHash: string;
   name: string;
   phone: string;
-  roles?: string[];
 };
 
 const userPublicSelect = {
@@ -19,6 +17,7 @@ const userPublicSelect = {
   phone: true,
   companyId: true,
   status: true,
+  role: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.UserSelect;
@@ -51,31 +50,12 @@ export class UsersRepository {
   }
 
   async createUser(data: CreateUserRepositoryInput) {
-    let companyId: string | undefined;
-
-    // TODO: see erlation between user and company
-    // if (data.roles && data.roles.length > 0) {
-    //   const isExporter = data.roles.includes('EXPORTEUR');
-    //   const isImporter = data.roles.includes('IMPORTEUR');
-
-    //   const company = await this.prisma.company.create({
-    //     data: {
-    //       name: `${data.name}'s Company`,
-    //       isExporter,
-    //       isImporter,
-    //       country: 'Unknown',
-    //     },
-    //   });
-    //   companyId = company.id;
-    // }
-
     return this.prisma.user.create({
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
         name: data.name,
         phone: data.phone,
-        companyId,
       },
       select: userPublicSelect,
     });

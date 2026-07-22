@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+/**
+ * This File Exists Only To Add Clarity In Type Of Response In Swagger Docs
+ */
 export class CompanyEntity {
   @ApiProperty({ example: '3203f19e-e763-426b-9c24-b14316d84878' })
   id!: string;
@@ -16,11 +19,8 @@ export class CompanyEntity {
   @ApiProperty({ example: 'Tunisia' })
   country!: string;
 
-  @ApiPropertyOptional({
-    example: 'Leading exporter of industrial goods.',
-    nullable: true,
-  })
-  description!: string | null;
+  @ApiProperty({ example: 'Leading exporter of industrial goods.' })
+  description!: string;
 
   @ApiPropertyOptional({
     example: 'https://example.com',

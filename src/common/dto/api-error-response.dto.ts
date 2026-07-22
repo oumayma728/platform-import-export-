@@ -34,6 +34,17 @@ export class UnauthorizedErrorResponseDto {
   statusCode!: number;
 }
 
+export class ForbiddenErrorResponseDto {
+  @ApiProperty({ example: 'Only admins can perform this action' })
+  message!: string;
+
+  @ApiProperty({ example: 'Forbidden' })
+  error!: string;
+
+  @ApiProperty({ example: 403 })
+  statusCode!: number;
+}
+
 export class NotFoundErrorResponseDto {
   @ApiProperty({ example: 'Resource not found' })
   message!: string;

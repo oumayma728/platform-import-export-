@@ -65,3 +65,9 @@ async function bootstrap() {
   });
 }
 bootstrap();
+
+
+/**
+ * TODO
+ * - add role that can only changed by admin and not by the user himself
+ */
