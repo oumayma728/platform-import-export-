@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
@@ -12,6 +12,8 @@ export default function LoginPage() {
 
   const [submitError, setSubmitError] = useState(null);
   const [remember, setRemember] = useState(true);
+  const [searchParams] = useSearchParams();
+  const suspendedMessage = searchParams.get("reason") === "suspended";
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -167,6 +169,22 @@ export default function LoginPage() {
               </p>
             )}
           </div>
+
+          {/* Compte suspendu */}
+          {suspendedMessage && (
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "12px",
+                borderRadius: "10px",
+                background: "#fef2f2",
+                color: "#C22D2D",
+                border: "1px solid #fecaca",
+              }}
+            >
+              Votre compte a été suspendu. Veuillez contacter l'administration.
+            </div>
+          )}
 
           {/* Erreur de connexion */}
           {submitError && (

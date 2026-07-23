@@ -8,7 +8,7 @@ import Reveal from "../components/atoms/Reveal";
 import Input from "../components/atoms/Input";
 import Select from "../components/atoms/Select";
 import Button from "../components/atoms/Button";
-import { uploadCompanyLogo } from "../api/auth";
+import { uploadCompanyLogo, updateProfile } from "../api/auth";
 import { colors, spacing, typography } from "../styles/tokens";
 import { toRoleArray, ROLE_LABEL } from "../utils/roles";
 
@@ -55,14 +55,15 @@ function FieldLabel({ children }) {
 }
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshUser } = useAuth();
 
   const [accountInfo, setAccountInfo] = useState({
     email: user?.email || "",
-    phone: user?.phone || "",
+    phone: user?.telephone || user?.phone || "",
     role: toRoleArray(user?.role).length > 0 ? toRoleArray(user?.role) : ["exporter"],
   });
   const [accountSaved, setAccountSaved] = useState(false);
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
 
   const [companyInfo, setCompanyInfo] = useState({
     companyName: user?.profile?.companyName || "Olive Tunisia",
@@ -74,6 +75,9 @@ export default function ProfilePage() {
   const [logoUrl, setLogoUrl] = useState(user?.profile?.logoUrl || null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState("");
+
+  const [companySaved, setCompanySaved] = useState(false);
+  const [isSavingCompany, setIsSavingCompany] = useState(false);
 
   async function handleLogoSelected(file) {
     setLogoUploadError("");
@@ -251,21 +255,34 @@ export default function ProfilePage() {
 
               <div style={{ marginTop: spacing.sm, display: "flex", alignItems: "center", gap: spacing.sm }}>
                 <Button
-                  onClick={() => {
-                    updateUser({
-                      email: accountInfo.email,
-                      phone: accountInfo.phone,
-                      role: accountInfo.role,
-                    });
-                    setAccountSaved(true);
-                    setTimeout(() => setAccountSaved(false), 2500);
+                  disabled={isSavingAccount}
+                  onClick={async () => {
+                    setIsSavingAccount(true);
+                    try {
+                      const roleValue = accountInfo.role.length === 2
+                        ? "BOTH"
+                        : accountInfo.role[0] === "exporter"
+                        ? "EXPORTATEUR"
+                        : "IMPORTATEUR";
+                      await updateProfile({
+                        phone: accountInfo.phone,
+                        role: roleValue,
+                      });
+                      await refreshUser();
+                      setAccountSaved(true);
+                      setTimeout(() => setAccountSaved(false), 2500);
+                    } catch (err) {
+                      console.error("Failed to save account:", err);
+                    } finally {
+                      setIsSavingAccount(false);
+                    }
                   }}
                 >
-                  Enregistrer
+                  {isSavingAccount ? "..." : "Enregistrer"}
                 </Button>
                 {accountSaved && (
                   <span style={{ color: colors.success, fontSize: 13, fontWeight: 600 }}>
-                    ✅ Modifications enregistrées
+                    Modifications enregistrées
                   </span>
                 )}
               </div>
@@ -307,8 +324,44 @@ export default function ProfilePage() {
                 onChange={(e) => setCompanyInfo({ ...companyInfo, certifications: e.target.value })}
               />
 
-              <div style={{ marginTop: spacing.sm }}>
-                <Button>Enregistrer</Button>
+              <div style={{ marginTop: spacing.sm, display: "flex", alignItems: "center", gap: spacing.sm }}>
+                <Button
+                  disabled={isSavingCompany}
+                  onClick={async () => {
+                    setIsSavingCompany(true);
+                    try {
+                      const certs = companyInfo.certifications
+                        ? companyInfo.certifications.split(",").map((c) => c.trim()).filter(Boolean)
+                        : [];
+                      const roleValue = accountInfo.role.length === 2
+                        ? "BOTH"
+                        : accountInfo.role[0] === "exporter"
+                        ? "EXPORTATEUR"
+                        : "IMPORTATEUR";
+                      await updateProfile({
+                        companyName: companyInfo.companyName,
+                        country: companyInfo.country,
+                        sector: companyInfo.sector,
+                        certifications: certs,
+                        role: roleValue,
+                      });
+                      await refreshUser();
+                      setCompanySaved(true);
+                      setTimeout(() => setCompanySaved(false), 2500);
+                    } catch (err) {
+                      console.error("Failed to save company:", err);
+                    } finally {
+                      setIsSavingCompany(false);
+                    }
+                  }}
+                >
+                  {isSavingCompany ? "..." : "Enregistrer"}
+                </Button>
+                {companySaved && (
+                  <span style={{ color: colors.success, fontSize: 13, fontWeight: 600 }}>
+                    Modifications enregistrées
+                  </span>
+                )}
               </div>
             </SectionCard>
           </Reveal>

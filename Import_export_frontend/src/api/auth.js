@@ -64,6 +64,15 @@ export async function completeProfile(payload) {
   return data;
 }
 
+export async function updateProfile(payload) {
+  if (USE_MOCKS) {
+    await delay(400);
+    return { ...mockUser, ...payload };
+  }
+  const { data } = await apiClient.put("/auth/profile", payload);
+  return data;
+}
+
 /**
  * Demande de réinitialisation de mot de passe. Ne révèle jamais si
  * l'adresse existe réellement en base (message identique dans les deux

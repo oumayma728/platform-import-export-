@@ -14,12 +14,12 @@ const NAV_ITEMS = [
   { to: "/profile", label: "Profil" },
 ];
 
-// Routes qui doivent occuper toute la largeur/hauteur disponible,
-// sans le padding/max-width applique par defaut au contenu (ex: messagerie).
+const ADMIN_NAV_ITEM = { to: "/admin", label: "Admin" };
+
 const FULL_BLEED_PATHS = ["/messages"];
 
 export default function UserHeaderLayout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
   const isFullBleed = FULL_BLEED_PATHS.some((path) => location.pathname.startsWith(path));
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function UserHeaderLayout() {
 
           {/* Navigation desktop (masquée sur mobile via CSS, voir index.css) */}
           <nav className="desktop-nav" style={{ display: "flex", gap: spacing.sm, alignItems: "center", flexWrap: "wrap" }}>
-            {NAV_ITEMS.map((item) => (
+            {[...NAV_ITEMS, ...(user?.role === "admin" ? [ADMIN_NAV_ITEM] : [])].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -118,7 +118,6 @@ export default function UserHeaderLayout() {
             Déconnexion
           </button>
 
-          {/* Bouton burger (mobile uniquement via CSS) */}
           <button
             className="mobile-burger-button"
             onClick={() => setIsMenuOpen((open) => !open)}
@@ -141,7 +140,6 @@ export default function UserHeaderLayout() {
           </button>
         </div>
 
-        {/* Panneau de navigation mobile (déplié par le bouton burger) */}
         {isMenuOpen && (
           <nav
             className="mobile-nav-panel"
@@ -155,7 +153,7 @@ export default function UserHeaderLayout() {
               borderTop: `1px solid ${colors.border}`,
             }}
           >
-            {NAV_ITEMS.map((item) => (
+            {[...NAV_ITEMS, ...(user?.role === "admin" ? [ADMIN_NAV_ITEM] : [])].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

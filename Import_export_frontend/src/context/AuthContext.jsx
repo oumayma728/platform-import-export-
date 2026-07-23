@@ -64,8 +64,18 @@ export function AuthProvider({ children }) {
     setUser((prev) => ({ ...prev, ...patch }));
   }
 
+  async function refreshUser() {
+    try {
+      const fresh = await getCurrentUser();
+      setUser(fresh);
+      return fresh;
+    } catch {
+      return null;
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

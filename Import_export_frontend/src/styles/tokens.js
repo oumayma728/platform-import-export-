@@ -1,8 +1,3 @@
-// Identité visuelle "enterprise moderne" inspirée du monde du commerce
-// international : fond papier chaud, accent ocre (tampon douanier),
-// sections sombres marine, typographie affirmée. Grilles aérées,
-// rayons resserrés, ombres discrètes — sobriété assumée plutôt que
-// décor SaaS générique.
 
 export const colors = {
   background: "#FFFFFF",
@@ -63,8 +58,5 @@ export const typography = {
 export const shadow = {
   card: "0 1px 2px rgba(14, 21, 38, 0.04), 0 2px 10px rgba(14, 21, 38, 0.04)",
   raised: "0 6px 20px rgba(14, 21, 38, 0.10)",
-  // Ombre "accentuée" pour les éléments mis en avant (offre recommandée,
-  // carte sélectionnée...) — même teinte ocre que le reste de l'UI, pas de
-  // bleu/violet générique de template SaaS.
   highlight: "0 16px 32px rgba(184, 114, 10, 0.16)",
 };
