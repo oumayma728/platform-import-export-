@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.user import UserLogin, UserRegister, UserUpdate
 from uuid import uuid4
 from app.models.user import RefreshToken
+import hashlib
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
@@ -91,31 +92,26 @@ def require_admin(payload: dict):
     if payload.get("role") != "ADMIN":
         raise HTTPException(status_code=403, detail="Accès administrateur requis")
 
+
+
 def refresh_access_token(refresh_token: str, db: Session):
-    tokens = db.query(RefreshToken).filter(
+    hashed = hash_refresh_token(refresh_token)
+    token_db = db.query(RefreshToken).filter(
+        RefreshToken.token == hashed,
         RefreshToken.expire_at > datetime.utcnow()
-    ).all()
-    
-    token_db = None
-    for t in tokens:
-        if pwd_context.verify(refresh_token, t.token):
-            token_db = t
-            break
-
+    ).first()
     if not token_db:
-        raise HTTPException(
-            status_code=401,
-            detail="Refresh token invalide"
-        )
-
+        raise HTTPException(status_code=401, detail="Refresh token invalide")
     user = db.query(User).filter(User.id == token_db.user_id).first()
-    new_token = create_token({"id": user.id, "email": user.email, "role": user.role})
     return {
-        "access_token": new_token,
+        "access_token": create_token({"id": user.id, "email": user.email, "role": user.role}),
         "token_type": "bearer",
     }
+def hash_refresh_token(token: str) -> str:
+    """Hash the refresh token using SHA-256."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
 def create_refresh_token():
     raw_token = str(uuid4())
-    hashed=pwd_context.hash(raw_token)
-    return raw_token, hashed
+    return raw_token, hash_refresh_token(raw_token)
 

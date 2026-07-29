@@ -13,6 +13,7 @@ class NotificationLog(Base):
     sujet = Column(String(255), nullable=True)
     contenu = Column(Text, nullable=True)
     statut = Column(String(30), default="EN_ATTENTE")
+    lu= Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     
     

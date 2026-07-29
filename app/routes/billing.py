@@ -1,13 +1,17 @@
 import os
+import stripe
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.middleware.auth import verify_token
 from app.models.billing import BillingEvent, UserQuota
+from app.models.user import User
 from app.schemas.billing import PaymentIntentCreate, SubscriptionCreate
 
 router = APIRouter(prefix="/billing", tags=["Facturation"])
 SUBSCRIPTION_PRICE = float(os.getenv("SUBSCRIPTION_PRICE", "29"))
+logger = logging.getLogger("import_export_api")
 
 def quota_for(user_id: int, db: Session):
     quota = db.query(UserQuota).filter(UserQuota.user_id == user_id).first()
@@ -18,7 +22,14 @@ def quota_for(user_id: int, db: Session):
         db.refresh(quota)
     return quota
 
-@router.get("/status", summary="Consulter son quota et sa recommandation", description="Afficher l'état du quota de chat utilisateur et la recommandation d'abonnement.", responses={200: {"description": "Quota retourné"}, 401: {"description": "Non authentifié"}})
+def _require_stripe():
+    secret = os.getenv("STRIPE_SECRET_KEY")
+    if not secret:
+        raise HTTPException(status_code=503, detail="Stripe non configuré")
+    stripe.api_key = secret
+    return stripe
+
+@router.get("/status", summary="Consulter son quota et sa recommandation")
 def billing_status(user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     quota = quota_for(user["id"], db)
     return {
@@ -26,40 +37,60 @@ def billing_status(user: dict = Depends(verify_token), db: Session = Depends(get
         "chats_gratuits": quota.chats_gratuits,
         "statut": quota.statut,
         "depense_usage": quota.depense_usage,
-        "recommendation_abonnement": quota.depense_usage > SUBSCRIPTION_PRICE,
+        "recommendation_abonnement": (quota.depense_usage or 0) > SUBSCRIPTION_PRICE,
     }
 
-@router.post("/create-payment-intent", summary="Créer un paiement à l'usage", description="Créer un intent de paiement Stripe pour un usage ponctuel.", responses={200: {"description": "Intent de paiement créé"}, 401: {"description": "Non authentifié"}, 503: {"description": "Stripe non configuré"}})
+@router.post("/create-payment-intent", summary="Créer un paiement à l'usage")
 def payment_intent(data: PaymentIntentCreate, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
-    if not os.getenv("STRIPE_SECRET_KEY"):
-        raise HTTPException(status_code=503, detail="Stripe n'est pas configuré")
-    import stripe
-    stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
-    intent = stripe.PaymentIntent.create(amount=data.amount, currency=data.currency, metadata={"user_id": user["id"]})
-    return {"client_secret": intent.client_secret, "payment_intent_id": intent.id}
+    stripe_module = _require_stripe()
+    try:    
+        intent = stripe_module.PaymentIntent.create(
+            amount=data.amount,
+            currency=data.currency,
+            metadata={"user_id": str(user["id"]), "type": "usage"},
+        )
+        return {"client_secret": intent.client_secret, "payment_intent_id": intent.id}
+    except Exception as e:
+        logger.error(f"Erreur Stripe: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la création du paiement")
 
-@router.post("/subscribe", summary="Créer un abonnement Stripe", description="Initialiser un abonnement Stripe à partir d'un price_id.", responses={200: {"description": "Abonnement initialisé"}, 401: {"description": "Non authentifié"}, 503: {"description": "Stripe non configuré"}})
-def subscribe(data: SubscriptionCreate, user: dict = Depends(verify_token)):
-    if not os.getenv("STRIPE_SECRET_KEY"):
-        raise HTTPException(status_code=503, detail="Stripe n'est pas configuré")
-    return {"message": "Créer le Checkout Session avec le price_id fourni côté Stripe", "price_id": data.price_id, "user_id": user["id"]}
+@router.post("/subscribe", summary="Créer un abonnement Stripe")
+def subscribe(data: SubscriptionCreate, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
+    stripe_module = _require_stripe()
+    db_user = db.get(User, user["id"])
+    quota = quota_for(user["id"], db)
+    
+    customer_id = getattr(quota, "stripe_customer_id", None)
+    if not customer_id:
+        customer = stripe_module.Customer.create(
+            email=db_user.email if db_user else None,
+            metadata={"user_id": str(user["id"])},
+        )
+        customer_id = customer.id
+        quota.stripe_customer_id = customer_id
+        db.commit()
 
-@router.post("/webhook", include_in_schema=False)
-async def webhook(request: Request, db: Session = Depends(get_db)):
-    payload = await request.json()
-    event_type = payload.get("type", "unknown")
-    event_id = payload.get("id")
-    if event_id and db.query(BillingEvent).filter(BillingEvent.stripe_event_id == event_id).first():
-        return {"received": True}
-    obj = payload.get("data", {}).get("object", {})
-    metadata = obj.get("metadata", {})
-    user_id = metadata.get("user_id")
-    db.add(BillingEvent(stripe_event_id=event_id, event_type=event_type, user_id=int(user_id) if user_id else None))
-    if user_id:
-        quota = quota_for(int(user_id), db)
-        if event_type in ("payment_intent.succeeded", "customer.subscription.updated"):
-            quota.statut = "PAIEMENT_USAGE" if event_type.startswith("payment") else "ABONNE"
-        elif event_type == "customer.subscription.deleted":
-            quota.statut = "ABONNEMENT_EXPIRE"
-    db.commit()
-    return {"received": True}
+    # --- DÉBOGAGE : Afficher ce qui est envoyé ---
+    # On s'assure que le price_id est une chaîne propre sans espaces
+    actual_price_id = str(data.price_id).strip()
+   
+
+    try:
+        session = stripe_module.checkout.Session.create(
+            mode="subscription",
+            customer=customer_id,
+            line_items=[{
+                "price": actual_price_id, 
+                "quantity": 1
+            }],
+            # Conversion explicite des URLs Pydantic en chaînes de caractères
+            success_url=str(data.success_url),
+            cancel_url=str(data.cancel_url),
+            metadata={"user_id": str(user["id"])},
+            subscription_data={"metadata": {"user_id": str(user["id"])}},
+        )
+        return {"checkout_url": session.url, "session_id": session.id}
+    except Exception as e:
+        logger.error(f"Erreur Stripe (subscribe) : {str(e)}")
+        # Renvoi de l'erreur détaillée pour faciliter le diagnostic
+        raise HTTPException(status_code=400, detail=f"Erreur Stripe : {str(e)}")

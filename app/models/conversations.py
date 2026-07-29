@@ -2,6 +2,16 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, T
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.config.database import Base
+from sqlalchemy import Enum
+
+CONVERSATION_STATUSES = (
+    "SUGGEREE",
+    "CONSULTEE",
+    "EN_CONTACT",
+    "EN_NEGOCIATION",
+    "CONCLUE",
+    "REJETEE",
+)
 
 class Conversation(Base):
     __tablename__ = "conversations"
@@ -10,7 +20,7 @@ class Conversation(Base):
     initiateur_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     destinataire_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     listing_id = Column(Integer, ForeignKey("annonces.id"), nullable=True)
-    statut = Column(String(20), default="SUGGEREE")
+    statut = Column(Enum(*CONVERSATION_STATUSES, name="conversation_status"), nullable=False, default="SUGGEREE")
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -32,3 +42,23 @@ class Message(Base):
     
     conversation = relationship("Conversation", back_populates="messages")
     expediteur = relationship("User", foreign_keys=[expediteur_id], backref="messages_envoyes")
+    documents = relationship("DocumentMessage", back_populates="message", cascade="all, delete-orphan")
+    
+ 
+class DocumentMessage(Base):
+    __tablename__ = "document_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
+    expediteur_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    nom_fichier = Column(String(255), nullable=False)
+    url = Column(String(500), nullable=False)
+    type_fichier = Column(String(50), nullable=True)
+    taille = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+    # Relations
+    message = relationship("Message", back_populates="documents")
+    expediteur = relationship("User", foreign_keys=[expediteur_id])
+    conversation = relationship("Conversation", backref="documents")

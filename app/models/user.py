@@ -26,7 +26,7 @@ class User(Base):
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     company = relationship("Company", back_populates="user", uselist=False)
     annonces = relationship("Listing", back_populates="owner")
-    role_obj = relationship("Role", back_populates="user")
+    role_obj = relationship("Role", back_populates="users")
     quota = relationship("UserQuota", back_populates="user", uselist=False, cascade="all, delete-orphan")
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"

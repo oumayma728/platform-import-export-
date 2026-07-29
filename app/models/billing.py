@@ -24,6 +24,8 @@ class UserQuota(Base):
     is_premium = Column(Boolean, default=False)
     statut = Column(String(30), default="GRATUIT")
     depense_usage = Column(Float, default=0.0)
+    stripe_customer_id = Column(String(255), nullable=True, unique=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     

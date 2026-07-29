@@ -1,11 +1,28 @@
 from fastapi import APIRouter, Depends, File, UploadFile, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from app.config.database import SessionLocal, get_db
-from app.controllers.conversation_controller import add_message, create_conversation, get_conversation, list_conversations
+from app.controllers.conversation_controller import add_message, create_conversation, get_conversation, list_conversations, get_messages, upload_document, update_conversation_status
+import os
+import shutil
 from app.middleware.auth import verify_token
 from app.schemas.conversation import ConversationCreate, MessageCreate, StatusUpdate
 
+from pydantic import BaseModel
+from typing import Optional
+JWT_SECRET= os.getenv("JWT_SECRET")
+
+if not JWT_SECRET:
+    raise Exception("JWT_SECRET non défini")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 router = APIRouter(prefix="/conversations", tags=["Messagerie"])
+
+class DocumentUpload(BaseModel):
+    nom_fichier: str
+    url: str
+    type_fichier: Optional[str] = None
+    taille: Optional[int] = None
+
+
 
 class ConnectionManager:
     def __init__(self): self.connections: dict[int, list[WebSocket]] = {}
@@ -27,19 +44,37 @@ def list_all(user: dict = Depends(verify_token), db: Session = Depends(get_db)):
 
 @router.get("/{conversation_id}/messages", summary="Lire les messages", description="Récupérer les messages d'une conversation donnée.", responses={200: {"description": "Messages retournés"}, 401: {"description": "Non authentifié"}, 404: {"description": "Conversation introuvable"}})
 def messages(conversation_id: int, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
-    conversation = get_conversation(conversation_id, user["id"], db)
-    return [{"id": m.id, "expediteur_id": m.expediteur_id, "contenu": m.contenu, "document_url": m.document_url, "created_at": m.created_at} for m in conversation.messages]
-
+    return get_messages(conversation_id, user["id"], db)
 @router.post("/{conversation_id}/messages", status_code=201, summary="Envoyer un message", description="Publier un message texte dans une conversation.", responses={201: {"description": "Message envoyé"}, 401: {"description": "Non authentifié"}, 404: {"description": "Conversation introuvable"}})
 async def send(conversation_id: int, data: MessageCreate, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     result = add_message(conversation_id, user["id"], data.contenu, None, db)
     await manager.broadcast(conversation_id, result)
     return result
 
-@router.post("/{conversation_id}/documents", status_code=201, summary="Associer un document à un message", description="Ajouter une métadonnée de document à un message de conversation.", responses={201: {"description": "Document associé"}, 401: {"description": "Non authentifié"}, 404: {"description": "Conversation introuvable"}})
+@router.post("/{conversation_id}/documents", status_code=201, summary="Associer un document à un message", description="Ajouter un vrai fichier à une conversation.", responses={201: {"description": "Document associé"}, 401: {"description": "Non authentifié"}, 404: {"description": "Conversation introuvable"}})
 async def document(conversation_id: int, file: UploadFile = File(...), user: dict = Depends(verify_token), db: Session = Depends(get_db)):
-    result = add_message(conversation_id, user["id"], None, f"upload://{file.filename}", db)
+
+    UPLOAD_DIR = "uploads"
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    filepath = os.path.join(UPLOAD_DIR, file.filename)
+
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    result = upload_document(
+        conversation_id,
+        user["id"],
+        file.filename,
+        filepath,
+        file.content_type,
+        os.path.getsize(filepath),
+        db
+    )
+
     await manager.broadcast(conversation_id, result)
+
     return result
 
 @router.put("/{conversation_id}/status", summary="Changer le statut d'une mise en relation", description="Mettre à jour le statut d'une conversation.", responses={200: {"description": "Statut mis à jour"}, 401: {"description": "Non authentifié"}, 404: {"description": "Conversation introuvable"}})
@@ -53,7 +88,7 @@ async def websocket(conversation_id: int, websocket: WebSocket):
     from jose import jwt, JWTError
     import os
     try:
-        payload = jwt.decode(websocket.query_params.get("token", ""), os.getenv("JWT_SECRET", "change-me-in-production"), algorithms=[os.getenv("JWT_ALGORITHM", "HS256")])
+        payload = jwt.decode(websocket.query_params.get("token", ""), JWT_SECRET, algorithms=[JWT_ALGORITHM])
         db = SessionLocal(); get_conversation(conversation_id, payload["id"], db); db.close()
     except Exception:
         await websocket.close(code=1008); return

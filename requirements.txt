@@ -8,4 +8,9 @@ python-jose[cryptography]
 bcrypt
 pytest
 email-validator
-stripe
+python-multipart
+stripe==15.3.0
+sendgrid
+twilio
+alembic
+requests
