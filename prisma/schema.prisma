@@ -192,9 +192,10 @@ model Conversation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([listingId, exporterCompanyId, importerCompanyId])     // prevent duplication for these three columns combined
   @@index([listingId])
-  @@index([exporterCompanyId])
-  @@index([importerCompanyId])
+  @@index([exporterCompanyId, updatedAt])
+  @@index([importerCompanyId, updatedAt])
   @@map("conversations")
 }
 
@@ -212,7 +213,7 @@ model Message {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
   @@index([senderId])
   @@map("messages")
 }

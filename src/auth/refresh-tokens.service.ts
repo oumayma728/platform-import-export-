@@ -1,41 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+
+import { RefreshTokensRepository } from './refresh-tokens.repository';
 
 @Injectable()
 export class RefreshTokensService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly refreshTokensRepository: RefreshTokensRepository) {}
 
   /** Persist a new refresh-token hash. */
   async create(id: string, userId: string, tokenHash: string, expiresAt: Date) {
-    return this.prisma.refreshToken.create({
-      data: {
-        id,
-        userId,
-        tokenHash,
-        expiresAt,
-      },
-    });
+    return this.refreshTokensRepository.create(id, userId, tokenHash, expiresAt);
   }
 
   /** Look up a stored token by its jti (the record id). */
   async findById(id: string) {
-    return this.prisma.refreshToken.findUnique({
-      where: {
-        id,
-      },
-    });
+    return this.refreshTokensRepository.findById(id);
   }
 
   /** Mark a single token as revoked (used during normal rotation). */
   async revoke(id: string): Promise<void> {
-    await this.prisma.refreshToken.update({
-      where: {
-        id,
-      },
-      data: {
-        isRevoked: true,
-      },
-    });
+    await this.refreshTokensRepository.revoke(id);
   }
 
   /**
@@ -43,14 +26,7 @@ export class RefreshTokensService {
    * Called when reuse is detected — assumes the token family is compromised.
    */
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: {
-        userId,
-      },
-      data: {
-        isRevoked: true,
-      },
-    });
+    await this.refreshTokensRepository.revokeAllForUser(userId);
   }
 }
 

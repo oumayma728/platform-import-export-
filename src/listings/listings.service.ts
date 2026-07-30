@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { PrismaService } from '../prisma/prisma.service';
+import { CompaniesRepository } from '../companies/companies.repository';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
@@ -11,13 +11,13 @@ import { ListingsRepository } from './listings.repository';
 export class ListingsService {
   constructor(
     private readonly listingsRepository: ListingsRepository,
-    private readonly prisma: PrismaService,
+    private readonly companiesRepository: CompaniesRepository,
   ) {}
 
   async create(createListingDto: CreateListingDto) {
-    const company = await this.prisma.company.findUnique({
-      where: { id: createListingDto.companyId },
-    });
+    const company = await this.companiesRepository.findOne(
+      createListingDto.companyId,
+    );
 
     if (!company) {
       throw new NotFoundException('Company not found');

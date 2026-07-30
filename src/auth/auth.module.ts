@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { AccessTokenGuard } from './guard/access-token.guard';
 import { RefreshJwtGuard } from './guard/refresh-jwt.guard';
 import { RolesGuard } from './guard/roles.guard';
+import { RefreshTokensRepository } from './refresh-tokens.repository';
 import { RefreshTokensService } from './refresh-tokens.service';
 
 @Module({
@@ -16,6 +17,7 @@ import { RefreshTokensService } from './refresh-tokens.service';
   providers: [
     AuthService,
     RefreshTokensService,
+    RefreshTokensRepository,
     AccessTokenGuard,
     RefreshJwtGuard,
     RolesGuard,

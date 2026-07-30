@@ -11,6 +11,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { ListingsModule } from './listings/listings.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     CompaniesModule,
     ListingsModule,
+    MessagingModule,
   ],
   controllers: [AppController],
   providers: [

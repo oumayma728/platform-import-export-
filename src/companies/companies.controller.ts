@@ -172,4 +172,8 @@ export class CompaniesController {
   remove(@Param('id') id: string) {
     return this.companiesService.remove(id);
   }
+
+
+  // TODO
+  // POST  /companies/{id}/logo
 }

@@ -101,4 +101,13 @@ export class UsersRepository {
 
     return !!user;
   }
+
+  async getUserCompanyId(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { companyId: true },
+    });
+
+    return user?.companyId ?? null;
+  }
 }
