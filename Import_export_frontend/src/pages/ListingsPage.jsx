@@ -9,6 +9,7 @@ import ListingCard from "../components/organisms/ListingCard";
 import AsyncState from "../components/organisms/AsyncState";
 import Pagination from "../components/molecules/Pagination";
 import { colors } from "../styles/tokens";
+import { toRoleArray } from "../utils/roles";
 
 const COUNTRY_FIELD = {
   name: "country",
@@ -91,7 +92,13 @@ useState([]);
 
   // Un importateur cherche des OFFRES (ce que proposent les exportateurs).
   // Un exportateur cherche des DEMANDES (ce que veulent les importateurs).
-  const forcedType = user?.role === "importer" ? "offer" : user?.role === "exporter" ? "demand" : undefined;
+  // Le rôle est stocké sous forme de tableau (un utilisateur peut être les deux
+  // à la fois), donc on ne peut pas faire une comparaison stricte avec une chaîne.
+  // Si l'utilisateur a les deux rôles (ou aucun), on ne force rien : il voit tout.
+  const userRoles = toRoleArray(user?.role);
+  const isExporterOnly = userRoles.includes("exporter") && !userRoles.includes("importer");
+  const isImporterOnly = userRoles.includes("importer") && !userRoles.includes("exporter");
+  const forcedType = isExporterOnly ? "demand" : isImporterOnly ? "offer" : undefined;
 
   useEffect(() => {
   getFavorites().then((favorites) => {
