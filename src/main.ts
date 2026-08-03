@@ -33,13 +33,15 @@ async function findAvailablePort(startPort: number, maxTries = 20): Promise<numb
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.setGlobalPrefix('api/v1');
+
   // Swagger API docs
   const config = new DocumentBuilder()
     .setTitle('Users, Auth and List API')
     .setDescription('Auth and Client CRUD API documentation')
     .setVersion('1.0')
     .addBearerAuth()
-    .addServer("http://localhost:3000")
+    .addServer('http://localhost:3000/api/v1')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

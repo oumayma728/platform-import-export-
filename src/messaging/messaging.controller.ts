@@ -33,13 +33,13 @@ export class MessagingController {
 
   @Post('conversations')
   @ApiOperation({
-    summary: 'Create or retrieve a conversation for a listing',
+    summary: 'Create or retrieve an AI match suggestion for a listing',
     description:
-      'Initiates a conversation for the target listing between the seller/buyer companies. Returns existing conversation if already created.',
+      'Creates an empty suggested conversation for the matching companies. Returns an existing suggestion when present.',
   })
   @ApiResponse({
     status: 201,
-    description: 'Conversation successfully initiated.',
+    description: 'Suggested conversation successfully created.',
   })
   @ApiResponse({
     status: 400,

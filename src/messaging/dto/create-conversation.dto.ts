@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsUUID } from 'class-validator';
 
 export class CreateConversationDto {
   @ApiProperty({
@@ -10,13 +9,4 @@ export class CreateConversationDto {
   @IsUUID()
   @IsNotEmpty()
   listingId!: string;
-  
-  @ApiProperty({
-    description: 'Initial message content to send upon conversation creation',
-    example: 'Hello, I am interested in this listing!',
-  })
-  @IsString()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @IsNotEmpty()
-  initialMessage!: string;
 }

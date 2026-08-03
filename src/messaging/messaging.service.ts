@@ -127,14 +127,11 @@ export class MessagingService {
       return existingConversation;
     }
 
-    return this.messagingRepository.createConversationWithMessage(
-      {
-        listingId: dto.listingId,
-        exporterCompanyId,
-        importerCompanyId,
-      },
-      { senderId: userId, content: dto.initialMessage },
-    );
+    return this.messagingRepository.createSuggestedConversation({
+      listingId: dto.listingId,
+      exporterCompanyId,
+      importerCompanyId,
+    });
   }
 
   async getUserConversations(userId: string) {
@@ -150,7 +147,7 @@ export class MessagingService {
         listingId: conversation.listingId,
         listing: conversation.listing,
         status: conversation.status,
-        myRole: isExporter ? 'EXPORTER' : 'IMPORTER',
+        myRole: isExporter ? 'EXPORTATEUR' : 'IMPORTATEUR',
         partnerCompany: isExporter
           ? conversation.importerCompany
           : conversation.exporterCompany,
@@ -189,7 +186,7 @@ export class MessagingService {
   async sendMessage(userId: string, dto: CreateMessageDto) {
     await this.getAuthorizedConversation(dto.conversationId, userId);
 
-    return this.messagingRepository.createMessageAndPromoteContact({
+    return this.messagingRepository.createMessageAndStartContact({
       conversationId: dto.conversationId,
       senderId: userId,
       content: dto.content,

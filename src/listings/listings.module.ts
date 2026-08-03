@@ -9,5 +9,6 @@ import { ListingsService } from './listings.service';
   imports: [CompaniesModule],
   controllers: [ListingsController],
   providers: [ListingsService, ListingsRepository],
+  exports: [ListingsRepository],
 })
 export class ListingsModule {}

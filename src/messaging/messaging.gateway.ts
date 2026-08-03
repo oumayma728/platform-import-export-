@@ -28,7 +28,7 @@ import { MessagingService } from './messaging.service';
 })
 export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   private readonly logger = new Logger(MessagingGateway.name);
 
@@ -72,7 +72,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       await client.join(`user:${payload.sub}`);
       this.logger.log(`Client connected: ${client.id} (User: ${payload.name} [${payload.sub}])`);
     } catch (error) {
-      this.logger.error(`Connection authentication failed: ${error.message}`);
+      this.logger.error(`Connection authentication failed: ${error}`);
       client.disconnect();
     }
   }

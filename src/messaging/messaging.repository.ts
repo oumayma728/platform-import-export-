@@ -54,7 +54,6 @@ export class MessagingRepository {
     },
   } satisfies Prisma.ConversationInclude;
 
-  // condition to find a conversation where the user is either the exporter or importer company
   private authorizedConversationWhere(
     conversationId: string,
     companyId: string,
@@ -65,9 +64,6 @@ export class MessagingRepository {
     };
   }
 
-  // Queries
-
-  // check if the conversation is valid or no
   async findAuthorizedConversation(conversationId: string, companyId: string) {
     return this.prisma.conversation.findFirst({
       where: this.authorizedConversationWhere(conversationId, companyId),
@@ -75,8 +71,6 @@ export class MessagingRepository {
     });
   }
 
-  // the next 2 functions will get conversations with different results (depends on what u need: messages, infos)
-  // get infos about the conversation
   async findAuthorizedConversationDetails(
     conversationId: string,
     companyId: string,
@@ -87,7 +81,6 @@ export class MessagingRepository {
     });
   }
 
-  // get messages from a conversation
   async findAuthorizedConversationMessages(
     conversationId: string,
     companyId: string,
@@ -154,23 +147,17 @@ export class MessagingRepository {
     });
   }
 
-  async createConversationWithMessage(
-    conversation: Prisma.ConversationUncheckedCreateInput,
-    message: Omit<Prisma.MessageUncheckedCreateInput, 'conversationId'>,
-  ) {
+  async createSuggestedConversation(conversation: Prisma.ConversationUncheckedCreateInput) {
     return this.prisma.conversation.create({
       data: {
         ...conversation,
-        status: ConversationStatus.CONSULTEE,
-        messages: { create: message },
+        status: ConversationStatus.SUGGEREE,
       },
       include: this.conversationSummaryInclude,
     });
   }
 
-  async createMessageAndPromoteContact(
-    data: Prisma.MessageUncheckedCreateInput,
-  ) {
+  async createMessageAndStartContact(data: Prisma.MessageUncheckedCreateInput) {
     return this.prisma.$transaction(async (tx) => {
       const message = await tx.message.create({
         data,
@@ -180,8 +167,9 @@ export class MessagingRepository {
       await tx.conversation.updateMany({
         where: {
           id: data.conversationId,
-          status: ConversationStatus.CONSULTEE,
-          messages: { some: { senderId: { not: data.senderId } } },
+          status: {
+            in: [ConversationStatus.SUGGEREE, ConversationStatus.CONSULTEE],
+          },
         },
         data: { status: ConversationStatus.EN_CONTACT },
       });
@@ -203,7 +191,12 @@ export class MessagingRepository {
 
   async markMessagesAsRead(conversationId: string, userId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const result = await tx.message.updateMany({
+      await tx.conversation.updateMany({
+        where: { id: conversationId, status: ConversationStatus.SUGGEREE },
+        data: { status: ConversationStatus.CONSULTEE },
+      });
+
+      return tx.message.updateMany({
         where: {
           conversationId,
           senderId: { not: userId },
@@ -211,15 +204,6 @@ export class MessagingRepository {
         },
         data: { isRead: true },
       });
-
-      if (result.count > 0) {
-        await tx.conversation.updateMany({
-          where: { id: conversationId, status: ConversationStatus.SUGGEREE },
-          data: { status: ConversationStatus.CONSULTEE },
-        });
-      }
-
-      return result;
     });
   }
 }
