@@ -23,6 +23,11 @@ class Listing(Base):
     documents = Column(String, nullable=True)  # URLs séparées par des virgules
     statut = Column(String(20), default="active")
     suspendue = Column(Boolean, default=False, nullable=False)
+    
+    distance_km = Column(Float, nullable=True)
+    estimated_cost_usd = Column(Float, nullable=True)
+    estimated_days = Column(Integer, nullable=True)
+    
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

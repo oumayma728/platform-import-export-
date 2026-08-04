@@ -116,6 +116,7 @@ def list_notifications_for_user(
                 "sujet": n.sujet,
                 "contenu": n.contenu,
                 "statut": n.statut,
+                "lu": n.lu,
                 "created_at": n.created_at.isoformat() if n.created_at else None,
             }
             for n in notifications
@@ -164,28 +165,11 @@ def mark_notification_read(db, notification_id, user_id):
 
 
 def _send_email_notification(to_email: str, subject: str, content: str):
-    """
-    Envoie une notification par email via SendGrid.
-    
-    Args:
-        to_email: Adresse email destinataire
-        subject: Sujet de l'email
-        content: Contenu de l'email
-    
-    Raises:
-        Exception si l'envoi échoue
-    """
-    api_key = os.getenv("SENDGRID_API_KEY")
-    from_email = os.getenv("SENDGRID_FROM_EMAIL", "noreply@import-export.com")
-    
-    if not api_key:
-        logger.warning("SENDGRID_API_KEY non configurée. Email non envoyé.")
-        raise Exception("SendGrid n'est pas configuré")
     
     result = send_email(to_email, subject, content)
     
     if result.get("error"):
-        raise Exception(f"Erreur SendGrid: {result.get('error')}")
+        raise Exception(f"Erreur d'envoi email: {result.get('error')}")
     
     logger.info(f"Email envoyé avec succès à {to_email}")
 

@@ -21,8 +21,8 @@ async def currency_convert(amount: float = Query(gt=0), from_currency: str = Que
     summary="Estimer un transport entre deux pays",
     description="Estimer le coût logistique entre deux pays.",
 )
-def logistics_estimate(origin: str = Query(alias="from"), destination: str = Query(alias="to")):
+async def logistics_estimate(origin: str = Query(alias="from"), destination: str = Query(alias="to")):
     try:
-        return estimate(origin, destination)
+        return await estimate(origin, destination)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))

@@ -1,17 +1,17 @@
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import smtplib
+from email.mime.text import MIMEText
 
 def send_email(to_email: str, subject: str, content: str):
-    message = Mail(
-        from_email=os.getenv("SENDGRID_FROM_EMAIL"),
-        to_emails=to_email,
-        subject=subject,
-        html_content=content
-    )
+    msg = MIMEText(content, "html")
+    msg["Subject"] = subject
+    msg["From"] = os.getenv("GMAIL_ADDRESS")
+    msg["To"] = to_email
+
     try:
-        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        sg.send(message)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(os.getenv("GMAIL_ADDRESS"), os.getenv("GMAIL_APP_PASSWORD"))
+            server.sendmail(os.getenv("GMAIL_ADDRESS"), to_email, msg.as_string())
         return {"message": "Email envoyé"}
     except Exception as e:
         return {"error": str(e)}

@@ -14,3 +14,6 @@ sendgrid
 twilio
 alembic
 requests
+bcrypt==4.0.1
+pytest-asyncio
+redis
