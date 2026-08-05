@@ -119,6 +119,13 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   /**
+   * Helper: Get the room name for a given conversation ID
+   */
+  private getRoomName(roomId: string) {
+    return `conversation:${roomId}`;
+  }
+
+  /**
    * Event: Join a specific conversation room
    */
   @UseGuards(WsJwtGuard)
@@ -135,7 +142,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     // Verify user is allowed to access this conversation
     await this.messagingService.getConversationDetails(data.conversationId, user.id);
 
-    const roomName = `conversation:${data.conversationId}`;
+    const roomName = this.getRoomName(data.conversationId);
     await client.join(roomName);
     this.logger.log(`User ${user.id} joined room ${roomName}`);
 
@@ -152,7 +159,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @MessageBody() data: { conversationId: string },
   ) {
     if (!data?.conversationId) return;
-    const roomName = `conversation:${data.conversationId}`;
+    const roomName = this.getRoomName(data.conversationId);
     await client.leave(roomName);
     return { event: 'leftConversation', conversationId: data.conversationId };
   }
@@ -172,9 +179,9 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     // Save message via service
     const savedMessage = await this.messagingService.sendMessage(user.id, createMessageDto);
 
-    const roomName = `conversation:${createMessageDto.conversationId}`;
+    const roomName = this.getRoomName(createMessageDto.conversationId);
 
-    // Broadcast to room (including sender or excluding sender if client handles optimistic UI)
+    // Broadcast to room
     this.server.to(roomName).emit('newMessage', savedMessage);
 
     return savedMessage;
@@ -202,7 +209,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       { status: data.status },
     );
 
-    const roomName = `conversation:${data.conversationId}`;
+    const roomName = this.getRoomName(data.conversationId);
     this.server.to(roomName).emit('statusUpdated', updated);
 
     return updated;
@@ -220,7 +227,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     const user = this.getAuthenticatedUser(client);
     if (!data.conversationId) return;
 
-    const roomName = `conversation:${data.conversationId}`;
+    const roomName = this.getRoomName(data.conversationId);
     client.to(roomName).emit('userTyping', {
       conversationId: data.conversationId,
       userId: user.id,
@@ -243,7 +250,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
     const result = await this.messagingService.markMessagesAsRead(data.conversationId, user.id);
 
-    const roomName = `conversation:${data.conversationId}`;
+    const roomName = this.getRoomName(data.conversationId);
     this.server.to(roomName).emit('messagesRead', {
       conversationId: data.conversationId,
       readByUserId: user.id,

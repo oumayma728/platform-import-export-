@@ -23,7 +23,6 @@ import { GetConversationMessagesQueryDto } from './dto/get-conversation-messages
 import { UpdateConversationStatusDto } from './dto/update-conversation-status.dto';
 import { MessagingService } from './messaging.service';
 
-// TODO: add guard in top of the controller
 
 @ApiTags('Messaging')
 @ApiBearerAuth()

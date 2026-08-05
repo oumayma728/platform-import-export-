@@ -56,4 +56,5 @@ describe('RefreshJwtGuard', () => {
 
     await expect(guard.canActivate(context as ExecutionContext)).rejects.toThrow(UnauthorizedException);
   });
+  
 });

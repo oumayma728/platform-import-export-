@@ -3,6 +3,7 @@ import { ListingType } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -14,6 +15,7 @@ export class CreateListingDto {
     description: 'Identifier of the company that owns the listing.',
   })
   @IsString()
+  @IsNotEmpty()
   companyId!: string;
 
   @ApiProperty({
@@ -29,6 +31,7 @@ export class CreateListingDto {
     description: 'Listing title.',
   })
   @IsString()
+  @IsNotEmpty()
   title!: string;
 
   @ApiProperty({
@@ -36,6 +39,7 @@ export class CreateListingDto {
     description: 'Listing category.',
   })
   @IsString()
+  @IsNotEmpty()
   category!: string;
 
   @ApiProperty({
@@ -50,6 +54,7 @@ export class CreateListingDto {
     description: 'ISO-like currency code used for the price.',
   })
   @IsString()
+  @IsNotEmpty()
   currency!: string;
 
   @ApiPropertyOptional({
@@ -72,6 +77,7 @@ export class CreateListingDto {
     description: 'Unit of measure.',
   })
   @IsString()
+  @IsNotEmpty()
   unit!: string;
 
   @ApiProperty({
@@ -79,6 +85,7 @@ export class CreateListingDto {
     description: 'Country of origin or availability.',
   })
   @IsString()
+  @IsNotEmpty()
   country!: string;
 
   @ApiProperty({
@@ -86,6 +93,7 @@ export class CreateListingDto {
     description: 'Applicable Incoterm.',
   })
   @IsString()
+  @IsNotEmpty()
   incoterm!: string;
 
   @ApiPropertyOptional({

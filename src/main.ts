@@ -33,7 +33,7 @@ async function findAvailablePort(startPort: number, maxTries = 20): Promise<numb
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api/v1');
+  // app.setGlobalPrefix('api/v1');
 
   // Swagger API docs
   const config = new DocumentBuilder()
