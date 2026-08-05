@@ -40,7 +40,6 @@ export default function ProfileStatusPage() {
         onClick={() => navigate(-1)}
         style={{ marginBottom: spacing.lg }}
       >
-        // bouton de retour vers la page précédente
         <ArrowLeft size={15} />
         Retour
       </button>
