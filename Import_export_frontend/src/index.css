@@ -216,3 +216,248 @@ h1, h2, h3 {
     display: inline-flex;
   }
 }
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #F6F5F2;
+  color: #14161C;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+a {
+  color: inherit;
+}
+
+h1, h2, h3 {
+  font-family: 'Sora', sans-serif;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* Label "eyebrow" façon Adobe : petite étiquette majuscule au-dessus
+   d'un titre de section, encode une catégorie plutôt que de décorer. */
+.eyebrow {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #B8720A;
+  margin-bottom: 10px;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-fade-1 { animation: fadeInUp 0.7s ease-out both; }
+.hero-fade-2 { animation: fadeInUp 0.7s ease-out 0.12s both; }
+.hero-fade-3 { animation: fadeInUp 0.7s ease-out 0.24s both; }
+.hero-fade-4 { animation: fadeInUp 0.7s ease-out 0.36s both; }
+
+/* Légère flottaison verticale pour l'illustration du hero — signale la
+   fluidité des échanges commerciaux sans détourner l'attention du texte. */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.hero-illustration {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+/* Lien "retour" discret en haut des pages secondaires : simple texte avec
+   flèche, qui glisse légèrement vers la gauche et change de couleur au
+   survol — pas de bouton encadré qui concurrencerait les vraies actions
+   de la page. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  transition: color 0.15s ease, gap 0.15s ease;
+}
+.back-link:hover {
+  color: #14161C;
+  gap: 9px;
+}
+.back-link svg {
+  transition: transform 0.15s ease;
+}
+
+/* Effet de "lift" cohérent pour tout élément interactif au survol
+   (cartes catégories, boutons secondaires custom, etc.) */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* Défilement horizontal infini (bandeau de confiance / certifications).
+   Le contenu est dupliqué une fois dans le JSX ; on ne fait glisser que
+   la moitié du track pour boucler sans à-coup. */
+@keyframes marqueeScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 28s linear infinite;
+}
+.marquee-viewport:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-fade-1, .hero-fade-2, .hero-fade-3, .hero-fade-4 {
+    animation: none;
+  }
+  .hero-illustration {
+    animation: none;
+  }
+  .hover-lift:hover {
+    transform: none;
+  }
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Utilitaires responsive — media queries réelles.
+   Les styles inline React ne supportent pas @media, donc toute
+   grille dont le nombre de colonnes doit changer selon la largeur
+   d'écran passe par une de ces classes plutôt que par un objet
+   `style` figé.
+   Breakpoint mobile : 640px (téléphones), tablette : 900px.
+   ============================================================ */
+
+/* Grilles à 2 colonnes égales -> 1 colonne sous 640px */
+.grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 640px) {
+  .grid-2-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Grille asymétrique du hero (contenu / illustration) -> empilée sur mobile */
+.grid-hero {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+}
+@media (max-width: 900px) {
+  .grid-hero {
+    grid-template-columns: 1fr;
+  }
+}
+.grid-3-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 900px) {
+  .grid-3-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .grid-3-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Grilles "contenu principal + colonne latérale" (ex: prix + unité) -> empilées sur mobile */
+.grid-main-side {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+}
+@media (max-width: 640px) {
+  .grid-main-side {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Barre latérale de largeur fixe + contenu principal (ex: page Profil) -> empilés sur mobile */
+.grid-sidebar {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+}
+@media (max-width: 640px) {
+  .grid-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+.messaging-shell {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+@media (max-width: 768px) {
+  .messaging-shell {
+    flex-direction: column;
+  }
+  .messaging-shell > * {
+    width: 100% !important;
+    border-right: none !important;
+  }
+  /* Une fois une conversation ouverte, on masque la liste pour donner
+     tout l'écran au fil de discussion (comme WhatsApp/Messenger mobile) */
+  .messaging-shell[data-has-selection="true"] > :first-child {
+    display: none;
+  }
+}
+
+/* Menu burger mobile (UserHeaderLayout / VisitorLayout) : navigation desktop
+   masquée sous 768px, remplacée par un bouton burger + panneau dépliant. */
+.desktop-nav {
+  display: flex;
+}
+.mobile-burger-button {
+  display: none;
+}
+.mobile-nav-panel {
+  display: none;
+}
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none !important;
+  }
+  .mobile-burger-button {
+    display: flex !important;
+  }
+  .mobile-nav-panel {
+    display: flex !important;
+  }
+}
+/* Bouton "retour à la liste" dans le fil de discussion : inutile sur desktop
+   (les deux volets sont visibles côte à côte), affiché seulement sur mobile */
+.mobile-back-button {
+  display: none;
+}
+@media (max-width: 768px) {
+  .mobile-back-button {
+    display: inline-flex;
+  }
+}

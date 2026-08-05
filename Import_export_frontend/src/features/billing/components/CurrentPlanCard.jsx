@@ -23,19 +23,11 @@ export default function CurrentPlanCard({ subscription, compact }) {
             ✅ Plan actuel
           </h3>
           <h2 style={{ margin: `${spacing.sm}px 0 4px` }}>{subscription.planTitle}</h2>
-          <p style={{ color: colors.textMuted, margin: 0 }}>
-            {subscription.price} · {subscription.billingCycle}
-          </p>
         </div>
 
         <StatusBadge status={subscription.cancelAtPeriodEnd ? "canceled" : "active"} />
       </div>
 
-      <p style={{ color: colors.textMuted, marginTop: spacing.md, marginBottom: 0 }}>
-        {subscription.cancelAtPeriodEnd
-          ? `Résiliation programmée — vous gardez l'accès jusqu'au ${subscription.renewalDate}, puis retour au plan Gratuit.`
-          : `Prochain renouvellement le ${subscription.renewalDate}`}
-      </p>
 
       {!compact && (
         <div style={{ display: "flex", gap: spacing.sm, marginTop: spacing.lg, flexWrap: "wrap" }}>

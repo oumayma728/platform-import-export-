@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, Edit3, ArrowRight } from "lucide-react";
+import { RefreshCw, Edit3, ArrowRight, ArrowLeft } from "lucide-react";
 import StatusBadge from "../components/molecules/StatusBadge";
 import Reveal from "../components/atoms/Reveal";
 import { useAuth } from "../context/AuthContext";
@@ -34,6 +34,17 @@ export default function ProfileStatusPage() {
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto" }}>
+      <button
+        type="button"
+        className="back-link"
+        onClick={() => navigate(-1)}
+        style={{ marginBottom: spacing.lg }}
+      >
+        // bouton de retour vers la page précédente
+        <ArrowLeft size={15} />
+        Retour
+      </button>
+
       <Reveal>
         <span className="eyebrow">Vérification</span>
         <h1

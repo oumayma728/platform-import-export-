@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 
 import FormField from "../components/molecules/FormField";
 import Select from "../components/atoms/Select";
+import SelectWithAdd from "../components/molecules/SelectWithAdd";
 import ErrorMessage from "../components/atoms/ErrorMessage";
 import SectionCard from "../components/molecules/SectionCard";
 import FileDropzone from "../components/molecules/FileDropzone";
 import { createListing, updateListing, getListingById } from "../api/listings";
+import { colors, typography } from "../styles/tokens";
 
 const TYPE_OPTIONS = [
   { value: "offer", label: "🚢 Offre (j'exporte)" },
@@ -30,10 +32,10 @@ const QUANTITY_UNIT_OPTIONS = [
 ];
 
 const CURRENCY_OPTIONS = [
-  { value: "TND", label: "🇹🇳 TND" },
-  { value: "EUR", label: "🇪🇺 EUR" },
-  { value: "USD", label: "🇺🇸 USD" },
-  { value: "GBP", label: "🇬🇧 GBP" },
+  { value: "TND", label: "TND" },
+  { value: "EUR", label: "EUR" },
+  { value: "USD", label: "USD" },
+  { value: "GBP", label: "GBP" },
 ];
 
 const CATEGORY_OPTIONS = [
@@ -87,10 +89,7 @@ export default function ListingCreatePage() {
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
 
-  // Champs Select requis mais non gérés par react-hook-form (ce sont des
-  // composants contrôlés via watch/setValue, pas des inputs "register()").
-  // On calcule leurs erreurs manuellement, seulement après une tentative
-  // de soumission, pour un comportement cohérent avec les FormField.
+
   const watchedValues = watch();
   const selectErrors = attemptedSubmit
     ? {
@@ -103,9 +102,7 @@ export default function ListingCreatePage() {
       }
     : {};
 
-  // Vérifie que chaque document a un titre + un type, et que si des
-  // certifications sont déclarées, au moins un document de type
-  // "certificate" est bien attaché en preuve.
+
   function validateAttachments(data, files) {
     const incompleteFile = files.some(
       (file) => !file.label?.trim() || !file.type
@@ -131,7 +128,6 @@ export default function ListingCreatePage() {
     return null;
   }
 
-  // En mode édition, on charge l'annonce existante et on préremplit le formulaire
   useEffect(() => {
     if (!isEditMode) return;
     setIsLoadingListing(true);
@@ -305,7 +301,7 @@ async function handleConfirmEdit() {
 
     onSubmit(data);
   })}
->          {/* SECTION PRODUIT */}
+>          
 
           <div style={cardStyle}>
             <h2 style={sectionTitleStyle}>
@@ -316,8 +312,11 @@ async function handleConfirmEdit() {
               <label
                 style={{
                   display: "block",
-                  marginBottom: 8,
+                  marginBottom: 6,
+                  fontFamily: typography.body,
+                  fontSize: 14,
                   fontWeight: 600,
+                  color: colors.textPrimary,
                 }}
               >
                 Type d'annonce
@@ -364,16 +363,20 @@ async function handleConfirmEdit() {
                 <label
                   style={{
                     display: "block",
-                    marginBottom: 8,
+                    marginBottom: 6,
+                    fontFamily: typography.body,
+                    fontSize: 14,
                     fontWeight: 600,
+                    color: colors.textPrimary,
                   }}
                 >
                   Unité
                 </label>
 
-                <Select
+                <SelectWithAdd
                   options={QUANTITY_UNIT_OPTIONS}
                   placeholder="Unité"
+                  addPlaceholder="Ex: Palette"
                   value={watch("quantityUnit")}
                   onChange={(value) =>
                     setValue(
@@ -390,16 +393,20 @@ async function handleConfirmEdit() {
               <label
                 style={{
                   display: "block",
-                  marginBottom: 8,
+                  marginBottom: 6,
+                  fontFamily: typography.body,
+                  fontSize: 14,
                   fontWeight: 600,
+                  color: colors.textPrimary,
                 }}
               >
                 Catégorie
               </label>
 
-              <Select
+              <SelectWithAdd
                 options={CATEGORY_OPTIONS}
                 placeholder="Choisir une catégorie"
+                addPlaceholder="Ex: Ameublement"
                 value={watch("category")}
                 onChange={(value) =>
                   setValue("category", value)
@@ -436,16 +443,20 @@ async function handleConfirmEdit() {
                 <label
                   style={{
                     display: "block",
-                    marginBottom: 8,
+                    marginBottom: 6,
+                    fontFamily: typography.body,
+                    fontSize: 14,
                     fontWeight: 600,
+                    color: colors.textPrimary,
                   }}  
                 >
                   Devise
                 </label>
 
-                <Select
+                <SelectWithAdd
                   options={CURRENCY_OPTIONS}
                   placeholder="Devise"
+                  addPlaceholder="Ex: TND"
                   value={watch("currency")}
                   onChange={(value) =>
                     setValue(
@@ -462,16 +473,20 @@ async function handleConfirmEdit() {
               <label
                 style={{
                   display: "block",
-                  marginBottom: 8,
+                  marginBottom: 6,
+                  fontFamily: typography.body,
+                  fontSize: 14,
                   fontWeight: 600,
+                  color: colors.textPrimary,
                 }}
               >
                 Incoterm
               </label>
 
-              <Select
+              <SelectWithAdd
                 options={INCOTERM_OPTIONS}
                 placeholder="Choisir un incoterm"
+                addPlaceholder="Ex: DAF"
                 value={watch("incoterm")}
                 onChange={(value) =>
                   setValue("incoterm", value)
@@ -492,16 +507,20 @@ async function handleConfirmEdit() {
               <label
                 style={{
                   display: "block",
-                  marginBottom: 8,
+                  marginBottom: 6,
+                  fontFamily: typography.body,
+                  fontSize: 14,
                   fontWeight: 600,
+                  color: colors.textPrimary,
                 }}
               >
                 Pays
               </label>
 
-              <Select
+              <SelectWithAdd
                 options={COUNTRY_OPTIONS}
                 placeholder="Choisir un pays"
+                addPlaceholder="Ex: Qatar"
                 value={watch("country")}
                 onChange={(value) =>
                   setValue("country", value)
@@ -557,7 +576,7 @@ async function handleConfirmEdit() {
               fontWeight: "700",
               cursor: "pointer",
               boxShadow:
-                "0 12px 30px rgba(79,70,229,0.25)",
+            "0 8px 20px rgba(184,114,10,0.45)",
             }}
           >
             {isEditMode ? "💾 Enregistrer les modifications" : "🚀 Publier l'annonce"}

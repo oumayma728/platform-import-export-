@@ -30,10 +30,16 @@ export const getInvoiceById = invoicesApi.getById;
  * doivent jamais consommer le quota Gratuit — voir incrementUsage). Une
  * fois la date de renouvellement dépassée :
  *  - si l'utilisateur a résilié (cancelAtPeriodEnd) → retour automatique
- *    au plan Gratuit, avec son propre quota qui repart de zéro ;
+ *    au plan Gratuit ;
  *  - sinon → l'abonnement se renouvelle simplement pour un nouveau mois.
- * Dans les deux cas, le compteur de messages du cycle précédent est remis
- * à zéro : chaque période (Gratuit ou payante) a son propre quota.
+ *
+ * IMPORTANT — quota Gratuit à vie : contrairement à un abonnement payant
+ * (qui se renouvelle chaque mois), les 50 messages gratuits ne sont
+ * accordés qu'une seule fois pour la durée de vie du compte. On ne remet
+ * donc JAMAIS mockUsage.usedChats à zéro ici, même lors d'un retour au
+ * plan Gratuit après résiliation d'un abonnement payant : une fois les 50
+ * messages consommés, ils ne se rechargent plus, quel que soit le nombre
+ * de mois écoulés.
  */
 function resolveBillingCycle() {
   const today = new Date();
@@ -51,7 +57,6 @@ function resolveBillingCycle() {
   mockSubscription.status = "active";
   mockSubscription.startedAt = mockSubscription.renewalDate;
   mockSubscription.renewalDate = addOneMonth(mockSubscription.renewalDate);
-  mockUsage.usedChats = 0;
 }
 
 function addOneMonth(isoDate) {
@@ -123,19 +128,12 @@ export async function getSubscription() {
   return mockSubscription;
 }
 
-// Résilie l'abonnement PAYANT en cours, sans couper l'accès immédiatement :
-// l'utilisateur garde son plan (ex: Premium illimité) jusqu'à la date de
-// renouvellement déjà réglée, puis le compte repasse automatiquement au
-// plan Gratuit à ce moment-là (voir resolveBillingCycle). C'est le
-// comportement que promet déjà le texte de confirmation côté UI.
 export async function cancelSubscription() {
   await delay(400);
   mockSubscription.cancelAtPeriodEnd = true;
   return mockSubscription;
 }
 
-// Annule une résiliation programmée (l'utilisateur change d'avis avant la
-// fin de la période) — l'abonnement continue normalement.
 export async function reactivateSubscription() {
   await delay(300);
   mockSubscription.cancelAtPeriodEnd = false;
@@ -150,8 +148,7 @@ export async function changePlan(planId) {
   mockSubscription.planTitle = plan.title;
   mockSubscription.price = plan.price;
   mockSubscription.status = "active";
-  // Une fois un plan utilisé, il ne doit plus jamais être proposable à
-  // nouveau (ex: le plan Gratuit ne doit apparaître qu'une seule fois).
+
   if (!mockSubscription.usedPlanIds.includes(plan.id)) {
     mockSubscription.usedPlanIds.push(plan.id);
   }

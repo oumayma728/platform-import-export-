@@ -8,6 +8,7 @@ export default function Input({ type = "text", placeholder, register, name, erro
         placeholder={placeholder}
         style={{
           width: "100%",
+          height: "44px",
           padding: "10px 14px",
           borderRadius: radius.sm,
           border: `1px solid ${error ? colors.danger : colors.border}`,

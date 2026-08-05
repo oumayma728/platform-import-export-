@@ -85,11 +85,11 @@ export default function SubscriptionPage() {
                 value={subscription.cancelAtPeriodEnd ? "Résiliation programmée" : "Actif"}
               />
               <DetailCard icon="💶" title="Tarif" value={subscription.price} />
-              <DetailCard
+              {/* <DetailCard
                 icon="📅"
                 title={subscription.cancelAtPeriodEnd ? "Retour au Gratuit le" : "Prochain renouvellement"}
                 value={subscription.renewalDate}
-              />
+              /> */}
               <DetailCard
                 icon="🏦"
                 title="Moyen de paiement"
