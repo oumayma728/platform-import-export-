@@ -4,10 +4,13 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-
+import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 
 // TODO : return tihs file to be simple (delete this func) and requestedPort, port variables, availablePort
-async function findAvailablePort(startPort: number, maxTries = 20): Promise<number> {
+async function findAvailablePort(
+  startPort: number,
+  maxTries = 20,
+): Promise<number> {
   for (let port = startPort; port < startPort + maxTries; port += 1) {
     const tester = createServer();
 
@@ -27,11 +30,15 @@ async function findAvailablePort(startPort: number, maxTries = 20): Promise<numb
     }
   }
 
-  throw new Error(`Unable to find an available port starting from ${startPort}`);
+  throw new Error(
+    `Unable to find an available port starting from ${startPort}`,
+  );
 }
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   // app.setGlobalPrefix('api/v1');
 
@@ -52,7 +59,7 @@ async function bootstrap() {
   // Validate & strip unknown properties from all incoming DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,            // strip properties not in the DTO
+      whitelist: true, // strip properties not in the DTO
       forbidNonWhitelisted: true, // throw if unknown properties are sent
       transform: true,
     }),
@@ -67,7 +74,6 @@ async function bootstrap() {
   });
 }
 bootstrap();
-
 
 /**
  * TODO

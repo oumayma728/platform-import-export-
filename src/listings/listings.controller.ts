@@ -9,12 +9,17 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
+  ParseFilePipeBuilder
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -23,6 +28,7 @@ import {
   ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiUnprocessableEntityResponse
 } from '@nestjs/swagger';
 
 import {
@@ -34,7 +40,9 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
+import { ListingDocumentEntity } from './entities/listing-document.entity';
 import { ListingEntity } from './entities/listing.entity';
+import type { UploadedFileLike } from '../common/types/uploaded-file.type';
 import { CompanyWorkersGuard } from './guards/company-workers.guard';
 import { ListingsService } from './listings.service';
 
@@ -176,6 +184,71 @@ export class ListingsController {
   })
   update(@Param('id') id: string, @Body() updateListingDto: UpdateListingDto) {
     return this.listingsService.update(id, updateListingDto);
+  }
+
+  @Post(':id/documents')
+  @UseGuards(CompanyWorkersGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @HttpCode(HttpStatus.CREATED)
+@ApiOperation({
+    summary: 'Upload a listing document',
+    description:
+      'Adds a document entry for a specific listing. Allowed formats: PDF, PNG, JPG, JPEG (Max size: 5MB).',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'Listing identifier.' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'The file to upload. Allowed types: .pdf, .png, .jpg, .jpeg. Maximum size: 5MB.',
+        },
+      },
+    },
+  })
+  @ApiCreatedResponse({
+    description: 'Listing document uploaded successfully.',
+    type: ListingDocumentEntity,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Request body validation failed. Unknown properties are rejected by the global ValidationPipe.',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No listing exists for the provided identifier.',
+    type: NotFoundErrorResponseDto,
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'File validation failed. Invalid file type (must be PDF, PNG, JPG, or JPEG) or exceeds 5MB size limit.',
+  })
+  addDocument(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        // Validate file type (e.g., PDF, PNG, JPG)
+        .addFileTypeValidator({
+          fileType: /(pdf|png|jpeg|jpg|html)$/,
+        })
+        // Validate maximum file size (5 MB in bytes)
+        .addMaxSizeValidator({
+          maxSize: 5 * 1024 * 1024,
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    ) file: UploadedFileLike,
+  ) {
+    return this.listingsService.addDocument(id, file);
   }
 
   @Patch(':id/status')

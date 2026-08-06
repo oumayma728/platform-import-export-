@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '@prisma/client';
 import { Request } from 'express';
 
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -37,7 +38,7 @@ export class AccessTokenGuard implements CanActivate {
         secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
-      if (!payload.role) {
+      if (!this.hasRequiredClaims(payload)) {
         throw new UnauthorizedException('Invalid access token payload');
       }
 
@@ -56,5 +57,17 @@ export class AccessTokenGuard implements CanActivate {
   private extractToken(request: Request): string | null {
     const [type, token] = request.headers['authorization']?.split(' ') ?? [];
     return type === 'Bearer' && token ? token : null;
+  }
+
+  private hasRequiredClaims(
+    payload: JwtPayload,
+  ): payload is JwtPayload & { sub: string; name: string; role: UserRole } {
+    return (
+      typeof payload?.sub === 'string' &&
+      payload.sub.trim().length > 0 &&
+      typeof payload.name === 'string' &&
+      payload.name.trim().length > 0 &&
+      Object.values(UserRole).includes(payload.role as UserRole)
+    );
   }
 }

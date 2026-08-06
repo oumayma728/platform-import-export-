@@ -127,6 +127,8 @@ export class MessagingService {
       return existingConversation;
     }
 
+    // check if the 
+
     return this.messagingRepository.createSuggestedConversation({
       listingId: dto.listingId,
       exporterCompanyId,

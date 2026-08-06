@@ -69,7 +69,9 @@ export class AuthService {
     }
 
     const { sub: userId, jti: tokenId } = payload;
-    if (!tokenId) throw new UnauthorizedException('Malformed refresh token');
+    if (!this.isNonEmptyString(userId) || !this.isNonEmptyString(tokenId)) {
+      throw new UnauthorizedException('Malformed refresh token');
+    }
 
     const stored = await this.refreshTokensService.findById(tokenId);
     if (!stored) {
@@ -77,10 +79,14 @@ export class AuthService {
     }
 
     if (stored.isRevoked) {
-      await this.refreshTokensService.revokeAllForUser(userId);
+      await this.refreshTokensService.revokeAllForUser(stored.userId);
       throw new UnauthorizedException(
         'Refresh token reuse detected — all sessions revoked. Please log in again.',
       );
+    }
+
+    if (stored.userId !== userId) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     if (this.hashToken(rawRefreshToken) !== stored.tokenHash) {
@@ -91,7 +97,11 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    await this.refreshTokensService.revoke(tokenId);
+    const revoked = await this.refreshTokensService.revoke(tokenId);
+    if (!revoked) {
+      await this.refreshTokensService.revokeAllForUser(stored.userId);
+      throw new UnauthorizedException('Refresh token reuse detected');
+    }
 
     const user = await this.usersRepository.findById(userId);
     if (!user) throw new NotFoundException('User no longer exists');
@@ -109,7 +119,7 @@ export class AuthService {
       return;
     }
 
-    if (payload.jti) {
+    if (this.isNonEmptyString(payload.jti)) {
       await this.refreshTokensService.revoke(payload.jti);
     }
   }
@@ -157,18 +167,22 @@ export class AuthService {
     ]);
 
     const ttlMs = this.refreshCookieMaxAgeMs;
-    await this.refreshTokensService.create(
-      refreshTokenId,
+    await this.refreshTokensService.create({
+      id: refreshTokenId,
       userId,
-      this.hashToken(refreshToken),
-      new Date(Date.now() + ttlMs),
-    );
+      tokenHash: this.hashToken(refreshToken),
+      expiresAt: new Date(Date.now() + ttlMs),
+    });
 
     return { accessToken, refreshToken };
   }
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   private parseTtlToMs(ttl: string): number {

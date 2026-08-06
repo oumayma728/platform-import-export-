@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
@@ -15,18 +20,21 @@ export class RefreshJwtGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const refreshToken = request.cookies?.[REFRESH_COOKIE];
+    const refreshToken: unknown = request.cookies?.[REFRESH_COOKIE];
 
-    if (!refreshToken) {
+    if (typeof refreshToken !== 'string' || refreshToken.trim().length === 0) {
       throw new UnauthorizedException('Missing refresh token');
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      });
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(
+        refreshToken,
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        },
+      );
 
-      if (!payload?.sub || !payload?.jti) {
+      if (!this.hasRequiredClaims(payload)) {
         throw new UnauthorizedException('Invalid refresh token');
       }
     } catch {
@@ -34,5 +42,14 @@ export class RefreshJwtGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  private hasRequiredClaims(payload: JwtPayload): boolean {
+    return (
+      typeof payload?.sub === 'string' &&
+      payload.sub.trim().length > 0 &&
+      typeof payload.jti === 'string' &&
+      payload.jti.trim().length > 0
+    );
   }
 }

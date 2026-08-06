@@ -12,6 +12,8 @@ import { ListingsModule } from './listings/listings.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { SupabaseModule } from './supabase/supabase.module';
+import { StorageService } from './supabase/storage.service';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { MessagingModule } from './messaging/messaging.module';
     CompaniesModule,
     ListingsModule,
     MessagingModule,
+    SupabaseModule,
   ],
   controllers: [AppController],
   providers: [
@@ -37,6 +40,7 @@ import { MessagingModule } from './messaging/messaging.module';
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
+    StorageService,
   ],
 })
 export class AppModule {}

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ListingStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateListingDocumentDto } from './dto/create-listing-document.dto';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
@@ -129,6 +130,16 @@ export class ListingsRepository {
       where: { id },
       data: { status },
       include: { company: true },
+    });
+  }
+
+  async createDocument(listingId: string, data: CreateListingDocumentDto) {
+    return this.prisma.listingDocument.create({
+      data: {
+        listingId,
+        fileUrl: data.fileUrl,
+        fileType: data.fileType,
+      },
     });
   }
 
