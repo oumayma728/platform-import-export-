@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class CreateMessageDto {
   @ApiProperty({
@@ -17,12 +17,5 @@ export class CreateMessageDto {
   @IsString()
   @IsNotEmpty()
   content!: string;
-
-  @ApiPropertyOptional({
-    description: 'Optional URL for attached document / file',
-    example: 'https://storage.example.com/docs/proforma-invoice.pdf',
-  })
-  @IsString()
-  @IsOptional()
-  attachmentUrl?: string;
 }
+

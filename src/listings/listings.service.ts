@@ -3,7 +3,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CompaniesRepository } from '../companies/companies.repository';
 import { UploadedFileLike } from '../common/types/uploaded-file.type';
 import { StorageService } from '../supabase/storage.service';
-import { CreateListingDocumentDto } from './dto/create-listing-document.dto';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { SearchListingsDto } from './dto/search-listing-dto';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
@@ -72,7 +71,8 @@ export class ListingsService {
     }
 
     const storagePath = `listing_${id}/${file.originalname}`;
-    const fileUrl = await this.storageService.uploadFile(file, storagePath);
+    const bucket_name = "listing_document";
+    const fileUrl = await this.storageService.uploadFile(file, storagePath, bucket_name);
 
     return this.listingsRepository.createDocument(id, {
       fileUrl,

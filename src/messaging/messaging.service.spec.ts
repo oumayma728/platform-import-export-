@@ -10,12 +10,15 @@ import { MessagingService } from './messaging.service';
 import { MessagingRepository } from './messaging.repository';
 import { ListingsRepository } from '../listings/listings.repository';
 import { UsersRepository } from '../users/users.repository';
+import { StorageService } from '../supabase/storage.service';
 
 describe('MessagingService', () => {
   let service: MessagingService;
   let messagingRepository: jest.Mocked<MessagingRepository>;
   let listingsRepository: jest.Mocked<ListingsRepository>;
   let usersRepository: jest.Mocked<UsersRepository>;
+  let storageService: jest.Mocked<StorageService>;
+
 
   const mockUserId = 'user-123';
   const mockCompanyId = 'company-123';
@@ -53,6 +56,12 @@ describe('MessagingService', () => {
             getUserCompanyId: jest.fn(),
           },
         },
+        {
+          provide: StorageService,
+          useValue: {
+            uploadFile: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -60,6 +69,7 @@ describe('MessagingService', () => {
     messagingRepository = module.get(MessagingRepository);
     listingsRepository = module.get(ListingsRepository);
     usersRepository = module.get(UsersRepository);
+    storageService = module.get(StorageService);
   });
 
   afterEach(() => {
@@ -361,14 +371,13 @@ describe('MessagingService', () => {
     const dto = {
       conversationId: mockConversationId,
       content: 'Hello World',
-      attachmentUrl: 'https://example.com/file.pdf',
     };
 
     beforeEach(() => {
       usersRepository.getUserCompanyId.mockResolvedValue(mockCompanyId);
     });
 
-    it('should create a message and pass null when attachmentUrl is omitted', async () => {
+    it('should create a message and pass null when no file is uploaded', async () => {
       messagingRepository.findAuthorizedConversation.mockResolvedValue({
         id: mockConversationId,
       } as any);
@@ -376,12 +385,7 @@ describe('MessagingService', () => {
         id: 'msg-1',
       } as any);
 
-      const dtoWithoutAttachment = {
-        conversationId: mockConversationId,
-        content: 'Hello World',
-      };
-
-      const result = await service.sendMessage(mockUserId, dtoWithoutAttachment as any);
+      const result = await service.sendMessage(mockUserId, dto);
 
       expect(messagingRepository.createMessageAndStartContact).toHaveBeenCalledWith({
         conversationId: mockConversationId,
@@ -392,34 +396,50 @@ describe('MessagingService', () => {
       expect(result).toEqual({ id: 'msg-1' });
     });
 
-    it('should successfully send a message with an attachment when authorized', async () => {
+    it('should upload file and send message with attachmentUrl when file is provided', async () => {
+      const mockFile = {
+        fieldname: 'file',
+        originalname: 'test file.pdf',
+        encoding: '7bit',
+        mimetype: 'application/pdf',
+        size: 1024,
+        buffer: Buffer.from('test'),
+      };
+
       messagingRepository.findAuthorizedConversation.mockResolvedValue({
         id: mockConversationId,
       } as any);
+      storageService.uploadFile.mockResolvedValue('https://example.com/uploaded.pdf');
       messagingRepository.createMessageAndStartContact.mockResolvedValue({
         id: 'msg-1',
         ...dto,
+        attachmentUrl: 'https://example.com/uploaded.pdf',
       } as any);
 
-      const result = await service.sendMessage(mockUserId, dto as any);
+      const result = await service.sendMessage(mockUserId, dto, mockFile);
 
-      expect(messagingRepository.findAuthorizedConversation).toHaveBeenCalledWith(
-        mockConversationId,
-        mockCompanyId,
+      expect(storageService.uploadFile).toHaveBeenCalledWith(
+        mockFile,
+        expect.stringMatching(/^message_conv-101\/\d+_test_file\.pdf$/),
+        'conversation_attachment',
       );
       expect(messagingRepository.createMessageAndStartContact).toHaveBeenCalledWith({
         conversationId: mockConversationId,
         senderId: mockUserId,
         content: dto.content,
-        attachmentUrl: dto.attachmentUrl,
+        attachmentUrl: 'https://example.com/uploaded.pdf',
       });
-      expect(result).toEqual({ id: 'msg-1', ...dto });
+      expect(result).toEqual({
+        id: 'msg-1',
+        ...dto,
+        attachmentUrl: 'https://example.com/uploaded.pdf',
+      });
     });
 
     it('should throw ForbiddenException if user is not authorized to send message in conversation', async () => {
       messagingRepository.findAuthorizedConversation.mockResolvedValue(null);
 
-      await expect(service.sendMessage(mockUserId, dto as any)).rejects.toThrow(
+      await expect(service.sendMessage(mockUserId, dto)).rejects.toThrow(
         ForbiddenException,
       );
       expect(

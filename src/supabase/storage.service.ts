@@ -5,14 +5,13 @@ import { SupabaseService } from './supabase.service';
 
 @Injectable()
 export class StorageService {
-  private readonly bucketName = 'listing_document';
 
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async uploadFile(file: UploadedFileLike, path: string): Promise<string> {
+  async uploadFile(file: UploadedFileLike, path: string, bucketName: string): Promise<string> {
     const { data, error } = await this.supabaseService
       .getClient()
-      .storage.from(this.bucketName)
+      .storage.from(bucketName)
       .upload(path, file.buffer, {
         contentType: file.mimetype,
         upsert: true,
@@ -22,13 +21,13 @@ export class StorageService {
       throw error;
     }
 
-    return this.getPublicUrl(path);
+    return this.getPublicUrl(path, bucketName);
   }
 
-  getPublicUrl(path: string): string {
+  getPublicUrl(path: string, bucketName: string): string {
     const { data } = this.supabaseService
       .getClient()
-      .storage.from(this.bucketName)
+      .storage.from(bucketName)
       .getPublicUrl(path);
 
     return data.publicUrl;

@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { MessagingGateway } from './messaging.gateway';
 import { MessagingService } from './messaging.service';
 
@@ -7,7 +9,21 @@ describe('MessagingGateway', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MessagingGateway, MessagingService],
+      providers: [
+        MessagingGateway,
+        {
+          provide: MessagingService,
+          useValue: {},
+        },
+        {
+          provide: JwtService,
+          useValue: {},
+        },
+        {
+          provide: ConfigService,
+          useValue: {},
+        },
+      ],
     }).compile();
 
     gateway = module.get<MessagingGateway>(MessagingGateway);
@@ -17,3 +33,4 @@ describe('MessagingGateway', () => {
     expect(gateway).toBeDefined();
   });
 });
+

@@ -2,13 +2,20 @@ import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Param,
+  ParseFilePipeBuilder,
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -22,6 +29,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { GetConversationMessagesQueryDto } from './dto/get-conversation-messages-query.dto';
 import { UpdateConversationStatusDto } from './dto/update-conversation-status.dto';
 import { MessagingService } from './messaging.service';
+import type { UploadedFileLike } from '../common/types/uploaded-file.type';
 
 
 @ApiTags('Messaging')
@@ -110,24 +118,64 @@ export class MessagingController {
   }
 
   @Post('conversations/:id/messages')
+  @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
     summary:
       'Send a message in a conversation via REST API (Document sharing support)',
     description:
-      'Sends a message to the conversation. Accepts text content and optional attachmentUrl.',
+      'Sends a message to the conversation. Accepts text content and an optional attached file.',
   })
   @ApiParam({ name: 'id', description: 'UUID of the conversation' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        content: {
+          type: 'string',
+          description: 'Text content of the message',
+          example: 'Can you confirm the Incoterm and delivery timeline?',
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description:
+            'Optional file to attach. Allowed types: PDF, PNG, JPG, JPEG, WEBP, DOC, DOCX, TXT. Maximum size: 10MB.',
+        },
+      },
+      required: ['content'],
+    },
+  })
   @ApiResponse({ status: 201, description: 'Message sent successfully.' })
   sendMessage(
     @CurrentUser() user: AuthRequest['user'],
     @Param('id') conversationId: string,
     @Body() dto: Omit<CreateMessageDto, 'conversationId'>,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /(pdf|png|jpeg|jpg|webp|doc|docx|txt)$/,
+        })
+        .addMaxSizeValidator({
+          maxSize: 10 * 1024 * 1024,
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+          fileIsRequired: false,
+        }),
+    )
+    file?: UploadedFileLike,
   ) {
-    return this.messagingService.sendMessage(user.id, {
-      ...dto,
-      conversationId,
-    });
+    return this.messagingService.sendMessage(
+      user.id,
+      {
+        ...dto,
+        conversationId,
+      },
+      file,
+    );
   }
+
 
   @Patch('conversations/:id/status')
   @ApiOperation({

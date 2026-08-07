@@ -13,6 +13,8 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { GetConversationMessagesQueryDto } from './dto/get-conversation-messages-query.dto';
 import { UpdateConversationStatusDto } from './dto/update-conversation-status.dto';
 import { MessagingRepository } from './messaging.repository';
+import { StorageService } from '../supabase/storage.service';
+import type { UploadedFileLike } from '../common/types/uploaded-file.type';
 
 @Injectable()
 export class MessagingService {
@@ -20,6 +22,7 @@ export class MessagingService {
     private readonly messagingRepository: MessagingRepository,
     private readonly listingsRepository: ListingsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly storageService: StorageService,
   ) {}
 
   private async getUserCompanyId(userId: string): Promise<string> {
@@ -185,14 +188,31 @@ export class MessagingService {
     };
   }
 
-  async sendMessage(userId: string, dto: CreateMessageDto) {
+  async sendMessage(
+    userId: string,
+    dto: CreateMessageDto,
+    file?: UploadedFileLike,
+  ) {
     await this.getAuthorizedConversation(dto.conversationId, userId);
+
+    // upload to supabase the attachment if a file has been uploaded by the user
+    let attachmentUrl: string | undefined;
+    if (file) {
+      const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const storagePath = `message_${dto.conversationId}/${Date.now()}_${sanitizedFilename}`;
+      const bucket_name = 'conversation_attachment';
+      attachmentUrl = await this.storageService.uploadFile(
+        file,
+        storagePath,
+        bucket_name,
+      );
+    }
 
     return this.messagingRepository.createMessageAndStartContact({
       conversationId: dto.conversationId,
       senderId: userId,
       content: dto.content,
-      attachmentUrl: dto.attachmentUrl ?? null,
+      attachmentUrl: attachmentUrl ?? null,
     });
   }
 

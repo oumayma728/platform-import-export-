@@ -9,9 +9,10 @@ import { MessagingRepository } from './messaging.repository';
 import { MessagingService } from './messaging.service';
 import { ListingsModule } from '../listings/listings.module';
 import { UsersModule } from '../users/users.module';
+import { SupabaseModule } from '../supabase/supabase.module';
 
 @Module({
-  imports: [PrismaModule, JwtModule.register({}), ListingsModule, UsersModule],
+  imports: [PrismaModule, JwtModule.register({}), ListingsModule, UsersModule, SupabaseModule],
   controllers: [MessagingController],
   providers: [MessagingGateway, MessagingService, MessagingRepository, WsJwtGuard],
   exports: [MessagingService, MessagingGateway],
