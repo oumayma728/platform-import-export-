@@ -14,6 +14,7 @@ import { UsersModule } from './users/users.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { StorageService } from './supabase/storage.service';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { StorageService } from './supabase/storage.service';
     ListingsModule,
     MessagingModule,
     SupabaseModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

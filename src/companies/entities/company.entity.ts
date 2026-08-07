@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ValidationStatus } from '@prisma/client';
 
 /**
  * This File Exists Only To Add Clarity In Type Of Response In Swagger Docs
@@ -46,6 +47,12 @@ export class CompanyEntity {
     nullable: true,
   })
   certificationDocs!: Record<string, unknown> | null;
+
+  @ApiProperty({
+    enum: ValidationStatus,
+    example: ValidationStatus.EN_ATTENTE_VALIDATION,
+  })
+  validationStatus!: ValidationStatus;
 
   @ApiProperty({
     example: '2026-07-15T10:00:00.000Z',

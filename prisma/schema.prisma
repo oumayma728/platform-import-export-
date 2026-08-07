@@ -109,6 +109,7 @@ model Company {
   logoUrl             String?          @map("logo_url")
   registrationNumber  String?          @map("registration_number")
   certificationDocs   Json?            @map("certification_docs")
+  validationStatus    ValidationStatus @default(EN_ATTENTE_VALIDATION) @map("validation_status")
 
   users         User[]
   listings      Listing[]
