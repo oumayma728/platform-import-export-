@@ -17,10 +17,29 @@ prisma = Prisma()
 async def main():
     await prisma.connect()
 
-    # ── Admin user ──
-    admin = await prisma.utilisateur.find_unique(where={"email": "admin@platform.com"})
+    # ── Admin (identité séparée, spec §4) ──
+    admin_user = await prisma.utilisateur.find_unique(where={"email": "admin@platform.com"})
+    admin = await prisma.admin.find_unique(where={"email": "admin@platform.com"})
     if not admin:
-        admin = await prisma.utilisateur.create(
+        admin = await prisma.admin.create(
+            data={
+                # Même id que l'ancien utilisateur admin legacy pour que
+                # les AdminAction historiques restent rattachées.
+                "id": admin_user.id if admin_user else None,
+                "email": "admin@platform.com",
+                "passwordHash": hash_password("admin123"),
+                "nom": "Admin",
+                "prenom": "Super",
+                "role": "superadmin",
+                "isActive": True,
+            }
+        )
+        print(f"Admin created: admin@platform.com / admin123 (id={admin.id}, role=superadmin)")
+    else:
+        print("Admin already exists")
+
+    if not admin_user:
+        admin_user = await prisma.utilisateur.create(
             data={
                 "email": "admin@platform.com",
                 "passwordHash": hash_password("admin123"),
@@ -30,9 +49,38 @@ async def main():
                 "validationStatus": "validated",
             }
         )
-        print(f"Admin created: admin@platform.com / admin123 (id={admin.id})")
+        print(f"Legacy admin user created (id={admin_user.id})")
     else:
-        print("Admin already exists")
+        print("Legacy admin user already exists")
+
+    # ── Moderateurs (identité séparée, spec §4) ──
+    # On (ré)applique toujours le mot de passe par défaut pour que les
+    # identifiants de démo restent stables entre deux seeds.
+    moderators = [
+        {"email": "moderateur@platform.com", "password": "moderator123", "nom": "Mod", "prenom": "Moderateur"},
+        {"email": "newmod1785913547@x.com", "password": "moderator123", "nom": "Modo", "prenom": "Test"},
+    ]
+    for m in moderators:
+        existing_mod = await prisma.admin.find_unique(where={"email": m["email"]})
+        if existing_mod:
+            await prisma.admin.update(
+                where={"id": existing_mod.id},
+                data={"passwordHash": hash_password(m["password"]), "isActive": True},
+            )
+            print(f"Moderator reset: {m['email']} / {m['password']} (role={existing_mod.role})")
+        else:
+            created_mod = await prisma.admin.create(
+                data={
+                    "email": m["email"],
+                    "passwordHash": hash_password(m["password"]),
+                    "nom": m["nom"],
+                    "prenom": m["prenom"],
+                    "role": "moderateur",
+                    "isActive": True,
+                }
+            )
+            print(f"Moderator created: {m['email']} / {m['password']} (id={created_mod.id}, role=moderateur)")
+
 
     # ── Sample users ──
     users_data = [
@@ -106,6 +154,11 @@ async def main():
         if not existing:
             await prisma.incoterme.create(data=inc)
     print("  Incoterms seeded")
+
+    # ── Documents KYB de démonstration (livres du domaine public, spec §3) ──
+    from seed_kyb_books import seed_kyb_documents
+
+    await seed_kyb_documents(prisma)
 
     await prisma.disconnect()
     print("\nSeed complete!")

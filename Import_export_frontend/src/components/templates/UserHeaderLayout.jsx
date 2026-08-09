@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: "/matching", label: "Matching IA" },
   { to: "/messages", label: "Messagerie" },
   { to: "/billing", label: "Facturation" },
+  { to: "/notifications", label: "Notifications" },
   { to: "/profile", label: "Profil" },
 ];
 
@@ -18,10 +19,14 @@ const ADMIN_NAV_ITEM = { to: "/admin", label: "Admin" };
 
 const FULL_BLEED_PATHS = ["/messages"];
 
+// Étapes obligatoires d'onboarding : pas de navigation tant que le profil n'est pas complété/validé
+const ONBOARDING_PATHS = ["/profile/complete", "/profile/status"];
+
 export default function UserHeaderLayout() {
   const { logout, user } = useAuth();
   const location = useLocation();
   const isFullBleed = FULL_BLEED_PATHS.some((path) => location.pathname.startsWith(path));
+  const isOnboarding = ONBOARDING_PATHS.some((path) => location.pathname.startsWith(path));
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Referme le menu mobile automatiquement dès qu'on navigue vers une nouvelle page
@@ -75,31 +80,35 @@ export default function UserHeaderLayout() {
           </NavLink>
 
           {/* Navigation desktop (masquée sur mobile via CSS, voir index.css) */}
-          <nav className="desktop-nav" style={{ display: "flex", gap: spacing.sm, alignItems: "center", flexWrap: "wrap" }}>
-            {[...NAV_ITEMS, ...(user?.role === "admin" ? [ADMIN_NAV_ITEM] : [])].map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                style={({ isActive }) => ({
-                  textDecoration: "none",
-                  color: isActive ? colors.primary : colors.textMuted,
-                  fontSize: typography.fontSizeSm,
-                  fontWeight: isActive ? 700 : 500,
-                  padding: `${spacing.sm}px ${spacing.md}px`,
-                  borderRadius: "6px",
-                  backgroundColor: isActive ? colors.primarySoft : "transparent",
-                  transition: "all 0.2s",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                })}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-          {/* Bouton Deconnexion (desktop uniquement, repris dans le menu mobile) */}
+          {/* Masquée pendant les étapes obligatoires d'onboarding (profil incomplet/en attente) */}
+          {!isOnboarding && (
+            <nav className="desktop-nav" style={{ display: "flex", gap: spacing.sm, alignItems: "center", flexWrap: "wrap" }}>
+              {[...NAV_ITEMS, ...(user?.role === "admin" ? [ADMIN_NAV_ITEM] : [])].map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  style={({ isActive }) => ({
+                    textDecoration: "none",
+                    color: isActive ? colors.primary : colors.textMuted,
+                    fontSize: typography.fontSizeSm,
+                    fontWeight: isActive ? 700 : 500,
+                    padding: `${spacing.sm}px ${spacing.md}px`,
+                    borderRadius: "6px",
+                    backgroundColor: isActive ? colors.primarySoft : "transparent",
+                    transition: "all 0.2s",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  })}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+          )}
+          {/* Bouton Deconnexion : desktop uniquement (repris dans le menu mobile), */}
+          {/* sauf pendant l'onboarding où il reste visible partout (pas de menu burger) */}
           <button
-            className="desktop-nav"
+            className={isOnboarding ? "" : "desktop-nav"}
             onClick={handleLogout}
             style={{
               flexShrink: 0,
@@ -118,29 +127,31 @@ export default function UserHeaderLayout() {
             Déconnexion
           </button>
 
-          <button
-            className="mobile-burger-button"
-            onClick={() => setIsMenuOpen((open) => !open)}
-            aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-            aria-expanded={isMenuOpen}
-            style={{
-              border: `1px solid ${colors.border}`,
-              background: "#fff",
-              borderRadius: "8px",
-              width: 40,
-              height: 40,
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: colors.textPrimary,
-              flexShrink: 0,
-            }}
-          >
-            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {!isOnboarding && (
+            <button
+              className="mobile-burger-button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              aria-expanded={isMenuOpen}
+              style={{
+                border: `1px solid ${colors.border}`,
+                background: "#fff",
+                borderRadius: "8px",
+                width: 40,
+                height: 40,
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: colors.textPrimary,
+                flexShrink: 0,
+              }}
+            >
+              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          )}
         </div>
 
-        {isMenuOpen && (
+        {!isOnboarding && isMenuOpen && (
           <nav
             className="mobile-nav-panel"
             style={{

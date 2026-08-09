@@ -37,10 +37,10 @@ export function AuthProvider({ children }) {
    *   (sessionStorage). Correspond à une case "Se souvenir de moi".
    */
   async function login(credentials, remember = true) {
-    const { user: loggedInUser, token } = await loginUser(credentials);
+    const { user, token } = await loginUser(credentials);
     saveToken(token, remember);
-    setUser(loggedInUser);
-    return loggedInUser;
+    setUser(user);
+    return user;
   }
 
   /**

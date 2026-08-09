@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import StatusBadge from "../components/molecules/StatusBadge";
@@ -9,8 +9,14 @@ import Input from "../components/atoms/Input";
 import Select from "../components/atoms/Select";
 import Button from "../components/atoms/Button";
 import { uploadCompanyLogo, updateProfile } from "../api/auth";
+import { getMyKybDocuments } from "../api/kyb";
 import { colors, spacing, typography } from "../styles/tokens";
 import { toRoleArray, ROLE_LABEL } from "../utils/roles";
+
+const KYB_TYPE_LABEL = {
+  CERTIFICATION: "Certification",
+  AUTRE: "Autre",
+};
 
 const COUNTRY_OPTIONS = [
   "Tunisie",
@@ -78,6 +84,16 @@ export default function ProfilePage() {
 
   const [companySaved, setCompanySaved] = useState(false);
   const [isSavingCompany, setIsSavingCompany] = useState(false);
+
+  const [kybDocuments, setKybDocuments] = useState([]);
+  const [kybLoading, setKybLoading] = useState(true);
+
+  useEffect(() => {
+    getMyKybDocuments()
+      .then((res) => setKybDocuments(res.documents || []))
+      .catch(() => setKybDocuments([]))
+      .finally(() => setKybLoading(false));
+  }, []);
 
   async function handleLogoSelected(file) {
     setLogoUploadError("");
@@ -260,10 +276,10 @@ export default function ProfilePage() {
                     setIsSavingAccount(true);
                     try {
                       const roleValue = accountInfo.role.length === 2
-                        ? "BOTH"
+                        ? "both"
                         : accountInfo.role[0] === "exporter"
-                        ? "EXPORTATEUR"
-                        : "IMPORTATEUR";
+                        ? "exporter"
+                        : "importer";
                       await updateProfile({
                         phone: accountInfo.phone,
                         role: roleValue,
@@ -334,10 +350,10 @@ export default function ProfilePage() {
                         ? companyInfo.certifications.split(",").map((c) => c.trim()).filter(Boolean)
                         : [];
                       const roleValue = accountInfo.role.length === 2
-                        ? "BOTH"
+                        ? "both"
                         : accountInfo.role[0] === "exporter"
-                        ? "EXPORTATEUR"
-                        : "IMPORTATEUR";
+                        ? "exporter"
+                        : "importer";
                       await updateProfile({
                         companyName: companyInfo.companyName,
                         country: companyInfo.country,
@@ -362,6 +378,67 @@ export default function ProfilePage() {
                     Modifications enregistrées
                   </span>
                 )}
+              </div>
+            </SectionCard>
+          </Reveal>
+
+          <Reveal delay={230}>
+            <SectionCard title="Documents de vérification (KYB)">
+              <p style={{ color: colors.textMuted, fontFamily: typography.body, fontSize: 13, marginTop: 0 }}>
+                Pièces justificatives transmises lors de la validation de votre entreprise.
+                Elles sont examinées par l'équipe de modération avant validation.
+              </p>
+
+              {kybLoading ? (
+                <p style={{ color: colors.textMuted, fontSize: 13 }}>Chargement...</p>
+              ) : kybDocuments.length === 0 ? (
+                <p style={{ color: colors.textMuted, fontSize: 13 }}>
+                  Aucun document déposé pour le moment.
+                </p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm, marginTop: spacing.sm }}>
+                  {kybDocuments.map((doc) => (
+                    <div
+                      key={doc.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: spacing.sm,
+                        padding: "12px 14px",
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 10,
+                        background: colors.surfaceRaised,
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>
+                          {doc.nomFichier}
+                        </p>
+                        <p style={{ margin: 0, color: colors.textMuted, fontSize: 12.5, marginTop: 2 }}>
+                          {KYB_TYPE_LABEL[doc.typeDocument] || doc.typeDocument}
+                          {doc.motifRejet ? ` — ${doc.motifRejet}` : ""}
+                        </p>
+                      </div>
+                      <StatusBadge status={doc.statut} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: spacing.md }}>
+                <Link
+                  to="/profile/complete"
+                  style={{
+                    fontFamily: typography.body,
+                    fontSize: 14,
+                    color: colors.primary,
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  + Ajouter ou remplacer des documents
+                </Link>
               </div>
             </SectionCard>
           </Reveal>

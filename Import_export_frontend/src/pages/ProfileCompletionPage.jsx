@@ -12,6 +12,7 @@ import Reveal from "../components/atoms/Reveal";
 import FileDropzone, { DOCUMENT_TYPES } from "../components/molecules/FileDropzone";
 
 import { completeProfile } from "../api/auth";
+import { presignKybUpload, localKybUpload, confirmKybUpload } from "../api/kyb";
 import { useAuth } from "../context/AuthContext";
 import { colors, radius, spacing, typography } from "../styles/tokens";
 
@@ -57,6 +58,27 @@ const STEPS = [
   { id: 2, label: "Certifications" },
   { id: 3, label: "Description" },
 ];
+
+// Le backend KYB n'accepte que PDF/JPG/PNG (spec §3) : on les sépare des
+// autres formats tolérés par le dropzone (WEBP/TXT/DOCX) pour les refuser
+// proprement au moment de l'envoi.
+const KYB_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const KYB_EXTENSION_MIME = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+};
+
+function resolveKybMimeType(doc) {
+  if (doc.file?.type && KYB_MIME_TYPES.includes(doc.file.type)) return doc.file.type;
+  const ext = (doc.name || "").split(".").pop()?.toLowerCase();
+  return KYB_EXTENSION_MIME[ext] || null;
+}
+
+function kybTypeFromDropzone(type) {
+  return type === "certificate" ? "CERTIFICATION" : "AUTRE";
+}
 
 export default function ProfileCompletionPage() {
   const {
@@ -119,6 +141,40 @@ export default function ProfileCompletionPage() {
     setCurrentStep((step) => Math.max(step - 1, 1));
   }
 
+  async function uploadKybDocuments(docs) {
+    if (!docs.length) return;
+
+    const unsupported = docs.filter((d) => !resolveKybMimeType(d));
+    if (unsupported.length > 0) {
+      throw new Error(
+        "Seuls les PDF, JPG et PNG sont acceptés pour la vérification : " +
+          unsupported.map((d) => d.name).join(", ")
+      );
+    }
+
+    for (const doc of docs) {
+      const mimeType = resolveKybMimeType(doc);
+      const { documentId, uploadUrl } = await presignKybUpload({
+        mimeType,
+        filename: doc.name,
+        typeDocument: kybTypeFromDropzone(doc.type),
+      });
+
+      if (uploadUrl) {
+        const res = await fetch(uploadUrl, {
+          method: "PUT",
+          body: doc.file,
+          headers: { "Content-Type": mimeType },
+        });
+        if (!res.ok) throw new Error(`Échec de l'envoi de ${doc.name}`);
+      } else {
+        await localKybUpload(documentId, doc.file);
+      }
+
+      await confirmKybUpload(documentId);
+    }
+  }
+
   async function onSubmit(data) {
     setSubmitError(null);
 
@@ -138,6 +194,8 @@ export default function ProfileCompletionPage() {
       };
 
       const updated = await completeProfile(payload);
+
+      await uploadKybDocuments(certificationDocs);
 
       updateUser({
         profile: updated.profile,

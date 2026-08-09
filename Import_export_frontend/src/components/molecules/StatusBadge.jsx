@@ -6,6 +6,11 @@ const STATUS_MAP = {
   validated: { label: "Validé", tone: "success" },
   rejected: { label: "Rejeté", tone: "danger" },
 
+  // Statuts des documents KYB (spec §3/§5.1).
+  en_attente: { label: "En attente", tone: "neutral" },
+  valide: { label: "Validé", tone: "success" },
+  rejete: { label: "Rejeté", tone: "danger" },
+
   offer: { label: "Offre", tone: "success" },
   demand: { label: "Demande", tone: "info" },
   suspended: { label: "Suspendue", tone: "neutral" },

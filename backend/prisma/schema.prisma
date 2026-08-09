@@ -7,6 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Admin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  nom          String
+  prenom       String
+  role         String    @default("moderateur")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("Admin")
+}
+
 model Location {
   id        String   @id @default(uuid())
   pays      String
@@ -39,6 +53,8 @@ model Entreprise {
   chiffreAffaires Float?   @map("chiffre_affaires")
   nombreEmployes  Int?     @map("nombre_employes")
   secteurActivite String?  @map("secteur_activite")
+  trustScore      Float?   @map("trust_score")
+  trustScoreDetails String? @map("trust_score_details")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -46,6 +62,7 @@ model Entreprise {
   utilisateurs    Utilisateur[]
   documents       DocumentEntreprise[]
   badges          TrustBadge[]
+  entrepriseBadges EntrepriseBadge[]
   reviewsRecus    Review[]     @relation("ReviewRecu")
   certifications  EntrepriseCertification[]
   kybVerifications KYBVerification[]
@@ -94,7 +111,6 @@ model Utilisateur {
   conversationsAcheteur Conversation[] @relation("ConversationsAcheteur")
   conversationsVendeur Conversation[] @relation("ConversationsVendeur")
   documentsSent        DocumentConversation[]
-  adminActions         AdminAction[]
   reviewsDonnes        Review[]          @relation("ReviewDonne")
   reports              Report[]
   matchingResults      MatchingResult[]
@@ -137,6 +153,8 @@ model Conversation {
   messages      Message[]
   facturations  Facturation[]
   documents     DocumentConversation[]
+  reports       Report[]
+  reviews       Review[]
 
   @@map("Conversation")
 }
@@ -176,10 +194,15 @@ model DocumentAnnonce {
 model DocumentEntreprise {
   id            String    @id @default(uuid())
   entrepriseId  String    @map("entreprise_id")
+  typeDocument  String    @default("AUTRE") @map("type_document")
   nomFichier    String    @map("nom_fichier")
   cheminFichier String    @map("chemin_fichier")
+  bucket        String?   @default("kyb-documents")
+  mimeType      String?   @map("mime_type")
   extention     String
   taille        BigInt
+  statut        String    @default("en_attente")
+  motifRejet    String?   @map("motif_rejet")
   type          String    @default("document")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -346,31 +369,78 @@ model AdminAction {
   id          String   @id @default(uuid())
   adminId     String   @map("admin_id")
   cibleUserId String?  @map("cible_user_id")
+  cibleType   String?  @map("cible_type")
+  cibleId     String?  @map("cible_id")
+  action      String?
   typeAction  String   @map("type_action")
+  motif       String?
   description String?
   metadata    String   @default("{}")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  admin Utilisateur @relation(fields: [adminId], references: [id])
-
   @@map("AdminAction")
 }
 
+model UserModerationHistory {
+  id                      String    @id @default(uuid())
+  userId                  String    @map("user_id")
+  adminId                 String    @map("admin_id")
+  action                  String
+  motif                   String?
+  suspensionDurationDays  Int?      @map("suspension_duration_days")
+  suspensionEndDate       DateTime? @map("suspension_end_date")
+  createdAt               DateTime  @default(now()) @map("created_at")
+
+  @@map("UserModerationHistory")
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  nom         String
+  description String?
+  criteres    String   @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  entreprises EntrepriseBadge[]
+
+  @@map("Badge")
+}
+
+model EntrepriseBadge {
+  id           String    @id @default(uuid())
+  entrepriseId String    @map("entreprise_id")
+  badgeId      String    @map("badge_id")
+  obtenuLe     DateTime  @default(now()) @map("obtenu_le")
+
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  badge      Badge      @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([entrepriseId, badgeId])
+  @@map("EntrepriseBadge")
+}
+
 model Report {
-  id             String    @id @default(uuid())
-  reporterId     String    @map("reporter_id")
-  annonceId      String?   @map("annonce_id")
-  cibleUserId    String?   @map("cible_user_id")
+  id             String        @id @default(uuid())
+  reporterId     String        @map("reporter_id")
+  annonceId      String?       @map("annonce_id")
+  cibleUserId    String?       @map("cible_user_id")
+  cibleType      String?       @map("cible_type")
+  cibleId        String?       @map("cible_id")
+  conversationId String?       @map("conversation_id")
   type           String
   motif          String
-  statut         String    @default("pending")
-  traitePar      String?   @map("traite_par")
-  dateTraitement DateTime? @map("date_traitement")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  statut         String        @default("pending")
+  traitePar      String?       @map("traite_par")
+  traiteParAdminId String?     @map("traite_par_admin_id")
+  dateTraitement DateTime?     @map("date_traitement")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  reporter Utilisateur @relation(fields: [reporterId], references: [id])
-  annonce  Annonce?    @relation(fields: [annonceId], references: [id])
+  reporter     Utilisateur  @relation(fields: [reporterId], references: [id])
+  annonce      Annonce?     @relation(fields: [annonceId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
 
   @@map("Report")
 }
@@ -394,15 +464,18 @@ model Review {
   auteurId     String    @map("auteur_id")
   entrepriseId String    @map("entreprise_id")
   annonceId    String?   @map("annonce_id")
+  conversationId String? @map("conversation_id")
   note         Int
   commentaire  String?
   dateVisite   DateTime? @map("date_visite")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  auteur     Utilisateur @relation("ReviewDonne", fields: [auteurId], references: [id])
-  entreprise Entreprise  @relation("ReviewRecu", fields: [entrepriseId], references: [id])
+  auteur       Utilisateur @relation("ReviewDonne", fields: [auteurId], references: [id])
+  entreprise   Entreprise  @relation("ReviewRecu", fields: [entrepriseId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
 
+  @@unique([auteurId, conversationId])
   @@map("Review")
 }
 
@@ -415,6 +488,7 @@ model KYBVerification {
   dateVerification DateTime? @map("date_verification")
   commentaire      String?
   score            Int?
+  checklist        String    @default("[]")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 

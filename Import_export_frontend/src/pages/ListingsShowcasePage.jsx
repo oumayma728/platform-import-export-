@@ -15,10 +15,11 @@ export default function ListingsShowcasePage() {
           position: "relative",
           background: "#fff",
           borderRadius: "24px",
-          padding: "40px",
+          padding: "clamp(20px, 6vw, 40px)",
           overflow: "hidden",
           border: "1px solid #E4E2DC",
           marginBottom: "40px",
+          boxSizing: "border-box",
         }}
       >
         <div
@@ -61,17 +62,21 @@ export default function ListingsShowcasePage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            padding: "16px",
+            boxSizing: "border-box",
           }}
         >
           <div
             style={{
               textAlign: "center",
               maxWidth: "600px",
+              width: "100%",
+              boxSizing: "border-box",
             }}
           >
             <div
               style={{
-                fontSize: "60px",
+                fontSize: "clamp(38px, 8vw, 60px)",
                 marginBottom: "14px",
               }}
             >
@@ -80,8 +85,11 @@ export default function ListingsShowcasePage() {
 
             <h2
               style={{
-                fontSize: "36px",
+                fontSize: "clamp(22px, 6vw, 36px)",
+                lineHeight: 1.2,
                 marginBottom: "16px",
+                overflowWrap: "break-word",
+                wordBreak: "break-word",
               }}
             >
               Découvrez des milliers d'opportunités
@@ -92,6 +100,7 @@ export default function ListingsShowcasePage() {
                 color: "#6B6D76",
                 lineHeight: 1.8,
                 marginBottom: "24px",
+                overflowWrap: "break-word",
               }}
             >
               Explorez les annonces publiées par des
@@ -100,40 +109,47 @@ export default function ListingsShowcasePage() {
               activité.
             </p>
 
-            <Link to="/listings/catalog">
-              <button
-                style={{
-                  border: "none",
-                  borderRadius: "14px",
-                  padding: "16px 26px",
-                  background:
-                    "linear-gradient(135deg,#B8720A,#9C5E08)",
-                  color: "#fff",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                }}
-              >
-                🚀 Voir les annonces
-              </button>
-            </Link>
-                    <Link to="/listings/create">
-          <button
-            style={{
-              marginLeft: "20px",
-              marginTop: "20px",
-              border: "none",
-              borderRadius: "14px",
-              padding: "16px 28px",
-              fontWeight: "700",
-              background:
-                "linear-gradient(135deg,#B8720A,#9C5E08)",
-              color: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            ➕ Publier une annonce
-          </button>
-        </Link>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "16px",
+                justifyContent: "center",
+              }}
+            >
+              <Link to="/listings/catalog">
+                <button
+                  style={{
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "16px 26px",
+                    background:
+                      "linear-gradient(135deg,#B8720A,#9C5E08)",
+                    color: "#fff",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  🚀 Voir les annonces
+                </button>
+              </Link>
+              <Link to="/listings/create">
+                <button
+                  style={{
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "16px 28px",
+                    fontWeight: "700",
+                    background:
+                      "linear-gradient(135deg,#B8720A,#9C5E08)",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  ➕ Publier une annonce
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

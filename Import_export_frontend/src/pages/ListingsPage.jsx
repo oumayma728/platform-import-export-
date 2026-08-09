@@ -89,10 +89,6 @@ useState([]);
     });
   }, []);
 
-  // Un importateur cherche des OFFRES (ce que proposent les exportateurs).
-  // Un exportateur cherche des DEMANDES (ce que veulent les importateurs).
-  const forcedType = user?.role === "importer" ? "offer" : user?.role === "exporter" ? "demand" : undefined;
-
   useEffect(() => {
   getFavorites().then((favorites) => {
     setFavoriteIds(
@@ -104,9 +100,10 @@ useState([]);
 }, []);
 
   const fields = useMemo(() => {
-    const base = forcedType ? [COUNTRY_FIELD, CATEGORY_FIELD] : [TYPE_FIELD, COUNTRY_FIELD, CATEGORY_FIELD];
     return [
-      ...base,
+      TYPE_FIELD,
+      COUNTRY_FIELD,
+      CATEGORY_FIELD,
       {
         name: "price",
         type: "price-range",
@@ -122,10 +119,9 @@ useState([]);
         options: catalogStats.certifications,
       },
     ];
-  }, [forcedType, catalogStats]);
+  }, [catalogStats]);
 
   const { items: allItems, filters, setFilters, isLoading, error } = useResourceList(getListings, {
-    ...(forcedType ? { type: forcedType } : {}),
     ...(categoryFromUrl ? { category: categoryFromUrl } : {}),
   });
 
@@ -190,11 +186,6 @@ const displayedItems =
       >
         Catalogue des annonces
       </h1>
-      {forcedType && (
-        <p style={{ color: colors.textMuted, fontSize: 14, marginTop: 4, marginBottom: 16 }}>
-          Affichage des {forcedType === "offer" ? "offres" : "demandes"} correspondant à votre profil.
-        </p>
-      )}
 <div
   style={{
     display: "flex",

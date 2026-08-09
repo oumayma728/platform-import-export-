@@ -17,8 +17,12 @@ export async function loginUser(payload) {
     await delay(400);
     return { user: mockUser, token: `mock-token-${Date.now()}` };
   }
-  const { data } = await apiClient.post("/auth/login", payload);
-  return data;
+  try {
+    const { data } = await apiClient.post("/auth/login", payload);
+    return data;
+  } catch (err) {
+    throw new Error(err.response?.data?.detail || "Identifiants invalides");
+  }
 }
 
 export async function getCurrentUser() {
@@ -90,7 +94,27 @@ export async function requestPasswordReset(email) {
     return data;
   } catch (err) {
     throw new Error(
-      err.response?.data?.message || "Impossible d'envoyer l'email pour le moment. Réessayez plus tard."
+      err.response?.data?.detail || "Impossible d'envoyer l'email pour le moment. Réessayez plus tard."
+    );
+  }
+}
+
+/**
+ * Réinitialise le mot de passe avec le token reçu par email
+ * (lien /reset-password?token=...).
+ */
+export async function resetPassword(token, password) {
+  if (USE_MOCKS) {
+    await delay(500);
+    return { success: true };
+  }
+
+  try {
+    const { data } = await apiClient.post("/auth/reset-password", { token, password });
+    return data;
+  } catch (err) {
+    throw new Error(
+      err.response?.data?.message || "Impossible de réinitialiser le mot de passe. Réessayez plus tard."
     );
   }
 }

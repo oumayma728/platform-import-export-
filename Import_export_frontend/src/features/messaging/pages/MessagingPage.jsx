@@ -18,6 +18,7 @@ import {
 } from "../../../components/molecules/FileDropzone";
 import StatusBadge from "../../../components/molecules/StatusBadge";
 import AsyncState from "../../../components/organisms/AsyncState";
+import { createReview } from "../../../api/reviews";
 
 const STATUS_FLOW = ["suggested", "in_contact", "negotiating", "concluded"];
 
@@ -227,9 +228,36 @@ function ConversationThread({ conversation, onRefetch }) {
   const [sendError, setSendError] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [reviewNote, setReviewNote] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState(null);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
   useEffect(() => {
     refreshPaywallStatus();
   }, [conversation.id]);
+
+  async function handleSubmitReview(e) {
+    e.preventDefault();
+    if (reviewNote < 1) return;
+    setIsSubmittingReview(true);
+    setReviewError(null);
+    try {
+      await createReview({
+        entrepriseId: conversation.counterpart.entrepriseId,
+        conversationId: conversation.id,
+        note: reviewNote,
+        commentaire: reviewComment.trim() || null,
+      });
+      setReviewSuccess(true);
+      await onRefetch();
+    } catch (err) {
+      setReviewError(err.message);
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  }
 
   function refreshPaywallStatus() {
     checkPaywallStatus().then(({ isBlocked, usage, isUnlimited }) => {
@@ -517,6 +545,68 @@ function ConversationThread({ conversation, onRefetch }) {
           );
         })}
       </div>
+
+      {/* Avis post-transaction (spec §5.4) */}
+      {conversation.status === "concluded" && (
+        <div style={{ borderTop: "1px solid #E4E2DC", padding: "16px 20px", backgroundColor: "#F6F5F2" }}>
+          {conversation.reviewed || reviewSuccess ? (
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
+              ✅ Vous avez laissé un avis pour cette transaction.
+            </p>
+          ) : conversation.counterpart.entrepriseId ? (
+            <form onSubmit={handleSubmitReview} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#14161C" }}>
+                Laisser un avis sur {conversation.counterpart.name}
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setReviewNote(n)}
+                    aria-label={`${n} étoile${n > 1 ? "s" : ""}`}
+                    style={{ border: "none", background: "none", cursor: "pointer", fontSize: 22, color: n <= reviewNote ? "#B8720A" : "#d1d5db", lineHeight: 1 }}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 4 }}>
+                  {reviewNote > 0 ? `${reviewNote}/5` : "Sélectionnez une note"}
+                </span>
+              </div>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                rows={2}
+                placeholder="Votre commentaire (optionnel)"
+                style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #E4E2DC", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+              />
+              {reviewError && <p style={{ margin: 0, fontSize: 12, color: "#C22D2D" }}>⚠️ {reviewError}</p>}
+              <div>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview || reviewNote < 1}
+                  style={{
+                    padding: "9px 18px",
+                    border: "none",
+                    borderRadius: 10,
+                    background: "linear-gradient(135deg,#B8720A,#9C5E08)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: isSubmittingReview || reviewNote < 1 ? "not-allowed" : "pointer",
+                    opacity: isSubmittingReview || reviewNote < 1 ? 0.6 : 1,
+                  }}
+                >
+                  {isSubmittingReview ? "Envoi..." : "Envoyer l'avis"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>Transaction conclue. Les avis ne sont possibles qu'avec une entreprise enregistrée.</p>
+          )}
+        </div>
+      )}
 
       {/* Composeur */}
       {isBlocked ? (

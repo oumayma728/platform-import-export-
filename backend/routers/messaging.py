@@ -48,7 +48,7 @@ async def get_or_create_conversation(body: GetOrCreateConversationRequest, user=
     )
 
     if existing:
-        return _serialize_conversation(existing, user.id)
+        return await _serialize_conversation(existing, user.id)
 
     conversation = await prisma.conversation.create(
         data={
@@ -66,7 +66,7 @@ async def get_or_create_conversation(body: GetOrCreateConversationRequest, user=
         },
     )
 
-    return _serialize_conversation(conversation, user.id)
+    return await _serialize_conversation(conversation, user.id)
 
 
 @router.get("")
@@ -87,7 +87,7 @@ async def get_conversations(user=Depends(get_current_user)):
         order={"updatedAt": "desc"},
     )
 
-    return [_serialize_conversation(c, user.id) for c in conversations]
+    return [await _serialize_conversation(c, user.id) for c in conversations]
 
 
 @router.get("/{conversation_id}")
@@ -104,7 +104,7 @@ async def get_conversation_by_id(conversation_id: str, user=Depends(get_current_
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
 
-    result = _serialize_conversation(conversation, user.id)
+    result = await _serialize_conversation(conversation, user.id)
     return result
 
 
@@ -158,7 +158,7 @@ async def update_conversation_status(conversation_id: str, body: UpdateStatusReq
 
     updated = await prisma.conversation.update(
         where={"id": conversation_id},
-        data={"statut": body.status if body.status else conversation.statut},
+        data={"statut": (body.status if body.status else conversation.statut).upper()},
         include={
             "annonce": True,
             "vendeur": True,
@@ -166,15 +166,25 @@ async def update_conversation_status(conversation_id: str, body: UpdateStatusReq
             "messages": True,
         },
     )
-    return _serialize_conversation(updated, user.id)
+    return await _serialize_conversation(updated, user.id)
 
 
-def _serialize_conversation(c, current_user_id: str) -> dict:
+async def _serialize_conversation(c, current_user_id: str) -> dict:
     name = ""
     if current_user_id == c.vendeurId:
         name = f"{c.acheteur.nom} {c.acheteur.prenom}"
     else:
         name = f"{c.vendeur.nom} {c.vendeur.prenom}"
+
+    # Entreprise de l'interlocuteur (celle qu'on peut noter) + état d'avis
+    counterpart_entreprise_id = (
+        c.acheteur.entrepriseId if current_user_id == c.vendeurId else c.vendeur.entrepriseId
+    )
+    reviewed = bool(
+        await prisma.review.find_first(
+            where={"auteurId": current_user_id, "conversationId": c.id}
+        )
+    )
 
     sorted_msgs = sorted(c.messages, key=lambda m: m.dateEnvoi or __import__("datetime").datetime.min.replace(tzinfo=__import__("datetime").timezone.utc))
 
@@ -182,8 +192,9 @@ def _serialize_conversation(c, current_user_id: str) -> dict:
         "id": c.id,
         "listingId": c.annonceId,
         "listingProduct": c.annonce.titre if c.annonce else "",
-        "counterpart": {"name": name, "country": ""},
+        "counterpart": {"name": name, "country": "", "entrepriseId": counterpart_entreprise_id},
         "status": c.statut.lower(),
+        "reviewed": reviewed,
         "updatedAt": c.updatedAt.isoformat() if c.updatedAt else None,
         "messages": [
             {

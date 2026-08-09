@@ -17,7 +17,11 @@ async def get_public_account(user_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="Compte introuvable")
 
-    reviews = await prisma.review.find_many(where={"entrepriseId": user.entrepriseId}) if user.entrepriseId else []
+    reviews = await prisma.review.find_many(
+        where={"entrepriseId": user.entrepriseId},
+        include={"auteur": True},
+        order={"createdAt": "desc"},
+    ) if user.entrepriseId else []
     avg_rating = round(sum(r.note for r in reviews) / len(reviews), 1) if reviews else None
 
     entreprise = user.entreprise
@@ -33,6 +37,17 @@ async def get_public_account(user_id: str):
         "memberSince": user.createdAt.strftime("%Y") if user.createdAt else "",
         "profileStatus": user.validationStatus or "pending",
         "description": entreprise.description or "" if entreprise else "",
+        "trustScore": entreprise.trustScore if entreprise else None,
         "averageRating": avg_rating,
         "reviewCount": len(reviews),
+        "reviews": [
+            {
+                "id": r.id,
+                "note": r.note,
+                "commentaire": r.commentaire,
+                "auteur": {"nom": r.auteur.nom, "prenom": r.auteur.prenom} if r.auteur else None,
+                "createdAt": r.createdAt.isoformat() if r.createdAt else None,
+            }
+            for r in reviews
+        ],
     }

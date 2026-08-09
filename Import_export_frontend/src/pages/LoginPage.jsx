@@ -265,6 +265,21 @@ export default function LoginPage() {
 </button>
         </form>
 
+        {/* Accès espace admin (identité séparée, spec §4) */}
+        <div style={{ textAlign: "center", marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #eee" }}>
+          <Link
+            to="/admin/login"
+            style={{
+              textDecoration: "none",
+              color: "#6b7280",
+              fontWeight: "600",
+              fontSize: "13px",
+            }}
+          >
+            Espace administrateur →
+          </Link>
+        </div>
+
         {/* Inscription */}
         <p
           style={{

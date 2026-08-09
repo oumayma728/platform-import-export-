@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../../../context/AuthContext";
+import { useAdmin } from "../context/AdminContext";
 import { Navigate } from "react-router-dom";
 import { getReviews } from "../api/admin";
+import Spinner from "../../../components/atoms/Spinner";
+import ErrorMessage from "../../../components/atoms/ErrorMessage";
 import { colors, radius, shadow, spacing, typography } from "../../../styles/tokens";
 
 function StarRating({ note }) {
   return (
-    <span style={{ color: "#F59E0B", fontSize: 14, letterSpacing: 2 }}>
+    <span style={{ color: colors.primary, fontSize: 14, letterSpacing: 2 }}>
       {"★".repeat(note)}{"☆".repeat(5 - note)}
     </span>
   );
 }
 
 export default function AdminReviewsPage() {
-  const { user } = useAuth();
+  const { admin } = useAdmin();
   const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,32 +27,30 @@ export default function AdminReviewsPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  if (user?.role !== "admin") return <Navigate to="/" replace />;
+  if (!admin) return <Navigate to="/admin/login" replace />;
 
   return (
     <div>
-      <h1 style={{ fontFamily: typography.display, fontSize: typography.fontSizeXl, fontWeight: 800, marginBottom: spacing.lg, color: colors.textPrimary }}>
-        Avis utilisateurs
-      </h1>
+      <div style={{ marginBottom: spacing.xl }}>
+        <span className="eyebrow">Administration</span>
+        <h1 style={{ margin: 0, fontSize: 38, fontWeight: 800, color: colors.textPrimary }}>
+          Avis utilisateurs
+        </h1>
+        <p style={{ marginTop: 8, color: colors.textMuted }}>
+          Retours laissés par les utilisateurs sur les entreprises.
+        </p>
+      </div>
 
-      {error && <div style={{ padding: "10px 14px", borderRadius: radius.sm, backgroundColor: colors.dangerBg, color: colors.danger, marginBottom: spacing.md }}>{error}</div>}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {isLoading ? (
-        <p style={{ color: colors.textMuted }}>Chargement...</p>
-      ) : reviews.length === 0 ? (
+      {isLoading ? <Spinner /> : reviews.length === 0 ? (
         <p style={{ color: colors.textMuted }}>Aucun avis pour le moment.</p>
       ) : (
         <>
           <p style={{ color: colors.textMuted, fontSize: typography.fontSizeSm, marginBottom: spacing.md }}>{reviews.length} avis</p>
           <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}>
             {reviews.map((r) => (
-              <div key={r.id} style={{
-                background: colors.surfaceRaised,
-                border: `1px solid ${colors.border}`,
-                borderRadius: radius.md,
-                padding: spacing.md,
-                boxShadow: shadow.card,
-              }}>
+              <div key={r.id} style={{ background: "#fff", border: `1px solid ${colors.border}`, borderRadius: radius.md, padding: spacing.md, boxShadow: shadow.card }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: spacing.sm }}>
                     <StarRating note={r.note} />

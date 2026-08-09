@@ -320,12 +320,48 @@ const filteredItems = items.filter(
   {/* </div> */}
 </div>
 
-        <AsyncState
-          isLoading={isLoading}
-          error={error}
-          isEmpty={filteredItems.length === 0}
-          emptyLabel="Vous n'avez pas encore publié d'annonce."
-        >
+        <AsyncState isLoading={isLoading} error={error}>
+          {items.length === 0 ? (
+            // Aucune annonce publiée du tout : on invite l'utilisateur à en créer une
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: spacing.sm,
+                padding: `${spacing.xl}px ${spacing.lg}px`,
+                backgroundColor: "#fff",
+                border: `1px dashed ${colors.border}`,
+                borderRadius: radius.md,
+              }}
+            >
+              <div style={{ fontSize: "40px" }}>📭</div>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: typography.fontSizeMd,
+                  color: colors.textPrimary,
+                }}
+              >
+                Aucune publication n'est disponible
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  color: colors.textMuted,
+                  fontSize: typography.fontSizeBase,
+                }}
+              >
+                Voulez-vous en créer une ?
+              </p>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            // Il existe des annonces, mais aucune ne correspond aux filtres actifs
+            <p style={{ color: "#666" }}>
+              Aucune annonce ne correspond à ces filtres.
+            </p>
+          ) : (
           <div
             style={{
               display: "flex",
@@ -502,6 +538,7 @@ const filteredItems = items.filter(
               );
             })}
           </div>
+          )}
         </AsyncState>
       </div>
 

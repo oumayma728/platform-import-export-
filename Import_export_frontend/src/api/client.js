@@ -22,7 +22,11 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Sur les pages /auth/* (login, register) on laisse le composant
+    // afficher l'erreur (ex: "Aucun compte associé à cet email") au lieu
+    // de rediriger. Ailleurs, un 401 = session expirée -> retour au login.
+    const isAuthPage = window.location.pathname.startsWith("/auth/");
+    if (error.response?.status === 401 && !isAuthPage) {
       clearToken();
       window.location.href = "/auth/login";
     }
