@@ -1,5 +1,6 @@
 package com.commercial.Pont.Commercial.models;
 
+import com.commercial.Pont.Commercial.enums.AuthProvider;
 import com.commercial.Pont.Commercial.enums.ValidationStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,26 +23,23 @@ public class Utilisateur {
     private UUID utilisateurId;
 
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(unique = true)
     private String email;
 
     private String passwordHash;
 
     private String nom;
 
-    @Column(nullable = false, length = 100)
     private String prenom;
 
-    @Column(length = 20)
     private String telephone;
 
-    @Column(length = 100)
     private String fonction;
 
     @Enumerated(EnumType.STRING)
     private ValidationStatus validationStatus;
 
-    private Integer nombreChatsUtilises = 0;
+    private Integer nombreChatsUtilises ;
 
     private Integer maxMessagesPossible;
 
@@ -51,6 +49,12 @@ public class Utilisateur {
 
     private LocalDateTime updatedAt;
 
+    @Column(unique = true)
+    private String googleId;
+
+    @Enumerated(EnumType.STRING)
+    private AuthProvider authProvider;
+
 
 
     @OneToMany(mappedBy = "utilisateur")
@@ -59,8 +63,8 @@ public class Utilisateur {
     @OneToMany(mappedBy = "utilisateur")
     private List<Message> messages;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "entrepriseId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "entrepriseId")
     private Entreprise entreprise;
 
     @OneToMany(mappedBy = "vendeur")
@@ -81,6 +85,6 @@ public class Utilisateur {
     private List<Notification> notifications;
 
     @OneToMany(mappedBy = "utilisateur")
-    private Set<RoleUtilisateur> utilisateurs;
+    private Set<RoleUtilisateur> roles;
 
 }

@@ -19,10 +19,8 @@ public class Role {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID roleId;
 
-    @Column(nullable = false, unique = true, length = 50)
     private String code;
 
-    @Column(nullable = false, length = 100)
     private String nom;
 
     @Column(columnDefinition = "TEXT")
@@ -33,5 +31,5 @@ public class Role {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "role")
-    private Set<RoleUtilisateur> roles;
+    private Set<RoleUtilisateur> utilisateurs;
 }

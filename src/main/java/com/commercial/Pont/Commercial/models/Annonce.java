@@ -23,33 +23,25 @@ public class Annonce {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID annonceId;
 
-    @Column(nullable = false)
     private String titre;
 
-    @Column(length = 255)
     private String certification;
 
-    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private AnnouncementType type;
 
     private Double prix;
 
-    @Column(length = 5)
     private String devise;
 
     private Double quantite;
-
-    @Column(length = 20)
     private String uniteQuantite;
 
     private LocalDateTime dateLimite;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private AnnouncementStatus statut;
 
     private Integer dureeLivraison;
@@ -69,27 +61,25 @@ public class Annonce {
     @OneToMany(mappedBy = "annonce", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DocumentAnnonce> documentAnnonces;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "categorieId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categorieId")
     private Categorie categorie;
 
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "utilisateurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateurId")
     private Utilisateur utilisateur;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "locationOrigineId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "locationOrigineId")
     private Location locationOrigine;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "locationDestinationId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "locationDestinationId")
     private Location locationDestination;
 
 
     @OneToMany(mappedBy = "annonce")
     private Set<IncotermAnnonce> annonces;
-
-
 
 }

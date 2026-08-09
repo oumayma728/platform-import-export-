@@ -32,7 +32,7 @@ public class DocumentAnnonce {
     private LocalDateTime updatedAt;
 
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "annonceId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "annonceId")
     private Annonce  annonce;
 }

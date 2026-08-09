@@ -20,11 +20,8 @@ public class Entreprise {
     private UUID entrepriseId;
 
 
-
-    @Column(nullable = false, length = 200)
     private String nom;
 
-    @Column(length = 50)
     private String siret;
 
     private String numeroTva;
@@ -34,7 +31,6 @@ public class Entreprise {
 
     private String siteWeb;
 
-    @Column(length = 255)
     private String logo;
 
     private Integer anneeCreation;
@@ -54,7 +50,7 @@ public class Entreprise {
     @OneToMany(mappedBy = "entreprise")
     private List<Utilisateur> utilisateurs;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "locationId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "locationId")
     private Location location;
 }

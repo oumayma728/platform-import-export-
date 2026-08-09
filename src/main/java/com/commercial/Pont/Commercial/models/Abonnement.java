@@ -22,27 +22,21 @@ public class Abonnement {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID abonnementId;
 
-    @Column(nullable = false)
     private String nom;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private AbonnementType typeAbonnement;
 
-    @Column(nullable = false)
     private Integer dureeEnMois;
 
     private Double prixAbonnement;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private AbonnementStatus statut;
 
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
-
-
 
     @OneToMany(mappedBy = "abonnement")
     private List<Subscription> subscriptions;

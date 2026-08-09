@@ -20,7 +20,6 @@ public class Categorie {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID categorieId;
 
-    @Column(nullable = false, length = 100)
     private String nom;
 
     @Column(columnDefinition = "TEXT")

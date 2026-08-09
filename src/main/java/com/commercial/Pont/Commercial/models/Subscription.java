@@ -19,15 +19,14 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID subscriptionId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "utilisateurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateurId")
     private Utilisateur utilisateur;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "abonnementId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "abonnementId")
     private Abonnement abonnement;
 
-    @Column( nullable = false)
     private LocalDateTime dateDebut;
 
     private LocalDateTime dateFin;

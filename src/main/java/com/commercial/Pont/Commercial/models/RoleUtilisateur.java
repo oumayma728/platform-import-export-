@@ -18,15 +18,14 @@ public class RoleUtilisateur {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID roleUtilisateurId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "utilisateurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateurId")
     private Utilisateur utilisateur;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "roleId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "roleId")
     private Role role;
 
 
-    @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

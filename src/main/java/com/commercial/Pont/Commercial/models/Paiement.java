@@ -22,7 +22,6 @@ public class Paiement {
 
     private Double montant;
 
-    @Column(nullable = false, length = 3)
     private String devise;
 
     private String stripePaymentIntentId;
@@ -40,8 +39,8 @@ public class Paiement {
 
     private LocalDateTime updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "facturationId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "facturationId")
     private Facturation facturation;
 
 }

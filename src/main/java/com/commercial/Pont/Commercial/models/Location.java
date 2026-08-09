@@ -18,10 +18,8 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID locationId;
 
-    @Column(nullable = false, length = 100)
     private String pays;
 
-    @Column(length = 100)
     private String ville;
 
     private String codePostal;
@@ -29,7 +27,6 @@ public class Location {
     @Column(columnDefinition = "TEXT")
     private String adresse;
 
-    @Column(length = 100)
     private String region;
 
     @OneToMany(mappedBy = "locationOrigine", cascade = CascadeType.ALL, orphanRemoval = true)

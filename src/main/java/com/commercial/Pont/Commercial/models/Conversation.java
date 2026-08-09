@@ -21,7 +21,6 @@ public class Conversation {
     private UUID conversationId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private ConversationStatus statut;
 
     private LocalDateTime dateDernierMessage;
@@ -35,21 +34,21 @@ public class Conversation {
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Message> messages;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "vendeurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendeurId")
     private Utilisateur vendeur;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "acheteurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "acheteurId")
     private Utilisateur acheteur;
 
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "annonceId", nullable = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "annonceId")
     private Annonce annonce;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "facturationId", nullable = true, unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "facturationId")
     private Facturation facturation;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)

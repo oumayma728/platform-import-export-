@@ -18,7 +18,7 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID messageId;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String contenu;
 
     private Boolean estLu = false;
@@ -27,7 +27,6 @@ public class Message {
 
     private LocalDateTime dateLecture;
 
-    @Column(name = "prix_message")
     private Integer prixMessage;
 
     private LocalDateTime createdAt;
@@ -36,11 +35,11 @@ public class Message {
 
 
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "conversationId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversationId")
     private Conversation conversation;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "expediteurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "expediteurId")
     private Utilisateur utilisateur;
 }

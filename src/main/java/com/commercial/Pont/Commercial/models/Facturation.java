@@ -21,16 +21,13 @@ public class Facturation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID facturationId;
 
-    @Column(length = 50)
     private String numeroFacture;
 
     private Integer tva;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private FacturationStatus statut;
 
-    @Column(length = 50)
     private String methodePaiement;
 
     private Double prixFacturation;
@@ -41,13 +38,13 @@ public class Facturation {
     private LocalDateTime updatedAt;
 
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "subscriptionId", nullable = true, unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subscriptionId")
     private Subscription subscription;
 
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "conversationId", nullable = true, unique = true)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversationId")
     private Conversation conversation;
 
     @OneToMany(mappedBy = "facturation")

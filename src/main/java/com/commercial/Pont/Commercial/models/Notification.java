@@ -21,17 +21,15 @@ public class Notification {
     private UUID notificationId;
 
 
-    @Column(nullable = false, length = 255)
     private String titre;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String contenu;
 
     @Enumerated(EnumType.STRING)
     private NotificationType typeNotification;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private NotificationStatus statut;
 
     private String emailDestinataire;
@@ -50,8 +48,8 @@ public class Notification {
 
     private LocalDateTime updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "utilisateurId", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateurId")
     private Utilisateur utilisateur;
 
 
