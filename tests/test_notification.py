@@ -1,17 +1,17 @@
 """Tests du module notifications : creation, liste, marquage lu/non lu."""
 
 
-def test_send_email_notification_cree_une_entree(client, registered_user, mock_email):
+def test_send_email_notification_cree_une_entree(client, admin_user, mock_email):
     r = client.post("/api/notifications/email", params={
         "to": "destinataire@example.com", "subject": "Test", "body": "Contenu du message",
-    }, headers=registered_user["headers"])
+    }, headers=admin_user["headers"])
     assert r.status_code == 200
 
 
-def test_send_sms_notification_cree_une_entree(client, registered_user, mock_twilio):
+def test_send_sms_notification_cree_une_entree(client, admin_user, mock_twilio):
     r = client.post("/api/notifications/sms", params={
         "to": "+21600000000", "message": "Test SMS",
-    }, headers=registered_user["headers"])
+    }, headers=admin_user["headers"])
     assert r.status_code == 200
 
 

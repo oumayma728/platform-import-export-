@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from typing import Optional
 from enum import Enum
 from pydantic import Field
@@ -69,5 +69,4 @@ class ValidationStatus(str, Enum):
 class ValidationUpdate(BaseModel):
     statut: ValidationStatus
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

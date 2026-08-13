@@ -72,13 +72,13 @@ def test_refresh_token_flow(client, registered_user):
     })
     refresh_token = r.json()["refresh_token"]
 
-    r2 = client.post(f"/api/auth/refresh?refresh_token={refresh_token}")
+    r2 = client.post("/api/auth/refresh", json={"refresh_token": refresh_token})
     assert r2.status_code == 200
     assert "access_token" in r2.json()
 
 
 def test_refresh_token_invalide(client):
-    r = client.post("/api/auth/refresh?refresh_token=un-faux-token-qui-nexiste-pas")
+    r = client.post("/api/auth/refresh", json={"refresh_token": "un-faux-token-qui-nexiste-pas"})
     assert r.status_code == 401
 
 

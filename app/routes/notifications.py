@@ -7,6 +7,7 @@ from app.services.notification_service import (
     list_notifications_for_user,
     mark_notification_read,
 )
+from app.services.notification_service import retry_failed_notifications
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
@@ -40,7 +41,6 @@ def read_notification(notification_id: int, user: dict = Depends(verify_token), 
         raise HTTPException(status_code=404, detail="Notification introuvable")
     return result
 
-
 @router.post(
     "/email",
     summary="Envoyer une notification e-mail",
@@ -59,3 +59,12 @@ def send_email(to: str, subject: str, body: str, user: dict = Depends(verify_tok
 )
 def send_sms(to: str, message: str, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     return create_notification(db, user["id"], "SMS", to, message)
+
+
+@router.post(
+    "/retry-failed",
+    summary="Relancer les notifications échouées",
+    description="Retente l'envoi des notifications en échec (max 3 tentatives, admin uniquement).",
+)
+def retry_failed(user: dict = Depends(verify_token), db: Session = Depends(get_db)):
+    return retry_failed_notifications(db)

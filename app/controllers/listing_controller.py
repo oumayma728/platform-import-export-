@@ -45,19 +45,18 @@ async def create_listing(data: ListingCreate, user_id: int, db: Session):
 
 
 async def get_all_listings(db: Session, country=None, category=None, listing_type=None, min_price=None, max_price=None,
-                            certification=None, page=1, page_size=20, devise_affichage=None):
+                            certification=None, incoterm=None, page=1, page_size=20, devise_affichage=None):
     query = db.query(Listing).filter(Listing.statut == "active", Listing.suspendue.is_(False))
-    if country: query = query.filter((Listing.pays_origine == country) | (Listing.pays_destination == country))
+    if country: query = query.filter((Listing.pays_origine == country.upper()) | (Listing.pays_destination == country.upper()))
     if category: query = query.filter(Listing.categorie == category)
     if listing_type: query = query.filter(Listing.type == listing_type)
     if min_price is not None: query = query.filter(Listing.prix >= min_price)
     if max_price is not None: query = query.filter(Listing.prix <= max_price)
-    if certification: query = query.filter(Listing.certification == certification)
+    if certification: query = query.filter(Listing.certification.ilike(certification))
+    if incoterm: query = query.filter(Listing.incoterm == incoterm.upper())
     total = query.count()
     rows = query.order_by(Listing.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-
     annonces = [serialize(row) for row in rows]
-
     if devise_affichage:
         for annonce in annonces:
             prix = annonce.get("prix")
@@ -70,9 +69,11 @@ async def get_all_listings(db: Session, country=None, category=None, listing_typ
                 annonce["devise_affichage"] = devise_affichage.upper()
             except ValueError as exc:
                 logger.info("Conversion de devise ignorée pour l'annonce %s : %s", annonce.get("id"), exc)
-
+    for annonce in annonces:
+        annonce.setdefault("prix_converti" , None)
+        annonce.setdefault("devise_affichage", None)
+        
     return {"total": total, "page": page, "page_size": page_size, "annonces": annonces}
-
 
 def get_listing_by_id(listing_id: int, db: Session):
     listing = db.get(Listing, listing_id)

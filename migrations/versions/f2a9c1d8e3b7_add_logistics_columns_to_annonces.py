@@ -17,7 +17,7 @@ def upgrade() -> None:
     op.add_column('annonces', sa.Column('distance_km', sa.Float(), nullable=True))
     op.add_column('annonces', sa.Column('estimated_cost_usd', sa.Float(), nullable=True))
     op.add_column('annonces', sa.Column('estimated_days', sa.Integer(), nullable=True))
-
+    
 
 def downgrade() -> None:
     op.drop_column('annonces', 'estimated_days')

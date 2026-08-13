@@ -49,7 +49,7 @@ def _set_cached_rates(base_currency: str, rates: dict[str, float]) -> None:
         client = _get_redis_client()
         pipeline = client.pipeline()
         for devise, taux in rates.items():
-            pipeline.setex(f"fx:{base_currency}:{devise}", _CACHE_TTL_SECONDES, taux)
+            pipeline.set(f"fx:{base_currency}:{devise}", taux, ex=_CACHE_TTL_SECONDES)
         pipeline.execute()
     except redis.RedisError:
         pass

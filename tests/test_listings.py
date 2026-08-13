@@ -107,7 +107,7 @@ def test_search_listings_filtre_par_categorie(client, registered_user, mock_logi
     client.post("/api/listings", json=_payload_annonce(categorie="Textile"), headers=registered_user["headers"])
     client.post("/api/listings", json=_payload_annonce(categorie="Agroalimentaire"), headers=registered_user["headers"])
 
-    r = client.get("/api/listings/search?category=Textile")
+    r = client.get("/api/listings/search?categorie=Textile")
     assert r.status_code == 200
     assert all(a["categorie"] == "Textile" for a in r.json()["annonces"])
 

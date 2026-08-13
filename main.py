@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -6,12 +8,38 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from app.config.database import SessionLocal
+from app.services.notification_service import retry_failed_notifications
+
 load_dotenv()
+
+scheduler = BackgroundScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not scheduler.running:
+        scheduler.add_job(
+            __job_retry_failed_notifications,
+            "interval",
+            minutes=5,
+            id="retry_notifications",
+            replace_existing=True,
+        )
+        scheduler.start()
+    try:
+        yield
+    finally:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+
 
 app = FastAPI(
     title="Import Export Platform API",
     description="API complète de la plateforme mondiale import/export — 3LM Solutions",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -62,3 +90,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Une erreur interne est survenue."},
     )
+    
+def __job_retry_failed_notifications():
+    db = SessionLocal()
+    try:
+        retry_failed_notifications(db)
+    finally:
+        db.close()

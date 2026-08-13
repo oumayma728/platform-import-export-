@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.notification import NotificationLog
 from app.services.email_service import send_email
 from app.services.sms_service import send_sms
+from datetime import datetime, timedelta
 
 logger = logging.getLogger("import_export_api")
 
@@ -218,3 +219,50 @@ def log_notification(
         contenu=contenu,
         sujet=sujet,
     )
+
+MAX_TENTATIVES = 3
+DELAI_ENTRE_TENTATIVES = timedelta(minutes=5)
+
+
+def retry_failed_notifications(db: Session) -> dict:
+    """
+    Parcourt les notifications en ÉCHEC et retente l'envoi
+    (max MAX_TENTATIVES essais, avec un délai minimum entre 2 tentatives).
+    À appeler périodiquement (scheduler) ou via l'endpoint /notifications/retry-failed.
+    """
+    maintenant = datetime.utcnow()
+    a_retenter = (
+        db.query(NotificationLog)
+        .filter(NotificationLog.statut == "ECHEC")
+        .filter(NotificationLog.tentatives < MAX_TENTATIVES)
+        .all()
+    )
+
+    resultats = {"retentees": 0, "reussies": 0, "definitivement_echouees": 0}
+
+    for notif in a_retenter:
+        if notif.derniere_tentative and (maintenant - notif.derniere_tentative) < DELAI_ENTRE_TENTATIVES:
+            continue  # trop tôt pour retenter
+
+        resultats["retentees"] += 1
+        notif.tentatives += 1
+        notif.derniere_tentative = maintenant
+
+        try:
+            if notif.canal == "EMAIL":
+                _send_email_notification(notif.destinataire, notif.sujet or "Notification", notif.contenu)
+            elif notif.canal == "SMS":
+                _send_sms_notification(notif.destinataire, notif.contenu)
+
+            notif.statut = "ENVOYEE"
+            resultats["reussies"] += 1
+            logger.info(f"Retry réussi pour la notification {notif.id} ({notif.canal})")
+        except Exception as e:
+            if notif.tentatives >= MAX_TENTATIVES:
+                notif.statut = "ECHEC_DEFINITIF"
+                resultats["definitivement_echouees"] += 1
+            logger.warning(f"Retry {notif.tentatives}/{MAX_TENTATIVES} échoué pour {notif.id}: {e}")
+
+        db.commit()
+
+    return resultats

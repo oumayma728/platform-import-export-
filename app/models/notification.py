@@ -15,6 +15,7 @@ class NotificationLog(Base):
     statut = Column(String(30), default="EN_ATTENTE")
     lu= Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
-    
+    tentatives = Column(Integer, default=0)
+    derniere_tentative = Column(DateTime, nullable=True)
     
     user = relationship("User", backref="notifications")

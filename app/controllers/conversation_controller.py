@@ -19,21 +19,31 @@ def is_member(conversation: Conversation, user_id: int):
 
 
 def create_conversation(destinataire_id: int, listing_id: int | None, user_id: int, db: Session):
-    if destinataire_id == user_id: raise HTTPException(status_code=400, detail="Impossible de créer une conversation avec soi-même")
+    if destinataire_id == user_id:
+        raise HTTPException(status_code=400, detail="Impossible de créer une conversation avec soi-même")
+
+    # Vérifier d'abord si la conversation existe déjà — ça ne consomme jamais de quota
+    existing = db.query(Conversation).filter(
+        Conversation.initiateur_id == user_id,
+        Conversation.destinataire_id == destinataire_id,
+        Conversation.listing_id == listing_id
+    ).first()
+    if existing:
+        return conversation_dict(existing)
+
+    # Seulement ensuite, vérifier le quota — puisqu'on sait que c'est vraiment un NOUVEAU chat
     quota = db.query(UserQuota).filter(UserQuota.user_id == user_id).first()
-    if not quota: quota = UserQuota(user_id=user_id); db.add(quota); db.flush()
+    if not quota:
+        quota = UserQuota(user_id=user_id); db.add(quota); db.flush()
     if quota.statut not in ("ABONNE", "PAIEMENT_USAGE") and quota.chats_utilises >= quota.chats_gratuits:
         quota.statut = "LIMITE_ATTEINTE"; db.commit()
         emetteur = db.get(User, user_id)
         if emetteur:
-            create_notification(
-                db, user_id, "EMAIL", emetteur.email,
+            create_notification(db, user_id, "EMAIL", emetteur.email,
                 "Vous avez atteint votre limite de 50 chats gratuits. Passez à l'abonnement ou au paiement à l'usage pour continuer.",
-                sujet="Limite de chats gratuits atteinte",
-            )
+                sujet="Limite de chats gratuits atteinte")
         raise HTTPException(status_code=402, detail="Limite de 50 nouveaux chats atteinte. Un paiement ou abonnement est requis.")
-    existing = db.query(Conversation).filter(Conversation.initiateur_id == user_id, Conversation.destinataire_id == destinataire_id, Conversation.listing_id == listing_id).first()
-    if existing: return conversation_dict(existing)
+
     conversation = Conversation(initiateur_id=user_id, destinataire_id=destinataire_id, listing_id=listing_id)
     quota.chats_utilises += 1
     if quota.chats_utilises >= quota.chats_gratuits: quota.statut = "LIMITE_ATTEINTE"

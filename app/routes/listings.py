@@ -9,41 +9,48 @@ from app.schemas.listing import ListingCreate, ListingUpdate
 router = APIRouter(prefix="/listings", tags=["Annonces"])
 
 
-@router.get("", summary="Rechercher des annonces", description="Retourner la liste paginée des annonces avec filtres optionnels.", responses={200: {"description": "Liste des annonces"}})
+@router.get("", summary="Rechercher des annonces", description="Retourner la liste paginée des annonces avec filtres optionnels.")
 async def get_listings(country: Optional[str] = None, category: Optional[str] = None, type: Optional[str] = None,
                         min_price: Optional[float] = None, max_price: Optional[float] = None, certification: Optional[str] = None,
-                        devise_affichage: Optional[str] = Query(default=None, description="Code devise ISO (ex: EUR) pour convertir les prix affichés"),
+                        devise_affichage: Optional[str] = Query(default=None),
                         page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100), db: Session = Depends(get_db)):
-    return await get_all_listings(db, country, category, type, min_price, max_price, certification, page, page_size, devise_affichage)
-
+    return await get_all_listings(
+        db=db, country=country, category=category, listing_type=type,
+        min_price=min_price, max_price=max_price, certification=certification,
+        page=page, page_size=page_size, devise_affichage=devise_affichage
+    )
 
 # IMPORTANT : /search doit être déclaré AVANT /{listing_id}, sinon FastAPI/Starlette
 # interprète "search" comme une valeur de listing_id et renvoie 422 avant même
 # d'atteindre cette route (bug corrigé).
-@router.get(
-    "/search",
-    summary="Recherche avancée d'annonces",
-    description="Recherche avec filtres multiples : pays, catégorie, prix, certification, devise d'affichage et pagination"
-)
+@router.get("/search", summary="Recherche avancée d'annonces",
+            description="Recherche avec filtres multiples : pays, catégorie, prix, certification, Incoterm, devise d'affichage et pagination")
 async def search_listings(
-    country: Optional[str] = None,
-    category: Optional[str] = None,
+    pays: Optional[str] = None,
+    categorie: Optional[str] = None,
     type: Optional[str] = None,
-    min_price: Optional[float] = None,
-    max_price: Optional[float] = None,
+    prix_min: Optional[float] = None,
+    prix_max: Optional[float] = None,
     certification: Optional[str] = None,
     incoterm: Optional[str] = None,
-    devise_affichage: Optional[str] = Query(default=None, description="Code devise ISO (ex: EUR) pour convertir les prix affichés"),
+    devise_affichage: Optional[str] = Query(default=None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return await get_all_listings(
-        db, country, category, type,
-        min_price, max_price, certification,
-        page, page_size, devise_affichage
+        db=db,
+        country=pays,
+        category=categorie,
+        listing_type=type,
+        min_price=prix_min,
+        max_price=prix_max,
+        certification=certification,
+        incoterm=incoterm,
+        page=page,
+        page_size=page_size,
+        devise_affichage=devise_affichage,
     )
-
 
 @router.post("", status_code=201, summary="Créer une annonce", description="Publier une nouvelle annonce import/export.", responses={201: {"description": "Annonce créée"}, 401: {"description": "Non authentifié"}})
 async def create(listing: ListingCreate, current_user: dict = Depends(verify_token), db: Session = Depends(get_db)):

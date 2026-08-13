@@ -70,8 +70,7 @@ def subscribe(data: SubscriptionCreate, user: dict = Depends(verify_token), db: 
         quota.stripe_customer_id = customer_id
         db.commit()
 
-    # --- DÉBOGAGE : Afficher ce qui est envoyé ---
-    # On s'assure que le price_id est une chaîne propre sans espaces
+  
     actual_price_id = str(data.price_id).strip()
    
 
@@ -93,4 +92,4 @@ def subscribe(data: SubscriptionCreate, user: dict = Depends(verify_token), db: 
     except Exception as e:
         logger.error(f"Erreur Stripe (subscribe) : {str(e)}")
         # Renvoi de l'erreur détaillée pour faciliter le diagnostic
-        raise HTTPException(status_code=400, detail=f"Erreur Stripe : {str(e)}")
+        raise HTTPException(status_code=400, detail="Impossible de créer l'abonnement, veilleez réessayer.")

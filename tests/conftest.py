@@ -101,7 +101,32 @@ def second_user(client):
     data = r.json()
     return {"headers": {"Authorization": f"Bearer {data['access_token']}"}, "id": data["user"]["id"]}
 
+@pytest.fixture()
+def admin_user(client, db_session):
+    """Crée un utilisateur puis le promeut ADMIN directement en base,
+    puis se reconnecte pour obtenir un token à jour contenant le rôle ADMIN."""
+    payload = {
+        "nom": "Admin Test",
+        "email": "admin.test@example.com",
+        "mot_de_passe": "AdminPass123",
+        "type_compte": "EXPORTATEUR",
+        "pays": "Tunisie",
+    }
+    r = client.post("/api/auth/register", json=payload)
+    assert r.status_code == 201, r.text
+    user_id = r.json()["user"]["id"]
 
+    from app.models.user import User
+    user = db_session.query(User).filter(User.id == user_id).first()
+    user.role = "ADMIN"
+    db_session.commit()
+
+    r2 = client.post("/api/auth/login", json={
+        "email": payload["email"], "mot_de_passe": payload["mot_de_passe"],
+    })
+    assert r2.status_code == 200, r2.text
+    token = r2.json()["access_token"]
+    return {"headers": {"Authorization": f"Bearer {token}"}, "id": user_id, "email": payload["email"]}
 # ---------------------------------------------------------------------------
 # Mocks des services externes : jamais de vrai appel réseau pendant les tests
 # ---------------------------------------------------------------------------
