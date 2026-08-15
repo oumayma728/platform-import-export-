@@ -2,6 +2,7 @@ package com.commercial.Pont.Commercial.services.ImplementationServices;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.DocumentConversationRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.DocumentConversationResponseDto;
+import com.commercial.Pont.Commercial.dtos.websocket.ConversationEventDto;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.DocumentConversationMapperInterface;
 import com.commercial.Pont.Commercial.models.Conversation;
 import com.commercial.Pont.Commercial.models.DocumentConversation;
@@ -9,11 +10,17 @@ import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.ConversationRepository;
 import com.commercial.Pont.Commercial.repositories.DocumentConversationRepository;
 import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
+import com.commercial.Pont.Commercial.security.CustomUserDetails;
+import com.commercial.Pont.Commercial.services.FileStorageService;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.DocumentConversationServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +40,9 @@ public class DocumentConversationServiceImpl
 
     private final ConversationRepository conversationRepository;
 
+    private final FileStorageService fileStorageService;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     // =========================
     // CREATE
@@ -118,6 +128,35 @@ public class DocumentConversationServiceImpl
                 documentConversationRepository.save(
                         documentConversation
                 );
+        Integer nombreMessages =
+                conversation.getNombreMessages();
+
+        if (nombreMessages == null) {
+
+            nombreMessages = 0;
+        }
+
+        conversation.setNombreMessages(
+                nombreMessages + 1
+        );
+
+        conversation.setDateDernierMessage(
+                now
+        );
+
+        conversationRepository.save(
+                conversation
+        );
+
+        Integer nombreMessagesUtilisees =
+                expediteur.getNombreChatsUtilises();
+
+        expediteur.setNombreChatsUtilises(
+                nombreMessagesUtilisees + 1
+        );
+
+        utilisateurRepository.save(expediteur);
+
 
         return documentConversationMapper.entityToResponse(
                 savedDocumentConversation
@@ -327,5 +366,488 @@ public class DocumentConversationServiceImpl
         documentConversationRepository.deleteById(
                 documentConversationId
         );
+    }
+
+
+
+
+
+
+    @Override
+    @Transactional
+    public DocumentConversationResponseDto addDocumentToConversation(
+            UUID conversationId,
+            MultipartFile file
+    ) {
+
+        // =====================================================
+        // Vérification du fichier
+        // =====================================================
+
+        if (file == null || file.isEmpty()) {
+
+            throw new IllegalArgumentException(
+                    "Le fichier est obligatoire"
+            );
+        }
+
+
+        // =====================================================
+        // Utilisateur connecté via JWT
+        // =====================================================
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
+            throw new IllegalStateException(
+                    "Utilisateur non authentifié"
+            );
+        }
+
+
+        String email = authentication.getName();
+
+
+        // =====================================================
+        // Recherche utilisateur
+        // =====================================================
+
+        Utilisateur expediteur =
+                utilisateurRepository.findByEmail(email)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Utilisateur non trouvé avec l'email': "
+                                                + email
+                                )
+                        );
+
+
+
+
+
+        // =====================================================
+        // Recherche conversation
+        // =====================================================
+
+        Conversation conversation =
+                conversationRepository.findById(conversationId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Conversation non trouvée avec l'id : "
+                                                + conversationId
+                                )
+                        );
+
+
+        // =====================================================
+        // Vérification que l'utilisateur appartient
+        // à la conversation
+        // =====================================================
+
+        boolean participant =
+
+                conversation.getInitiateur()
+                        .getUtilisateurId()
+                        .equals(expediteur.getUtilisateurId())
+
+                        ||
+
+                        conversation.getDestinataire()
+                                .getUtilisateurId()
+                                .equals(expediteur.getUtilisateurId());
+
+
+        if (!participant) {
+
+            throw new IllegalStateException(
+                    "Vous ne participez pas à cette conversation"
+            );
+        }
+
+
+        // =====================================================
+        // Nom original du fichier
+        // =====================================================
+
+        String nomFichier =
+                file.getOriginalFilename();
+
+
+        if (nomFichier == null
+                || nomFichier.isBlank()) {
+
+            throw new IllegalArgumentException(
+                    "Nom du fichier invalide"
+            );
+        }
+
+
+        // =====================================================
+        // Extension
+        // =====================================================
+
+        String extension = "";
+
+        int lastDot =
+                nomFichier.lastIndexOf(".");
+
+        if (lastDot > 0) {
+
+            extension =
+                    nomFichier.substring(
+                            lastDot + 1
+                    );
+        }
+
+
+        // =====================================================
+        // Taille
+        // =====================================================
+
+        Long taille =
+                file.getSize();
+
+
+        // =====================================================
+        // Sauvegarde physique
+        // =====================================================
+
+        String cheminFichier =
+                fileStorageService.store(file);
+
+
+        // =====================================================
+        // Création DocumentConversation
+        // =====================================================
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        DocumentConversation documentConversation =
+                DocumentConversation.builder()
+
+                        .nomFichier(nomFichier)
+
+                        .cheminFichier(cheminFichier)
+
+                        .extension(extension)
+
+                        .taille(taille)
+
+                        .createdAt(now)
+
+                        .updatedAt(now)
+
+                        .expediteur(expediteur)
+
+                        .conversation(conversation)
+
+                        .build();
+
+
+        // =====================================================
+        // Sauvegarde DB
+        // =====================================================
+
+        DocumentConversation savedDocument =
+                documentConversationRepository.save(
+                        documentConversation
+                );
+
+
+        // =====================================================
+        // Incrémentation nombreMessages
+        // =====================================================
+
+        Integer nombreMessages =
+                conversation.getNombreMessages();
+
+        if (nombreMessages == null) {
+
+            nombreMessages = 0;
+        }
+
+        conversation.setNombreMessages(
+                nombreMessages + 1
+        );
+
+        conversation.setDateDernierMessage(
+                now
+        );
+
+        conversationRepository.save(
+                conversation
+        );
+
+        Integer nombreMessagesUtilisees =
+                expediteur.getNombreChatsUtilises();
+
+        expediteur.setNombreChatsUtilises(
+                nombreMessagesUtilisees + 1
+        );
+
+        utilisateurRepository.save(expediteur);
+
+
+
+        DocumentConversationResponseDto response =
+                documentConversationMapper
+                        .entityToResponse(
+                                savedDocument
+                        );
+
+
+        // =====================================================
+        // Événement WebSocket
+        // =====================================================
+
+        ConversationEventDto event =
+                ConversationEventDto.builder()
+
+                        .type("DOCUMENT")
+
+                        .conversationId(
+                                conversation.getConversationId()
+                        )
+
+                        .data(response)
+
+                        .build();
+
+
+        // =====================================================
+        // Diffusion temps réel
+        // =====================================================
+
+        messagingTemplate.convertAndSend(
+
+                "/topic/conversations/"
+                        + conversation.getConversationId(),
+
+                event
+        );
+
+
+        // =====================================================
+        // Retour HTTP
+        // =====================================================
+
+        return response;
+    }
+
+
+    // =========================================================
+    // GET DOCUMENTS BY CONVERSATION
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DocumentConversationResponseDto>
+    getDocumentsByConversation(
+            UUID conversationId
+    ) {
+
+        // =====================================================
+        // Utilisateur connecté
+        // =====================================================
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
+            throw new IllegalStateException(
+                    "Utilisateur non authentifié"
+            );
+        }
+
+
+        String email = authentication.getName();
+
+
+        // =====================================================
+        // Recherche conversation
+        // =====================================================
+
+        Conversation conversation =
+                conversationRepository.findById(conversationId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Conversation non trouvée avec l'id : "
+                                                + conversationId
+                                )
+                        );
+
+
+        // =====================================================
+        // Vérifier participant
+        // =====================================================
+
+        boolean participant =
+
+                conversation.getInitiateur()
+                        .getEmail()
+                        .equals(email)
+
+                        ||
+
+                        conversation.getDestinataire()
+                                .getEmail()
+                                .equals(email);
+
+
+        if (!participant) {
+
+            throw new IllegalStateException(
+                    "Vous ne participez pas à cette conversation"
+            );
+        }
+
+
+        // =====================================================
+        // Récupération documents
+        // =====================================================
+
+        return documentConversationRepository
+                .findByConversation_ConversationId(
+                        conversationId
+                )
+                .stream()
+                .map(
+                        documentConversationMapper::entityToResponse
+                )
+                .toList();
+    }
+
+
+    // =========================================================
+    // DELETE DOCUMENT
+    // =========================================================
+
+    @Override
+    public void deleteDocumentFromConversation(
+            UUID conversationId,
+            UUID documentConversationId
+    ) {
+
+        // =====================================================
+        // Utilisateur connecté
+        // =====================================================
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
+            throw new IllegalStateException(
+                    "Utilisateur non authentifié"
+            );
+        }
+
+
+        String email = authentication.getName();
+
+
+        // =====================================================
+        // Recherche document
+        // =====================================================
+
+        DocumentConversation documentConversation =
+                documentConversationRepository
+                        .findById(documentConversationId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Document non trouvé avec l'id : "
+                                                + documentConversationId
+                                )
+                        );
+
+
+        // =====================================================
+        // Vérifier conversation
+        // =====================================================
+
+        Conversation conversation =
+                documentConversation.getConversation();
+
+
+        if (!conversation
+                .getConversationId()
+                .equals(conversationId)) {
+
+            throw new IllegalArgumentException(
+                    "Ce document n'appartient pas à cette conversation"
+            );
+        }
+
+
+        // =====================================================
+        // Vérifier participant
+        // =====================================================
+
+        boolean participant =
+
+                conversation.getInitiateur()
+                        .getEmail()
+                        .equals(email)
+
+                        ||
+
+                        conversation.getDestinataire()
+                                .getEmail()
+                                .equals(email);
+
+
+        if (!participant) {
+
+            throw new IllegalStateException(
+                    "Vous ne participez pas à cette conversation"
+            );
+        }
+
+
+        // =====================================================
+        // Vérifier que l'utilisateur est l'expéditeur
+        // =====================================================
+
+        if (!documentConversation
+                .getExpediteur()
+                .getEmail()
+                .equals(email)) {
+
+            throw new IllegalStateException(
+                    "Vous ne pouvez supprimer que vos propres documents"
+            );
+        }
+
+
+        // =====================================================
+        // Suppression fichier physique
+        // =====================================================
+
+        fileStorageService.delete(
+                documentConversation.getCheminFichier()
+        );
+
+
+        // =====================================================
+        // Suppression DB
+        // =====================================================
+
+        documentConversationRepository.delete(
+                documentConversation
+        );
+
     }
 }

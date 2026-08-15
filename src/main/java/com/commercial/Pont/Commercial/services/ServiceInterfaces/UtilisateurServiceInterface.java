@@ -3,6 +3,7 @@ package com.commercial.Pont.Commercial.services.ServiceInterfaces;
 import com.commercial.Pont.Commercial.dtos.requestDtos.UpdateProfileRequestDto;
 import com.commercial.Pont.Commercial.dtos.requestDtos.UtilisateurRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.UtilisateurResponseDto;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -10,7 +11,8 @@ import java.util.UUID;
 public interface UtilisateurServiceInterface {
 
     UtilisateurResponseDto create(
-            UtilisateurRequestDto utilisateurRequestDto
+            UtilisateurRequestDto utilisateurRequestDto,
+            MultipartFile photo
     );
 
     UtilisateurResponseDto update(

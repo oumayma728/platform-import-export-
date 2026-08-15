@@ -16,8 +16,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ConversationResponseDto {
 
-    private UUID vendeurId;
-    private UUID acheteurId;
+    private UUID initiateurId;
+    private UUID destinataireId;
     private UUID annonceId;
     private UUID facturationId;
 

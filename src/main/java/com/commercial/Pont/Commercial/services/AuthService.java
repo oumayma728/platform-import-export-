@@ -22,6 +22,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -185,8 +186,8 @@ public class AuthService {
 
 
 
-    public void register(UtilisateurRequestDto request) {
-        utilisateurService.create(request);
+    public void register(UtilisateurRequestDto request , MultipartFile photo) {
+        utilisateurService.create(request,photo);
     }
 
 

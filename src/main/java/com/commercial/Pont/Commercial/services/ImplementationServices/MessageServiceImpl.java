@@ -2,6 +2,7 @@ package com.commercial.Pont.Commercial.services.ImplementationServices;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.MessageRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.MessageResponseDto;
+import com.commercial.Pont.Commercial.dtos.websocket.ConversationEventDto;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.MessageMapperInterface;
 import com.commercial.Pont.Commercial.models.Conversation;
 import com.commercial.Pont.Commercial.models.Message;
@@ -12,6 +13,7 @@ import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.MessageServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,20 +35,18 @@ public class MessageServiceImpl implements MessageServiceInterface {
     private final UtilisateurRepository utilisateurRepository;
 
 
+    private final SimpMessagingTemplate messagingTemplate;
+
+
     // =========================
     // CREATE
     // =========================
 
     @Override
+    @Transactional
     public MessageResponseDto create(
             MessageRequestDto messageRequestDto
     ) {
-
-        Message message =
-                messageMapper.requestToEntity(
-                        messageRequestDto
-                );
-
 
         // =========================
         // Recherche de la conversation
@@ -54,14 +54,12 @@ public class MessageServiceImpl implements MessageServiceInterface {
 
         Conversation conversation =
                 conversationRepository.findById(
-                                messageRequestDto
-                                        .getConversationId()
+                                messageRequestDto.getConversationId()
                         )
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
                                         "Conversation non trouvée avec l'id : "
-                                                + messageRequestDto
-                                                .getConversationId()
+                                                + messageRequestDto.getConversationId()
                                 )
                         );
 
@@ -72,41 +70,61 @@ public class MessageServiceImpl implements MessageServiceInterface {
 
         Utilisateur utilisateur =
                 utilisateurRepository.findById(
-                                messageRequestDto
-                                        .getExpediteurId()
+                                messageRequestDto.getExpediteurId()
                         )
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
                                         "Utilisateur non trouvé avec l'id : "
-                                                + messageRequestDto
-                                                .getExpediteurId()
+                                                + messageRequestDto.getExpediteurId()
                                 )
                         );
+
+
+        // =========================
+        // Transformation DTO → Entity
+        // =========================
+
+        Message message =
+                messageMapper.requestToEntity(
+                        messageRequestDto
+                );
+
+
+        UUID expediteurId =
+                messageRequestDto.getExpediteurId();
+
+        if (!conversation.getInitiateur()
+                .getUtilisateurId()
+                .equals(expediteurId)
+                &&
+                !conversation.getDestinataire()
+                        .getUtilisateurId()
+                        .equals(expediteurId)) {
+
+            throw new IllegalArgumentException(
+                    "Cet utilisateur ne participe pas à cette conversation"
+            );
+        }
 
 
         // =========================
         // Association des relations
         // =========================
 
-        message.setConversation(
-                conversation
-        );
+        message.setConversation(conversation);
 
-        message.setUtilisateur(
-                utilisateur
-        );
+        message.setUtilisateur(utilisateur);
 
 
         // =========================
         // Gestion des valeurs par défaut
         // =========================
 
+        LocalDateTime now = LocalDateTime.now();
+
         if (message.getEstLu() == null) {
             message.setEstLu(false);
         }
-
-        LocalDateTime now =
-                LocalDateTime.now();
 
         if (message.getDateEnvoi() == null) {
             message.setDateEnvoi(now);
@@ -117,17 +135,80 @@ public class MessageServiceImpl implements MessageServiceInterface {
 
 
         // =========================
-        // Sauvegarde
+        // Sauvegarde du message
         // =========================
 
         Message savedMessage =
-                messageRepository.save(
-                        message
+                messageRepository.save(message);
+
+
+        // =========================
+        // Mise à jour de la conversation
+        // =========================
+
+        Integer nombreMessages =
+                conversation.getNombreMessages();
+
+        if (nombreMessages == null) {
+            nombreMessages = 0;
+        }
+
+        conversation.setNombreMessages(
+                nombreMessages + 1
+        );
+
+        conversation.setDateDernierMessage(
+                message.getDateEnvoi()
+        );
+
+        conversation.setUpdatedAt(now);
+
+
+        // =========================
+        // Sauvegarde de la conversation
+        // =========================
+
+        conversationRepository.save(conversation);
+
+
+        Integer nombreMessagesUtilisees =
+                utilisateur.getNombreChatsUtilises();
+
+        utilisateur.setNombreChatsUtilises(
+                nombreMessagesUtilisees + 1
+        );
+
+        utilisateurRepository.save(utilisateur);
+        // =========================
+        // Response
+        // =========================
+
+        MessageResponseDto response =
+                messageMapper.entityToResponse(
+                        savedMessage
                 );
 
-        return messageMapper.entityToResponse(
-                savedMessage
+
+        // =========================
+        // WebSocket
+        // =========================
+
+        ConversationEventDto event =
+                ConversationEventDto.builder()
+                        .type("MESSAGE")
+                        .conversationId(
+                                conversation.getConversationId()
+                        )
+                        .data(response)
+                        .build();
+
+        messagingTemplate.convertAndSend(
+                "/topic/conversations/"
+                        + conversation.getConversationId(),
+                event
         );
+
+        return response;
     }
 
 
@@ -345,5 +426,32 @@ public class MessageServiceImpl implements MessageServiceInterface {
         messageRepository.deleteById(
                 messageId
         );
+    }
+
+
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MessageResponseDto> getByConversationId(
+            UUID conversationId
+    ) {
+
+        // Vérifier que la conversation existe
+        if (!conversationRepository.existsById(conversationId)) {
+
+            throw new EntityNotFoundException(
+                    "Conversation non trouvée avec l'id : "
+                            + conversationId
+            );
+        }
+
+        return messageRepository
+                .findByConversation_ConversationIdOrderByDateEnvoiAsc(
+                        conversationId
+                )
+                .stream()
+                .map(messageMapper::entityToResponse)
+                .toList();
     }
 }

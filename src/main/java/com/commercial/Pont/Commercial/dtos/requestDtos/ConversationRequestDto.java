@@ -14,16 +14,13 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ConversationRequestDto {
 
-    private UUID vendeurId;
-    private UUID acheteurId;
+    private UUID initiateurId;
+    private UUID destinataireId;
     private UUID annonceId;
     private UUID facturationId;
 
     private ConversationStatus statut;
     private LocalDateTime dateDernierMessage;
-    private Integer nombreMessages;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     private List<UUID> messagesIds;
     private List<UUID> documentConversationsIds;

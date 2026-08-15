@@ -16,7 +16,7 @@ public class MessageRequestDto {
     private UUID expediteurId;
 
     private String contenu;
-    private Boolean estLu = false;
+    private Boolean estLu;
     private LocalDateTime dateEnvoi;
     private LocalDateTime dateLecture;
     private Integer prixMessage;

@@ -3,50 +3,38 @@ package com.commercial.Pont.Commercial.controllers;
 import com.commercial.Pont.Commercial.dtos.requestDtos.DocumentConversationRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.DocumentConversationResponseDto;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.DocumentConversationServiceInterface;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/documents-conversations")
+@RequestMapping("/documents-conversations")
 @RequiredArgsConstructor
 public class DocumentConversationController {
 
-    private final DocumentConversationServiceInterface documentConversationService;
+    private final DocumentConversationServiceInterface
+            documentConversationService;
 
 
-    // =========================
-    // CREATE
-    // =========================
-
-    @PostMapping
-    public ResponseEntity<DocumentConversationResponseDto> create(
-            @RequestBody DocumentConversationRequestDto documentConversationRequestDto
-    ) {
-
-        DocumentConversationResponseDto response =
-                documentConversationService.create(
-                        documentConversationRequestDto
-                );
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
-    }
-
-
-    // =========================
+    // =========================================================
     // UPDATE
-    // =========================
+    // =========================================================
 
     @PutMapping("/{documentConversationId}")
     public ResponseEntity<DocumentConversationResponseDto> update(
             @PathVariable UUID documentConversationId,
-            @RequestBody DocumentConversationRequestDto documentConversationRequestDto
+
+            @RequestBody DocumentConversationRequestDto
+                    documentConversationRequestDto
     ) {
 
         DocumentConversationResponseDto response =
@@ -59,9 +47,9 @@ public class DocumentConversationController {
     }
 
 
-    // =========================
+    // =========================================================
     // GET BY ID
-    // =========================
+    // =========================================================
 
     @GetMapping("/{documentConversationId}")
     public ResponseEntity<DocumentConversationResponseDto> getById(
@@ -77,12 +65,14 @@ public class DocumentConversationController {
     }
 
 
-    // =========================
+    // =========================================================
     // GET ALL
-    // =========================
+    // =========================================================
 
     @GetMapping
-    public ResponseEntity<List<DocumentConversationResponseDto>> getAll() {
+    public ResponseEntity<
+            List<DocumentConversationResponseDto>
+            > getAll() {
 
         List<DocumentConversationResponseDto> response =
                 documentConversationService.getAll();
@@ -91,9 +81,9 @@ public class DocumentConversationController {
     }
 
 
-    // =========================
-    // DELETE
-    // =========================
+    // =========================================================
+    // DELETE GENERIC
+    // =========================================================
 
     @DeleteMapping("/{documentConversationId}")
     public ResponseEntity<Void> delete(
@@ -104,6 +94,115 @@ public class DocumentConversationController {
                 documentConversationId
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
+
+
+    // =========================================================
+    // ADD DOCUMENT TO CONVERSATION
+    // =========================================================
+    //
+    // POST
+    // /documents-conversations/conversations/{conversationId}/documents
+    //
+    // Authorization: Bearer JWT
+    //
+    // Body:
+    // multipart/form-data
+    // file = fichier.pdf
+    //
+    // L'utilisateur est récupéré depuis le JWT
+    // =========================================================
+
+    @PostMapping(
+            value = "/conversations/{conversationId}/documents",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<DocumentConversationResponseDto>
+    addDocumentToConversation(
+
+            @PathVariable UUID conversationId,
+
+            @RequestPart("file") MultipartFile file
+
+    ) {
+
+        DocumentConversationResponseDto response =
+                documentConversationService
+                        .addDocumentToConversation(
+                                conversationId,
+                                file
+                        );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+
+    // =========================================================
+    // GET DOCUMENTS BY CONVERSATION
+    // =========================================================
+    //
+    // GET
+    // /documents-conversations/conversations/{conversationId}/documents
+    //
+    // Authorization: Bearer JWT
+    // =========================================================
+
+    @GetMapping(
+            "/conversations/{conversationId}/documents"
+    )
+    public ResponseEntity<
+            List<DocumentConversationResponseDto>
+            > getDocumentsByConversation(
+
+            @PathVariable UUID conversationId
+
+    ) {
+
+        List<DocumentConversationResponseDto> response =
+                documentConversationService
+                        .getDocumentsByConversation(
+                                conversationId
+                        );
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    // =========================================================
+    // DELETE DOCUMENT FROM CONVERSATION
+    // =========================================================
+    //
+    // DELETE
+    // /documents-conversations/conversations/{conversationId}/documents/{documentConversationId}
+    //
+    // Authorization: Bearer JWT
+    // =========================================================
+
+    @DeleteMapping(
+            "/conversations/{conversationId}/documents/{documentConversationId}"
+    )
+    public ResponseEntity<Void>
+    deleteDocumentFromConversation(
+
+            @PathVariable UUID conversationId,
+
+            @PathVariable UUID documentConversationId
+
+    ) {
+
+        documentConversationService
+                .deleteDocumentFromConversation(
+                        conversationId,
+                        documentConversationId
+                );
+
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 }

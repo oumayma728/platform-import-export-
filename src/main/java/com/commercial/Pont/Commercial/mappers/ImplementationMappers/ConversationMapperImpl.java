@@ -57,30 +57,30 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Récupération du Vendeur
+         * Récupération du initiateur
          * ========================================================
          */
-        Utilisateur vendeur = null;
+        Utilisateur initiateur = null;
 
-        if (conversationRequestDto.getVendeurId() != null) {
+        if (conversationRequestDto.getInitiateurId() != null) {
 
-            vendeur = utilisateurRepository
-                    .findById(conversationRequestDto.getVendeurId())
+            initiateur = utilisateurRepository
+                    .findById(conversationRequestDto.getInitiateurId())
                     .orElse(null);
         }
 
 
         /*
          * ========================================================
-         * Récupération de l'Acheteur
+         * Récupération de destinataire
          * ========================================================
          */
-        Utilisateur acheteur = null;
+        Utilisateur destinataire = null;
 
-        if (conversationRequestDto.getAcheteurId() != null) {
+        if (conversationRequestDto.getDestinataireId() != null) {
 
-            acheteur = utilisateurRepository
-                    .findById(conversationRequestDto.getAcheteurId())
+            destinataire = utilisateurRepository
+                    .findById(conversationRequestDto.getDestinataireId())
                     .orElse(null);
         }
 
@@ -164,19 +164,10 @@ public class ConversationMapperImpl
                 .dateDernierMessage(
                         conversationRequestDto.getDateDernierMessage()
                 )
-                .nombreMessages(
-                        conversationRequestDto.getNombreMessages()
-                )
-                .createdAt(
-                        conversationRequestDto.getCreatedAt()
-                )
-                .updatedAt(
-                        conversationRequestDto.getUpdatedAt()
-                )
 
                 // Relations ManyToOne / OneToOne
-                .vendeur(vendeur)
-                .acheteur(acheteur)
+                .initiateur(initiateur)
+                .destinataire(destinataire)
                 .annonce(annonce)
                 .facturation(facturation)
 
@@ -210,28 +201,28 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Extraction de l'ID du Vendeur
+         * Extraction de l'ID du Initiateur
          * ========================================================
          */
-        UUID vendeurId = null;
+        UUID initiateurId = null;
 
-        if (conversation.getVendeur() != null) {
+        if (conversation.getInitiateur() != null) {
 
-            vendeurId = conversation.getVendeur()
+            initiateurId = conversation.getInitiateur()
                     .getUtilisateurId();
         }
 
 
         /*
          * ========================================================
-         * Extraction de l'ID de l'Acheteur
+         * Extraction de l'ID de destinataire
          * ========================================================
          */
-        UUID acheteurId = null;
+        UUID destinataireId = null;
 
-        if (conversation.getAcheteur() != null) {
+        if (conversation.getDestinataire() != null) {
 
-            acheteurId = conversation.getAcheteur()
+            destinataireId = conversation.getDestinataire()
                     .getUtilisateurId();
         }
 
@@ -309,8 +300,8 @@ public class ConversationMapperImpl
         return ConversationRequestDto.builder()
 
                 // IDs des relations
-                .vendeurId(vendeurId)
-                .acheteurId(acheteurId)
+                .initiateurId(initiateurId)
+                .destinataireId(destinataireId)
                 .annonceId(annonceId)
                 .facturationId(facturationId)
 
@@ -318,15 +309,6 @@ public class ConversationMapperImpl
                 .statut(conversation.getStatut())
                 .dateDernierMessage(
                         conversation.getDateDernierMessage()
-                )
-                .nombreMessages(
-                        conversation.getNombreMessages()
-                )
-                .createdAt(
-                        conversation.getCreatedAt()
-                )
-                .updatedAt(
-                        conversation.getUpdatedAt()
                 )
 
                 // IDs des relations OneToMany
@@ -361,28 +343,28 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Extraction de l'ID du Vendeur
+         * Extraction de l'ID du initiateur
          * ========================================================
          */
-        UUID vendeurId = null;
+        UUID initiateurId = null;
 
-        if (conversation.getVendeur() != null) {
+        if (conversation.getInitiateur() != null) {
 
-            vendeurId = conversation.getVendeur()
+            initiateurId = conversation.getInitiateur()
                     .getUtilisateurId();
         }
 
 
         /*
          * ========================================================
-         * Extraction de l'ID de l'Acheteur
+         * Extraction de l'ID de destinataire
          * ========================================================
          */
-        UUID acheteurId = null;
+        UUID destinataireId = null;
 
-        if (conversation.getAcheteur() != null) {
+        if (conversation.getDestinataire() != null) {
 
-            acheteurId = conversation.getAcheteur()
+            destinataireId = conversation.getDestinataire()
                     .getUtilisateurId();
         }
 
@@ -460,8 +442,8 @@ public class ConversationMapperImpl
         return ConversationResponseDto.builder()
 
                 // IDs des relations
-                .vendeurId(vendeurId)
-                .acheteurId(acheteurId)
+                .initiateurId(initiateurId)
+                .destinataireId(destinataireId)
                 .annonceId(annonceId)
                 .facturationId(facturationId)
 
@@ -517,16 +499,16 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Récupération du Vendeur
+         * Récupération du initiateur
          * ========================================================
          */
-        Utilisateur vendeur = null;
+        Utilisateur initiateur = null;
 
-        if (conversationResponseDto.getVendeurId() != null) {
+        if (conversationResponseDto.getInitiateurId() != null) {
 
-            vendeur = utilisateurRepository
+            initiateur = utilisateurRepository
                     .findById(
-                            conversationResponseDto.getVendeurId()
+                            conversationResponseDto.getInitiateurId()
                     )
                     .orElse(null);
         }
@@ -534,16 +516,16 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Récupération de l'Acheteur
+         * Récupération de destinataire
          * ========================================================
          */
-        Utilisateur acheteur = null;
+        Utilisateur destinataire = null;
 
-        if (conversationResponseDto.getAcheteurId() != null) {
+        if (conversationResponseDto.getDestinataireId() != null) {
 
-            acheteur = utilisateurRepository
+            destinataire = utilisateurRepository
                     .findById(
-                            conversationResponseDto.getAcheteurId()
+                            conversationResponseDto.getDestinataireId()
                     )
                     .orElse(null);
         }
@@ -656,8 +638,8 @@ public class ConversationMapperImpl
                 )
 
                 // Relations ManyToOne / OneToOne
-                .vendeur(vendeur)
-                .acheteur(acheteur)
+                .initiateur(initiateur)
+                .destinataire(destinataire)
                 .annonce(annonce)
                 .facturation(facturation)
 

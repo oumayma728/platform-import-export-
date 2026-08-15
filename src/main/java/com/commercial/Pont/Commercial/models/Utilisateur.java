@@ -67,11 +67,11 @@ public class Utilisateur {
     @JoinColumn(name = "entrepriseId")
     private Entreprise entreprise;
 
-    @OneToMany(mappedBy = "vendeur")
-    private List<Conversation> conversationsCommeVendeur;
+    @OneToMany(mappedBy = "initiateur")
+    private List<Conversation> conversationsCommeInitiateur;
 
-    @OneToMany(mappedBy = "acheteur")
-    private List<Conversation> conversationsCommeAcheteur;
+    @OneToMany(mappedBy = "destinataire")
+    private List<Conversation> conversationsCommeDestinataire;
 
 
     @OneToMany(mappedBy = "utilisateur")

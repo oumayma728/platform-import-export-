@@ -35,12 +35,12 @@ public class Conversation {
     private List<Message> messages;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vendeurId")
-    private Utilisateur vendeur;
+    @JoinColumn(name = "initiateurId")
+    private Utilisateur initiateur;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "acheteurId")
-    private Utilisateur acheteur;
+    @JoinColumn(name = "destinataireId")
+    private Utilisateur destinataire;
 
 
     @ManyToOne(fetch = FetchType.LAZY)

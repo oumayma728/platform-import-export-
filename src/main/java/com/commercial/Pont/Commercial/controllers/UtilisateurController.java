@@ -5,8 +5,10 @@ import com.commercial.Pont.Commercial.dtos.responseDtos.UtilisateurResponseDto;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.UtilisateurServiceInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,12 +20,20 @@ public class UtilisateurController {
 
     private final UtilisateurServiceInterface utilisateurService;
 
-    @PostMapping("/createUtilisateur")
+    @PostMapping(
+            value = "/createUtilisateur",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<UtilisateurResponseDto> create(
-            @RequestBody UtilisateurRequestDto utilisateurRequestDto
+            @RequestPart("utilisateur") UtilisateurRequestDto utilisateurRequestDto,
+            @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
+
         UtilisateurResponseDto response =
-                utilisateurService.create(utilisateurRequestDto);
+                utilisateurService.create(
+                        utilisateurRequestDto,
+                        photo
+                );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

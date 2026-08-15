@@ -26,4 +26,9 @@ public interface MessageServiceInterface {
     void delete(
             UUID messageId
     );
+
+
+    List<MessageResponseDto> getByConversationId(
+            UUID conversationId
+    );
 }

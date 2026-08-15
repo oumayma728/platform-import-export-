@@ -11,11 +11,13 @@ import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.EntrepriseRepository;
 import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.UtilisateurServiceInterface;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.PhotoStorageServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,8 +26,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UtilisateurServiceImpl
-        implements UtilisateurServiceInterface {
+public class UtilisateurServiceImpl implements UtilisateurServiceInterface {
 
     private final UtilisateurRepository utilisateurRepository;
 
@@ -35,18 +36,17 @@ public class UtilisateurServiceImpl
 
     private final PasswordEncoder passwordEncoder;
 
+    private final PhotoStorageServiceInterface photoStorageService;
+
     // =========================
     // CREATE
     // =========================
 
     @Override
     public UtilisateurResponseDto create(
-            UtilisateurRequestDto utilisateurRequestDto
+            UtilisateurRequestDto utilisateurRequestDto,
+            MultipartFile photo
     ) {
-
-        // =========================
-        // Vérification de l'email
-        // =========================
 
         if (utilisateurRepository.existsByEmail(
                 utilisateurRequestDto.getEmail()
@@ -58,20 +58,10 @@ public class UtilisateurServiceImpl
             );
         }
 
-
-        // =========================
-        // Conversion DTO -> Entity
-        // =========================
-
         Utilisateur utilisateur =
                 utilisateurMapper.requestToEntity(
                         utilisateurRequestDto
                 );
-
-
-        // =========================
-        // Recherche de l'entreprise
-        // =========================
 
         Entreprise entreprise =
                 entrepriseRepository.findById(
@@ -84,19 +74,7 @@ public class UtilisateurServiceImpl
                                 )
                         );
 
-
-        // =========================
-        // Association avec entreprise
-        // =========================
-
-        utilisateur.setEntreprise(
-                entreprise
-        );
-
-
-        // =========================
-        // Hashage du mot de passe
-        // =========================
+        utilisateur.setEntreprise(entreprise);
 
         utilisateur.setPasswordHash(
                 passwordEncoder.encode(
@@ -104,44 +82,40 @@ public class UtilisateurServiceImpl
                 )
         );
 
-
-        // =========================
-        // Valeurs par défaut
-        // =========================
-
         utilisateur.setValidationStatus(
                 ValidationStatus.EN_ATTENTE_VALIDATION
         );
 
-        utilisateur.setNombreChatsUtilises(
-                0
-        );
+        utilisateur.setNombreChatsUtilises(0);
 
-        utilisateur.setMaxMessagesPossible(
-                50
-        );
-
-
-        // =========================
-        // Gestion des dates
-        // =========================
+        utilisateur.setMaxMessagesPossible(50);
 
         LocalDateTime now = LocalDateTime.now();
 
-        utilisateur.setCreatedAt(
-                now
-        );
+        utilisateur.setCreatedAt(now);
 
-        utilisateur.setUpdatedAt(
-                now
-        );
+        utilisateur.setUpdatedAt(now);
+
         utilisateur.setAuthProvider(
                 AuthProvider.LOCAL
         );
 
+        // =========================
+        // PHOTO DE PROFIL
+        // =========================
+
+        if (photo != null && !photo.isEmpty()) {
+
+            String photoUrl =
+                    photoStorageService.storeProfilePhoto(photo);
+
+            utilisateur.setPhotoProfile(
+                    photoUrl
+            );
+        }
 
         // =========================
-        // Sauvegarde
+        // SAVE
         // =========================
 
         Utilisateur savedUtilisateur =
@@ -149,6 +123,21 @@ public class UtilisateurServiceImpl
                         utilisateur
                 );
 
+        Integer nombreEmployes =
+                entreprise.getNombreEmployes();
+
+        if (nombreEmployes == null) {
+
+            nombreEmployes = 0;
+        }
+
+        entreprise.setNombreEmployes(
+                nombreEmployes + 1
+        );
+
+        entrepriseRepository.save(
+                entreprise
+        );
 
         // =========================
         // Conversion Entity -> Response DTO
@@ -157,7 +146,9 @@ public class UtilisateurServiceImpl
         return utilisateurMapper.entityToResponse(
                 savedUtilisateur
         );
+
     }
+
 
 
     // =========================

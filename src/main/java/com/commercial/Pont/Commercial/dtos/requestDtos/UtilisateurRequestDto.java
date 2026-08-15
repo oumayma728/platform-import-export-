@@ -28,8 +28,8 @@ public class UtilisateurRequestDto {
 
     private List<UUID> subscriptionsIds;
     private List<UUID> messageIds;
-    private List<UUID> conversationsCommeVendeurIds;
-    private List<UUID> conversationsCommeAcheteurIds;
+    private List<UUID> conversationsCommeInitiateurIds;
+    private List<UUID> conversationsCommeDestinataireIds;
     private List<UUID> annoncesIds;
     private List<UUID> documentConversationsIds;
     private List<UUID> notificationsIds;

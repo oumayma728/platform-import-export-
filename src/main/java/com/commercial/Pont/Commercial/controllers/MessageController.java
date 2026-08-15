@@ -12,13 +12,13 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/messages")
+@RequestMapping("/messages")
 @RequiredArgsConstructor
 public class MessageController {
 
     private final MessageServiceInterface messageService;
 
-    @PostMapping
+    @PostMapping("/createMessage")
     public ResponseEntity<MessageResponseDto> create(
             @RequestBody MessageRequestDto messageRequestDto
     ) {
@@ -33,7 +33,7 @@ public class MessageController {
                 .body(response);
     }
 
-    @PutMapping("/{messageId}")
+    @PutMapping("/updateMessage/{messageId}")
     public ResponseEntity<MessageResponseDto> update(
             @PathVariable UUID messageId,
             @RequestBody MessageRequestDto messageRequestDto
@@ -48,7 +48,7 @@ public class MessageController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{messageId}")
+    @GetMapping("/getMessage/{messageId}")
     public ResponseEntity<MessageResponseDto> getById(
             @PathVariable UUID messageId
     ) {
@@ -61,7 +61,25 @@ public class MessageController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping
+
+
+
+
+    @GetMapping("/getMessagesOfConversation/{conversationId}")
+    public ResponseEntity<List<MessageResponseDto>> getByConversation(
+            @PathVariable UUID conversationId
+    ) {
+
+        List<MessageResponseDto> response =
+                messageService.getByConversationId(
+                        conversationId
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("getAllMessages")
     public ResponseEntity<List<MessageResponseDto>> getAll() {
 
         List<MessageResponseDto> response =
@@ -70,7 +88,7 @@ public class MessageController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/{messageId}")
+    @DeleteMapping("/deleteMessage/{messageId}")
     public ResponseEntity<Void> delete(
             @PathVariable UUID messageId
     ) {

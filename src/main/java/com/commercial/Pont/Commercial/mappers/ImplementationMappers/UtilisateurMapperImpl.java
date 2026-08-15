@@ -38,8 +38,8 @@ public class UtilisateurMapperImpl
      * entrepriseId
      * subscriptionsIds
      * messageIds
-     * conversationsCommeVendeurIds
-     * conversationsCommeAcheteurIds
+     * conversationsCommeInitiateurIds
+     * conversationsCommeDEstinataireIds
      * annoncesIds
      * documentConversationsIds
      * notificationsIds
@@ -118,44 +118,44 @@ public class UtilisateurMapperImpl
 
         /*
          * ========================================================
-         * Récupération des Conversations comme Vendeur
+         * Récupération des Conversations comme Initiateur
          * ========================================================
          */
-        List<Conversation> conversationsCommeVendeur =
+        List<Conversation> conversationsCommeInitiateur =
                 Collections.emptyList();
 
         if (utilisateurRequestDto
-                .getConversationsCommeVendeurIds() != null
+                .getConversationsCommeInitiateurIds() != null
                 && !utilisateurRequestDto
-                .getConversationsCommeVendeurIds()
+                .getConversationsCommeInitiateurIds()
                 .isEmpty()) {
 
-            conversationsCommeVendeur =
+            conversationsCommeInitiateur =
                     conversationRepository.findAllById(
                             utilisateurRequestDto
-                                    .getConversationsCommeVendeurIds()
+                                    .getConversationsCommeInitiateurIds()
                     );
         }
 
 
         /*
          * ========================================================
-         * Récupération des Conversations comme Acheteur
+         * Récupération des Conversations comme Destinataire
          * ========================================================
          */
-        List<Conversation> conversationsCommeAcheteur =
+        List<Conversation> conversationsCommeDestinataire =
                 Collections.emptyList();
 
         if (utilisateurRequestDto
-                .getConversationsCommeAcheteurIds() != null
+                .getConversationsCommeDestinataireIds() != null
                 && !utilisateurRequestDto
-                .getConversationsCommeAcheteurIds()
+                .getConversationsCommeDestinataireIds()
                 .isEmpty()) {
 
-            conversationsCommeAcheteur =
+            conversationsCommeDestinataire =
                     conversationRepository.findAllById(
                             utilisateurRequestDto
-                                    .getConversationsCommeAcheteurIds()
+                                    .getConversationsCommeDestinataireIds()
                     );
         }
 
@@ -282,11 +282,11 @@ public class UtilisateurMapperImpl
                 .entreprise(entreprise)
                 .subscriptions(subscriptions)
                 .messages(messages)
-                .conversationsCommeVendeur(
-                        conversationsCommeVendeur
+                .conversationsCommeInitiateur(
+                        conversationsCommeInitiateur
                 )
-                .conversationsCommeAcheteur(
-                        conversationsCommeAcheteur
+                .conversationsCommeDestinataire(
+                        conversationsCommeDestinataire
                 )
                 .annonces(annonces)
                 .documentConversations(
@@ -358,14 +358,14 @@ public class UtilisateurMapperImpl
 
         /*
          * ========================================================
-         * Conversations comme Vendeur
+         * Conversations comme Initiateur
          * ========================================================
          */
-        List<UUID> conversationsCommeVendeurIds =
-                utilisateur.getConversationsCommeVendeur() == null
+        List<UUID> conversationsCommeInitiateurIds =
+                utilisateur.getConversationsCommeInitiateur() == null
                         ? Collections.emptyList()
                         : utilisateur
-                        .getConversationsCommeVendeur()
+                        .getConversationsCommeInitiateur()
                         .stream()
                         .map(Conversation::getConversationId)
                         .collect(Collectors.toList());
@@ -373,14 +373,14 @@ public class UtilisateurMapperImpl
 
         /*
          * ========================================================
-         * Conversations comme Acheteur
+         * Conversations comme Destinataire
          * ========================================================
          */
-        List<UUID> conversationsCommeAcheteurIds =
-                utilisateur.getConversationsCommeAcheteur() == null
+        List<UUID> conversationsCommeDestinataireIds =
+                utilisateur.getConversationsCommeDestinataire() == null
                         ? Collections.emptyList()
                         : utilisateur
-                        .getConversationsCommeAcheteur()
+                        .getConversationsCommeDestinataire()
                         .stream()
                         .map(Conversation::getConversationId)
                         .collect(Collectors.toList());
@@ -481,11 +481,11 @@ public class UtilisateurMapperImpl
                 // Relations
                 .subscriptionsIds(subscriptionsIds)
                 .messageIds(messageIds)
-                .conversationsCommeVendeurIds(
-                        conversationsCommeVendeurIds
+                .conversationsCommeInitiateurIds(
+                        conversationsCommeInitiateurIds
                 )
-                .conversationsCommeAcheteurIds(
-                        conversationsCommeAcheteurIds
+                .conversationsCommeDestinataireIds(
+                        conversationsCommeDestinataireIds
                 )
                 .annoncesIds(annoncesIds)
                 .documentConversationsIds(
@@ -552,21 +552,21 @@ public class UtilisateurMapperImpl
                         .collect(Collectors.toList());
 
 
-        List<UUID> conversationsCommeVendeurIds =
-                utilisateur.getConversationsCommeVendeur() == null
+        List<UUID> conversationsCommeInitiateurIds =
+                utilisateur.getConversationsCommeInitiateur() == null
                         ? Collections.emptyList()
                         : utilisateur
-                        .getConversationsCommeVendeur()
+                        .getConversationsCommeInitiateur()
                         .stream()
                         .map(Conversation::getConversationId)
                         .collect(Collectors.toList());
 
 
-        List<UUID> conversationsCommeAcheteurIds =
-                utilisateur.getConversationsCommeAcheteur() == null
+        List<UUID> conversationsCommeDestinataireIds =
+                utilisateur.getConversationsCommeDestinataire() == null
                         ? Collections.emptyList()
                         : utilisateur
-                        .getConversationsCommeAcheteur()
+                        .getConversationsCommeDestinataire()
                         .stream()
                         .map(Conversation::getConversationId)
                         .collect(Collectors.toList());
@@ -688,11 +688,11 @@ public class UtilisateurMapperImpl
                 // IDs des relations
                 .subscriptionsIds(subscriptionsIds)
                 .messageIds(messageIds)
-                .conversationsCommeVendeurIds(
-                        conversationsCommeVendeurIds
+                .conversationsCommeInitiateurIds(
+                        conversationsCommeInitiateurIds
                 )
-                .conversationsCommeAcheteurIds(
-                        conversationsCommeAcheteurIds
+                .conversationsCommeDestinataireIds(
+                        conversationsCommeDestinataireIds
                 )
                 .annoncesIds(annoncesIds)
                 .documentConversationsIds(
@@ -791,44 +791,44 @@ public class UtilisateurMapperImpl
 
         /*
          * ========================================================
-         * Récupération des Conversations Vendeur
+         * Récupération des Conversations Initiateur
          * ========================================================
          */
-        List<Conversation> conversationsCommeVendeur =
+        List<Conversation> conversationsCommeInitiateur =
                 Collections.emptyList();
 
         if (utilisateurResponseDto
-                .getConversationsCommeVendeurIds() != null
+                .getConversationsCommeInitiateurIds() != null
                 && !utilisateurResponseDto
-                .getConversationsCommeVendeurIds()
+                .getConversationsCommeInitiateurIds()
                 .isEmpty()) {
 
-            conversationsCommeVendeur =
+            conversationsCommeInitiateur =
                     conversationRepository.findAllById(
                             utilisateurResponseDto
-                                    .getConversationsCommeVendeurIds()
+                                    .getConversationsCommeInitiateurIds()
                     );
         }
 
 
         /*
          * ========================================================
-         * Récupération des Conversations Acheteur
+         * Récupération des Conversations Destinataire
          * ========================================================
          */
-        List<Conversation> conversationsCommeAcheteur =
+        List<Conversation> conversationsCommeDestinataire =
                 Collections.emptyList();
 
         if (utilisateurResponseDto
-                .getConversationsCommeAcheteurIds() != null
+                .getConversationsCommeDestinataireIds() != null
                 && !utilisateurResponseDto
-                .getConversationsCommeAcheteurIds()
+                .getConversationsCommeDestinataireIds()
                 .isEmpty()) {
 
-            conversationsCommeAcheteur =
+            conversationsCommeDestinataire =
                     conversationRepository.findAllById(
                             utilisateurResponseDto
-                                    .getConversationsCommeAcheteurIds()
+                                    .getConversationsCommeDestinataireIds()
                     );
         }
 
@@ -980,11 +980,11 @@ public class UtilisateurMapperImpl
                 .entreprise(entreprise)
                 .subscriptions(subscriptions)
                 .messages(messages)
-                .conversationsCommeVendeur(
-                        conversationsCommeVendeur
+                .conversationsCommeInitiateur(
+                        conversationsCommeInitiateur
                 )
-                .conversationsCommeAcheteur(
-                        conversationsCommeAcheteur
+                .conversationsCommeDestinataire(
+                        conversationsCommeDestinataire
                 )
                 .annonces(annonces)
                 .documentConversations(
