@@ -16,6 +16,7 @@ export class CompaniesService {
     private readonly prisma: PrismaService,
   ) {}
 
+  // TODO support the upload of a company logo and certificationDocs and store them in supabase
   async create(userId: string, createCompanyDto: CreateCompanyDto) {
     // Only users with valide Id (exist) and dont have company can create a company
     return this.prisma.$transaction(async (tx) => {

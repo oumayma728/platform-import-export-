@@ -1,0 +1,177 @@
+Date : 2026-08-10 09:46:11
+Directory : c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export
+Total : 106 files,  17546 codes, 183 comments, 948 blanks, all 18677 lines
+
+Languages
++--------------------+------------+------------+------------+------------+------------+
+| language           | files      | code       | comment    | blank      | total      |
++--------------------+------------+------------+------------+------------+------------+
+| JSON               |          6 |     12,286 |          0 |          6 |     12,292 |
+| TypeScript         |         95 |      4,809 |        118 |        804 |      5,731 |
+| Prisma             |          1 |        205 |         15 |         58 |        278 |
+| MS SQL             |          1 |        154 |         49 |         59 |        262 |
+| Markdown           |          1 |         33 |          0 |         18 |         51 |
+| JavaScript         |          1 |         33 |          1 |          2 |         36 |
+| JSON with Comments |          1 |         26 |          0 |          1 |         27 |
++--------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                       | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                          |        106 |     17,546 |        183 |        948 |     18,677 |
+| . (Files)                                                                                                                  |          9 |     12,380 |          3 |         28 |     12,411 |
+| prisma                                                                                                                     |          2 |        359 |         64 |        117 |        540 |
+| prisma (Files)                                                                                                             |          1 |        205 |         15 |         58 |        278 |
+| prisma\migrations                                                                                                          |          1 |        154 |         49 |         59 |        262 |
+| prisma\migrations\20260803144357_init                                                                                      |          1 |        154 |         49 |         59 |        262 |
+| src                                                                                                                        |         93 |      4,774 |        116 |        796 |      5,686 |
+| src (Files)                                                                                                                |          5 |        136 |          9 |         26 |        171 |
+| src\admin                                                                                                                  |          7 |        381 |          0 |         48 |        429 |
+| src\admin (Files)                                                                                                          |          6 |        367 |          0 |         46 |        413 |
+| src\admin\dto                                                                                                              |          1 |         14 |          0 |          2 |         16 |
+| src\auth                                                                                                                   |         23 |        853 |         19 |        166 |      1,038 |
+| src\auth (Files)                                                                                                           |          9 |        534 |          8 |         95 |        637 |
+| src\auth\decorators                                                                                                        |          3 |         14 |         11 |          6 |         31 |
+| src\auth\dto                                                                                                               |          3 |         59 |          0 |         10 |         69 |
+| src\auth\guard                                                                                                             |          5 |        226 |          0 |         50 |        276 |
+| src\auth\interfaces                                                                                                        |          3 |         20 |          0 |          5 |         25 |
+| src\common                                                                                                                 |          2 |         57 |          3 |         18 |         78 |
+| src\common\dto                                                                                                             |          1 |         49 |          3 |         17 |         69 |
+| src\common\types                                                                                                           |          1 |          8 |          0 |          1 |          9 |
+| src\companies                                                                                                              |          9 |        434 |          8 |         77 |        519 |
+| src\companies (Files)                                                                                                      |          6 |        313 |          5 |         51 |        369 |
+| src\companies\dto                                                                                                          |          2 |         69 |          0 |         12 |         81 |
+| src\companies\entities                                                                                                     |          1 |         52 |          3 |         14 |         69 |
+| src\constants                                                                                                              |          1 |          1 |          1 |          1 |          3 |
+| src\listings                                                                                                               |         15 |        900 |          9 |        146 |      1,055 |
+| src\listings (Files)                                                                                                       |          6 |        603 |          2 |         80 |        685 |
+| src\listings\dto                                                                                                           |          5 |        195 |          0 |         30 |        225 |
+| src\listings\entities                                                                                                      |          2 |         75 |          3 |         26 |        104 |
+| src\listings\guards                                                                                                        |          2 |         27 |          4 |         10 |         41 |
+| src\messaging                                                                                                              |         14 |      1,384 |         64 |        202 |      1,650 |
+| src\messaging (Files)                                                                                                      |          7 |      1,299 |         64 |        185 |      1,548 |
+| src\messaging\dto                                                                                                          |          5 |         71 |          0 |         13 |         84 |
+| src\messaging\entities                                                                                                     |          1 |          1 |          0 |          1 |          2 |
+| src\messaging\guards                                                                                                       |          1 |         13 |          0 |          3 |         16 |
+| src\prisma                                                                                                                 |          4 |        107 |          0 |         22 |        129 |
+| src\supabase                                                                                                               |          4 |         66 |          0 |         21 |         87 |
+| src\users                                                                                                                  |          9 |        455 |          3 |         69 |        527 |
+| src\users (Files)                                                                                                          |          6 |        352 |          0 |         51 |        403 |
+| src\users\dto                                                                                                              |          2 |         62 |          0 |          8 |         70 |
+| src\users\entities                                                                                                         |          1 |         41 |          3 |         10 |         54 |
+| test                                                                                                                       |          2 |         33 |          0 |          7 |         40 |
++----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| filename                                                                                                                   | language           | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\.prettierrc                                              | JSON               |          4 |          0 |          1 |          5 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\README.md                                                | Markdown           |         33 |          0 |         18 |         51 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\eslint.config.mjs                                        | JavaScript         |         33 |          1 |          2 |         36 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\nest-cli.json                                            | JSON               |          8 |          0 |          1 |          9 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\package-lock.json                                        | JSON               |     12,172 |          0 |          1 |     12,173 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\package.json                                             | JSON               |         89 |          0 |          1 |         90 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\prisma.config.ts                                         | TypeScript         |         11 |          2 |          2 |         15 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\prisma\migrations\20260803144357_init\migration.sql      | MS SQL             |        154 |         49 |         59 |        262 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\prisma\schema.prisma                                     | Prisma             |        205 |         15 |         58 |        278 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\admin.controller.spec.ts                       | TypeScript         |         46 |          0 |          9 |         55 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\admin.controller.ts                            | TypeScript         |        136 |          0 |          7 |        143 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\admin.module.ts                                | TypeScript         |         12 |          0 |          3 |         15 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\admin.repository.ts                            | TypeScript         |         67 |          0 |          7 |         74 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\admin.service.spec.ts                          | TypeScript         |         59 |          0 |         11 |         70 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\admin.service.ts                               | TypeScript         |         47 |          0 |          9 |         56 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\admin\dto\get-companies-filter.dto.ts                | TypeScript         |         14 |          0 |          2 |         16 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\app.controller.spec.ts                               | TypeScript         |         18 |          0 |          5 |         23 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\app.controller.ts                                    | TypeScript         |          6 |          0 |          3 |          9 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\app.module.ts                                        | TypeScript         |         46 |          0 |          3 |         49 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\app.service.ts                                       | TypeScript         |          7 |          0 |          1 |          8 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\auth.controller.spec.ts                         | TypeScript         |         16 |          0 |          5 |         21 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\auth.controller.ts                              | TypeScript         |        187 |          0 |         14 |        201 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\auth.module.ts                                  | TypeScript         |         25 |          0 |          3 |         28 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\auth.repository.ts                              | TypeScript         |          5 |          1 |          1 |          7 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\auth.service.spec.ts                            | TypeScript         |         14 |          0 |          5 |         19 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\auth.service.ts                                 | TypeScript         |        171 |          0 |         34 |        205 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\decorators\current-user.decorator.ts            | TypeScript         |          7 |          7 |          2 |         16 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\decorators\public.decorator.ts                  | TypeScript         |          3 |          4 |          2 |          9 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\decorators\roles.decorator.ts                   | TypeScript         |          4 |          0 |          2 |          6 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\dto\auth-response.dto.ts                        | TypeScript         |         15 |          0 |          3 |         18 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\dto\login.dto.ts                                | TypeScript         |         12 |          0 |          2 |         14 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\dto\register.dto.ts                             | TypeScript         |         32 |          0 |          5 |         37 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\guard\access-token.guard.spec.ts                | TypeScript         |         22 |          0 |          6 |         28 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\guard\access-token.guard.ts                     | TypeScript         |         63 |          0 |         11 |         74 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\guard\refresh-jwt.guard.spec.ts                 | TypeScript         |         65 |          0 |         16 |         81 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\guard\refresh-jwt.guard.ts                      | TypeScript         |         47 |          0 |          9 |         56 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\guard\roles.guard.ts                            | TypeScript         |         29 |          0 |          8 |         37 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\interfaces\auth-request.ts                      | TypeScript         |          9 |          0 |          2 |         11 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\interfaces\jwt-payload.ts                       | TypeScript         |          7 |          0 |          2 |          9 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\interfaces\tokens.interface.ts                  | TypeScript         |          4 |          0 |          1 |          5 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\refresh-tokens.repository.ts                    | TypeScript         |         34 |          0 |          9 |         43 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\refresh-tokens.service.spec.ts                  | TypeScript         |         36 |          0 |         13 |         49 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\auth\refresh-tokens.service.ts                       | TypeScript         |         46 |          7 |         11 |         64 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\common\dto\api-error-response.dto.ts                 | TypeScript         |         49 |          3 |         17 |         69 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\common\types\uploaded-file.type.ts                   | TypeScript         |          8 |          0 |          1 |          9 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\companies.controller.spec.ts               | TypeScript         |         16 |          0 |          5 |         21 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\companies.controller.ts                    | TypeScript         |        167 |          3 |         10 |        180 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\companies.module.ts                        | TypeScript         |         10 |          0 |          2 |         12 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\companies.repository.ts                    | TypeScript         |         42 |          0 |         13 |         55 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\companies.service.spec.ts                  | TypeScript         |         14 |          0 |          5 |         19 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\companies.service.ts                       | TypeScript         |         64 |          2 |         16 |         82 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\dto\create-company.dto.ts                  | TypeScript         |         66 |          0 |         10 |         76 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\dto\update-company.dto.ts                  | TypeScript         |          3 |          0 |          2 |          5 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\companies\entities\company.entity.ts                 | TypeScript         |         52 |          3 |         14 |         69 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\constants\variables.ts                               | TypeScript         |          1 |          1 |          1 |          3 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\dto\create-listing-document.dto.ts          | TypeScript         |         18 |          0 |          3 |         21 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\dto\create-listing.dto.ts                   | TypeScript         |         94 |          0 |         13 |        107 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\dto\search-listing-dto.ts                   | TypeScript         |         66 |          0 |          9 |         75 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\dto\update-listing-status.dto.ts            | TypeScript         |         12 |          0 |          2 |         14 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\dto\update-listing.dto.ts                   | TypeScript         |          5 |          0 |          3 |          8 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\entities\listing-document.entity.ts         | TypeScript         |         13 |          0 |          6 |         19 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\entities\listing.entity.ts                  | TypeScript         |         62 |          3 |         20 |         85 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\guards\company-workers.guard.spec.ts        | TypeScript         |          6 |          0 |          2 |          8 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\guards\company-workers.guard.ts             | TypeScript         |         21 |          4 |          8 |         33 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\listings.controller.spec.ts                 | TypeScript         |         16 |          0 |          5 |         21 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\listings.controller.ts                      | TypeScript         |        297 |          2 |         11 |        310 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\listings.module.ts                          | TypeScript         |         13 |          0 |          3 |         16 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\listings.repository.ts                      | TypeScript         |        124 |          0 |         29 |        153 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\listings.service.spec.ts                    | TypeScript         |         80 |          0 |         13 |         93 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\listings\listings.service.ts                         | TypeScript         |         73 |          0 |         19 |         92 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\main.ts                                              | TypeScript         |         59 |          9 |         14 |         82 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\dto\create-conversation.dto.ts             | TypeScript         |         11 |          0 |          2 |         13 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\dto\create-message.dto.ts                  | TypeScript         |         18 |          0 |          4 |         22 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\dto\get-conversation-messages-query.dto.ts | TypeScript         |         24 |          0 |          3 |         27 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\dto\update-conversation-status.dto.ts      | TypeScript         |         13 |          0 |          2 |         15 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\dto\update-messaging.dto.ts                | TypeScript         |          5 |          0 |          2 |          7 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\entities\messaging.entity.ts               | TypeScript         |          1 |          0 |          1 |          2 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\guards\ws-jwt.guard.ts                     | TypeScript         |         13 |          0 |          3 |         16 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.controller.ts                    | TypeScript         |        201 |         29 |         14 |        244 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.gateway.spec.ts                  | TypeScript         |         31 |          0 |          6 |         37 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.gateway.ts                       | TypeScript         |        192 |         32 |         39 |        263 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.module.ts                        | TypeScript         |         18 |          0 |          3 |         21 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.repository.ts                    | TypeScript         |        187 |          0 |         23 |        210 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.service.spec.ts                  | TypeScript         |        464 |          0 |         66 |        530 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\messaging\messaging.service.ts                       | TypeScript         |        206 |          3 |         34 |        243 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\prisma\prisma-exception.filter.ts                    | TypeScript         |         44 |          0 |          6 |         50 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\prisma\prisma.module.ts                              | TypeScript         |          8 |          0 |          1 |          9 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\prisma\prisma.service.spec.ts                        | TypeScript         |         14 |          0 |          5 |         19 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\prisma\prisma.service.ts                             | TypeScript         |         41 |          0 |         10 |         51 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\supabase\storage.service.ts                          | TypeScript         |         27 |          0 |          8 |         35 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\supabase\supabase.module.ts                          | TypeScript         |          8 |          0 |          3 |         11 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\supabase\supabase.service.spec.ts                    | TypeScript         |         14 |          0 |          5 |         19 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\supabase\supabase.service.ts                         | TypeScript         |         17 |          0 |          5 |         22 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\dto\update-user-role.dto.ts                    | TypeScript         |         12 |          0 |          2 |         14 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\dto\update-user.dto.ts                         | TypeScript         |         50 |          0 |          6 |         56 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\entities\user.entity.ts                        | TypeScript         |         41 |          3 |         10 |         54 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\users.controller.spec.ts                       | TypeScript         |         16 |          0 |          5 |         21 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\users.controller.ts                            | TypeScript         |        158 |          0 |          8 |        166 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\users.module.ts                                | TypeScript         |         10 |          0 |          2 |         12 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\users.repository.ts                            | TypeScript         |         98 |          0 |         16 |        114 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\users.service.spec.ts                          | TypeScript         |         18 |          0 |          5 |         23 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\src\users\users.service.ts                               | TypeScript         |         52 |          0 |         15 |         67 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\test\app.e2e-spec.ts                                     | TypeScript         |         24 |          0 |          6 |         30 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\test\jest-e2e.json                                       | JSON               |          9 |          0 |          1 |         10 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\tsconfig.build.json                                      | JSON               |          4 |          0 |          1 |          5 |
+| c:\Users\21651\Desktop\to learn\projects\stage_2026\import-export\tsconfig.json                                            | JSON with Comments |         26 |          0 |          1 |         27 |
+| Total                                                                                                                      |                    |     17,546 |        183 |        948 |     18,677 |
++----------------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+

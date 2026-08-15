@@ -14,7 +14,9 @@ import { GetConversationMessagesQueryDto } from './dto/get-conversation-messages
 import { UpdateConversationStatusDto } from './dto/update-conversation-status.dto';
 import { MessagingRepository } from './messaging.repository';
 import { StorageService } from '../supabase/storage.service';
+import { BillingRepository } from '../billing/billing.repo';
 import type { UploadedFileLike } from '../common/types/uploaded-file.type';
+import { BillingStatus } from '@prisma/client';
 
 @Injectable()
 export class MessagingService {
@@ -23,6 +25,7 @@ export class MessagingService {
     private readonly listingsRepository: ListingsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly storageService: StorageService,
+    private readonly billingRepository: BillingRepository,
   ) {}
 
   private async getUserCompanyId(userId: string): Promise<string> {
@@ -195,7 +198,31 @@ export class MessagingService {
   ) {
     await this.getAuthorizedConversation(dto.conversationId, userId);
 
-    // upload to supabase the attachment if a file has been uploaded by the user
+    // Check if the user has a billing account and if they have free chats left
+    const billing = await this.billingRepository.findBillingAccount(userId);
+
+    if (
+      billing &&
+      (billing.status === BillingStatus.LIMITE_ATTEINTE ||
+        (billing.status === BillingStatus.GRATUIT &&
+          billing.freeChatsUsed >= 50))
+    ) {
+      if (billing.status === BillingStatus.GRATUIT) {
+        await this.billingRepository.updateBillingStatus(
+          userId,
+          BillingStatus.LIMITE_ATTEINTE,
+        );
+      }
+      throw new ForbiddenException({
+        code: 'FREE_CHAT_LIMIT_REACHED',
+        message: 'Vous avez atteint vos 50 messages gratuits.',
+        freeChatsUsed: billing.freeChatsUsed,
+        limit: 50,
+        requiresSubscription: true,
+      });
+    }
+
+    // Upload attachment to Supabase if a file has been uploaded by the user
     let attachmentUrl: string | undefined;
     if (file) {
       const sanitizedFilename = file.originalname.replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -208,6 +235,7 @@ export class MessagingService {
       );
     }
 
+    // Message creation, conversation status update, and free chats increment are done atomically in one transaction
     return this.messagingRepository.createMessageAndStartContact({
       conversationId: dto.conversationId,
       senderId: userId,
@@ -215,14 +243,14 @@ export class MessagingService {
       attachmentUrl: attachmentUrl ?? null,
     });
   }
-
+  
   async updateConversationStatus(
     conversationId: string,
     userId: string,
     dto: UpdateConversationStatusDto,
   ) {
     await this.getAuthorizedConversation(conversationId, userId);
-
+    
     return this.messagingRepository.updateConversationStatus(
       conversationId,
       dto.status,

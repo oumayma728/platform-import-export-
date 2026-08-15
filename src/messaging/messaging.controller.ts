@@ -147,6 +147,10 @@ export class MessagingController {
     },
   })
   @ApiResponse({ status: 201, description: 'Message sent successfully.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Vous avez atteint vos 50 messages gratuits.',
+  })
   sendMessage(
     @CurrentUser() user: AuthRequest['user'],
     @Param('id') conversationId: string,

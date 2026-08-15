@@ -15,6 +15,7 @@ import { MessagingModule } from './messaging/messaging.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { StorageService } from './supabase/storage.service';
 import { AdminModule } from './admin/admin.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminModule } from './admin/admin.module';
     MessagingModule,
     SupabaseModule,
     AdminModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [
@@ -46,3 +48,7 @@ import { AdminModule } from './admin/admin.module';
   ],
 })
 export class AppModule {}
+
+
+// TODO add log logic in all modules
+// TODO change the english messages that goes back to the front in french

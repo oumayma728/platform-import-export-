@@ -36,6 +36,7 @@ import { AuthResponseDto, LogoutResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshJwtGuard } from './guard/refresh-jwt.guard';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -179,10 +180,11 @@ export class AuthController {
     return { message: 'Logged out' };
   }
 
+  // TODO: see and modify this condition
   private setRefreshCookie(res: Response, token: string): void {
     res.cookie(REFRESH_COOKIE, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: new ConfigService().get<string>('NODE_ENV') === 'production',
       sameSite: 'strict',
       path: '/auth',
       maxAge: this.authService.refreshCookieMaxAgeMs,
@@ -192,7 +194,7 @@ export class AuthController {
   private clearRefreshCookie(res: Response): void {
     res.clearCookie(REFRESH_COOKIE, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: new ConfigService().get<string>('NODE_ENV') === 'production',
       sameSite: 'strict',
       path: '/auth',
     });

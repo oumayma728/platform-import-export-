@@ -2,13 +2,15 @@
 // npm install --save-dev prisma dotenv
 import 'dotenv/config';
 import { defineConfig } from "prisma/config";
+import { ConfigService } from '@nestjs/config';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    seed: 'ts-node --project tsconfig.json prisma/seed.ts',
   },
   datasource: {
-    url:  process.env.DATABASE_URL,
+    url: new ConfigService().get<string>('DATABASE_URL') || '',
   },
 });

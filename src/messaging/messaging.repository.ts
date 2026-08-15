@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { ConversationStatus, Prisma } from '@prisma/client';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BillingStatus, ConversationStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -157,14 +157,46 @@ export class MessagingRepository {
     });
   }
 
-  async createMessageAndStartContact(data: Prisma.MessageUncheckedCreateInput) {
-    return this.prisma.$transaction(async (tx) => {
-      const message = await tx.message.create({
+  async createMessageAndStartContact(
+    data: Prisma.MessageUncheckedCreateInput,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const execute = async (prismaTx: Prisma.TransactionClient) => {
+      // 1. Fetch sender billing account within transaction
+      const billing = await prismaTx.billingAccount.findUnique({
+        where: { userId: data.senderId },
+      });
+
+      // 2. Check and increment counter if GRATUIT
+      if (billing && billing.status === BillingStatus.GRATUIT) {
+        if (billing.freeChatsUsed >= 50) {
+          await prismaTx.billingAccount.update({
+            where: { userId: data.senderId },
+            data: { status: BillingStatus.LIMITE_ATTEINTE },
+          });
+          throw new ForbiddenException({
+            code: 'FREE_CHAT_LIMIT_REACHED',
+            message: 'Vous avez atteint vos 50 messages gratuits.',
+            freeChatsUsed: billing.freeChatsUsed,
+            limit: 50,
+            requiresSubscription: true,
+          });
+        }
+
+        await prismaTx.billingAccount.update({
+          where: { userId: data.senderId },
+          data: { freeChatsUsed: { increment: 1 } },
+        });
+      }
+
+      // 3. Create message inside transaction
+      const message = await prismaTx.message.create({
         data,
         include: { sender: { select: this.senderSelect } },
       });
 
-      await tx.conversation.updateMany({
+      // 4. Update conversation status inside transaction
+      await prismaTx.conversation.updateMany({
         where: {
           id: data.conversationId,
           status: {
@@ -175,7 +207,13 @@ export class MessagingRepository {
       });
 
       return message;
-    });
+    };
+
+    if (tx) {
+      return execute(tx);
+    }
+
+    return this.prisma.$transaction(execute);
   }
 
   async updateConversationStatus(

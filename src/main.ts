@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
+import { ConfigService } from '@nestjs/config';
 
 // TODO : return tihs file to be simple (delete this func) and requestedPort, port variables, availablePort
 async function findAvailablePort(
@@ -36,7 +37,7 @@ async function findAvailablePort(
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalFilters(new PrismaExceptionFilter());
 
@@ -65,7 +66,7 @@ async function bootstrap() {
     }),
   );
 
-  const requestedPort = Number(process.env.PORT) || 3000;
+  const requestedPort = Number(new ConfigService().get<string>('PORT')) || 3000;
   const port = Number.isNaN(requestedPort) ? 3000 : requestedPort;
   const availablePort = await findAvailablePort(port);
 

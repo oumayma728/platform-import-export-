@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BillingStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -56,6 +56,11 @@ export class UsersRepository {
         passwordHash: data.passwordHash,
         name: data.name,
         phone: data.phone,
+        billingAccount: {
+          create: {
+            status: BillingStatus.GRATUIT,
+          },
+        },
       },
       select: userPublicSelect,
     });

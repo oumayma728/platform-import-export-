@@ -11,6 +11,7 @@ import { MessagingRepository } from './messaging.repository';
 import { ListingsRepository } from '../listings/listings.repository';
 import { UsersRepository } from '../users/users.repository';
 import { StorageService } from '../supabase/storage.service';
+import { BillingRepository } from '../billing/billing.repo';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -18,7 +19,7 @@ describe('MessagingService', () => {
   let listingsRepository: jest.Mocked<ListingsRepository>;
   let usersRepository: jest.Mocked<UsersRepository>;
   let storageService: jest.Mocked<StorageService>;
-
+  let billingRepository: jest.Mocked<BillingRepository>;
 
   const mockUserId = 'user-123';
   const mockCompanyId = 'company-123';
@@ -62,6 +63,12 @@ describe('MessagingService', () => {
             uploadFile: jest.fn(),
           },
         },
+        {
+          provide: BillingRepository,
+          useValue: {
+            findBillingAccount: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -70,6 +77,7 @@ describe('MessagingService', () => {
     listingsRepository = module.get(ListingsRepository);
     usersRepository = module.get(UsersRepository);
     storageService = module.get(StorageService);
+    billingRepository = module.get(BillingRepository);
   });
 
   afterEach(() => {
@@ -375,6 +383,10 @@ describe('MessagingService', () => {
 
     beforeEach(() => {
       usersRepository.getUserCompanyId.mockResolvedValue(mockCompanyId);
+      billingRepository.findBillingAccount.mockResolvedValue({
+        status: 'GRATUIT',
+        freeChatsUsed: 0,
+      } as any);
     });
 
     it('should create a message and pass null when no file is uploaded', async () => {
