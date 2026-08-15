@@ -1,5 +1,6 @@
 .env
-
+uploads/documents
+uploads/profiles
 
 HELP.md
 target/
