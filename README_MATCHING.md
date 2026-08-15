@@ -97,5 +97,5 @@ python -m tests.manual_scenarios
 ## Related documentation
 
 - Detailed algorithm: [(../docs/MATCHING_ALGORITHM.md)](https://github.com/oumayma728/platform-import-export-/blob/stagiaire-3-tests-update/docs/MATCHING_ALGORITHM.md)
-- Frontend integration guide: [`docs/INTEGRATION_GUIDE.md`](../docs/INTEGRATION_GUIDE.md)
+- Frontend integration guide:[(../docs/INTEGRATION_GUIDE.md)](https://github.com/oumayma728/platform-import-export-/blob/stagiaire-3-tests-update/docs/INTEGRATION_GUIDE.md)
 - Validation results: [`docs/test_results.md`](../docs/test_results.md)
