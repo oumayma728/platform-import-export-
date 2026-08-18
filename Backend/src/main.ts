@@ -44,14 +44,21 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Parse cookies so we can read the refresh_token HttpOnly cookie
+  app.enableCors({
+  origin: 'http://localhost:5173', 
+  credentials: true,               
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
+
+  
   app.use(cookieParser());
 
-  // Validate & strip unknown properties from all incoming DTOs
+  
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,            // strip properties not in the DTO
-      forbidNonWhitelisted: true, // throw if unknown properties are sent
+      whitelist: true,            
+      forbidNonWhitelisted: true, 
       transform: true,
     }),
   );
@@ -67,7 +74,3 @@ async function bootstrap() {
 bootstrap();
 
 
-/**
- * TODO
- * - add role that can only changed by admin and not by the user himself
- */

@@ -5,6 +5,15 @@ import RootLayout from "./components/templates/RootLayout";
 import ProtectedRoute from "./components/organisms/ProtectedRoute";
 import Spinner from "./components/atoms/Spinner";
 
+// ── Admin ──────────────────────────────────────────────────────────────────
+import { AdminAuthProvider } from "./admin/context/AdminAuthContext";
+import AdminLayout from "./admin/components/AdminLayout";
+import AdminProtectedRoute from "./admin/components/AdminProtectedRoute";
+const AdminLoginPage = lazy(() => import("./admin/pages/AdminLoginPage"));
+const AdminDashboardPage = lazy(() => import("./admin/pages/AdminDashboardPage"));
+const PendingCompaniesPage = lazy(() => import("./admin/pages/PendingCompaniesPage"));
+// ──────────────────────────────────────────────────────────────────────────
+
 import LandingPage from "./pages/LandingPage";
 
 const ListingsPage = lazy(() => import("./pages/ListingsPage"));
@@ -189,6 +198,31 @@ export default function App() {
                 }
               />
             </Route>
+
+            {/* ── Routes Admin ── */}
+            {/* Login admin : sans sidebar */}
+            <Route
+              path="/admin/login"
+              element={
+                <AdminAuthProvider>
+                  <AdminLoginPage />
+                </AdminAuthProvider>
+              }
+            />
+            {/* Dashboard admin : avec sidebar, protégé ADMIN */}
+            <Route
+              element={
+                <AdminAuthProvider>
+                  <AdminProtectedRoute>
+                    <AdminLayout />
+                  </AdminProtectedRoute>
+                </AdminAuthProvider>
+              }
+            >
+              <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+              <Route path="/admin/pending-companies" element={<PendingCompaniesPage />} />
+            </Route>
+            {/* ─────────────────────────────────────────────────────────── */}
           </Routes>
         </Suspense>
       </BrowserRouter>
