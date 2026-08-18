@@ -1,0 +1,20 @@
+fastapi==0.111.1
+uvicorn==0.23.2
+pydantic==2.13.4
+python-multipart>=0.0.7
+PyJWT==2.8.0
+sqlalchemy==2.0.31
+psycopg2-binary==2.9.9
+# psycopg v3 (driver PostgreSQL pour Python 3.14, psycopg2 n'a pas de wheel).
+# URL de connexion associée : postgresql+psycopg://...
+psycopg[binary]==3.3.4
+alembic==1.13.1
+python-dotenv==1.0.1
+stripe==10.5.0
+websockets==12.0
+httpx==0.27.0
+redis==5.0.8
+APScheduler==3.10.4
+pytest==8.2.2
+pytest-asyncio==0.23.7
+pytest-cov==7.1.0

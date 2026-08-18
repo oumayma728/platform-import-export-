@@ -1,73 +1,75 @@
-# Indeed² — Import/Export Matching
+# 🌐 Module Salons Virtuels B2B — Stagiaire 5
 
-Plateforme qui met en relation des exportateurs et des importateurs.
+Module indépendant permettant la création, la gestion et la participation à des **Salons Virtuels thématiques B2B** (ex: *"SIAM Virtuel"*, *"Salon Virtuel de l'Huile d'Olive"*), connectant les **Exportateurs** et les **Importateurs** à l'échelle mondiale.
 
-## Lancer le projet
+Le module gère la réservation de stands payants par les exportateurs, l'accès gratuit et illimité pour les importateurs, la planification de rendez-vous d'affaires B2B, ainsi qu'un tableau de bord administrateur complet de modération et de suivi.
 
+---
+
+## 📋 Périmètre Fonctionnel (Conforme au Cahier des Charges)
+
+### 🏬 4.1 Stand Exportateur (Stand Standard V1)
+* **Paiement d'un frais fixe** : Inscription et réservation de stand payant via Stripe dans un salon actif.
+* **Formulaire d'inscription** : Informations entreprise (ICE/RC), produits, certifications (ex: ISO 9001).
+* **Uploads Médias & Documents** : Vidéo de présentation produit + documents complémentaires (fiches techniques, catalogues, certificats PDF).
+* **Page de stand publique** : Page dédiée consultable par tous les importateurs inscrits au salon.
+* **Gestion des RDV B2B** : Réception des demandes, confirmation, refus ou proposition de créneaux horaires alternatifs.
+
+### 🛒 4.2 & 4.3 Accès Importateur & Prise de Rendez-vous (RDV)
+* **Page d'accueil du salon** : Liste de tous les stands exposants avec parcours libre et gratuit.
+* **Visionnage des vidéos & documents** : Consultation des vidéos de présentation et téléchargement des fiches techniques.
+* **Demande de RDV** : Sélection d'un exportateur et proposition d'une date/heure de rendez-vous.
+* **Accès au canal d'échange** : Une fois le RDV confirmé, un canal de messagerie texte dédié est ouvert.
+* **Rappel automatique** : Notification/Email de rappel envoyé aux deux parties 24h avant le RDV.
+* **Gratuité totale** : Le RDV et l'accès au salon ne sont jamais décomptés du quota de chats gratuits.
+* **Statuts du RDV** : `PROPOSE` ➔ `CONFIRME` ➔ `REFUSE` ➔ `TERMINE`.
+
+### 🛡️ 4.4 Dashboard Administrateur — Gestion des Salons
+* **Création d'un salon** : Configuration du thème, de la catégorie, des dates de début/fin et du prix du stand.
+* **Validation des inscriptions** : Modération et vérification du profil entreprise (ICE/RC), du paiement et de la vidéo soumise.
+* **Suivi des statistiques** : Nombre de visiteurs du salon, nombre de RDV pris, taux de conversion %.
+* **Gestion du cycle de vie du salon** :
+  * **Statuts du Salon** : `BROUILLON` ➔ `PUBLIE` ➔ `EN_COURS` ➔ `TERMINE`.
+  * **Statuts du Stand** : `EN_ATTENTE_PAIEMENT` ➔ `EN_ATTENTE_VALIDATION` ➔ `VALIDE` ➔ `REJETE`.
+
+### 📢 4.5 Diffusion, Visibilité & Dépendances
+* **Visibilité globale** : Section "Salons en cours" sur l'ensemble de la plateforme et Marketplace B2B.
+* **Notifications par email** : Envoi automatique d'emails d'invitation aux importateurs inscrits dans la catégorie.
+* **Lien de partage direct** : Accès direct via URL aux salons et aux stands exposants.
+* **Dépendances & Paiement** : Intégration du profil entreprise validé (`Company.profile_status == 'VALIDE'`) et du système de paiement Stripe Checkout.
+
+---
+
+## 🛠️ Stack Technique
+
+* **Backend** : FastAPI (Python) & PostgreSQL
+* **Frontend** : React
+
+---
+
+## 📦 Livrables Attendu & Démarrage
+
+### 1. Démarrage du Backend (FastAPI)
 ```bash
+# Installation des dépendances et lancement
+pip install -r backend/requirements.txt
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
+```
+> API & Documentation Swagger accessibles sur `http://localhost:8000/docs`.
+
+### 2. Démarrage du Frontend (React)
+```bash
+# Installation et lancement du serveur Web
+cd frontend
 npm install
 npm run dev
 ```
+> Application Web accessible sur `http://localhost:5174`.
 
-L'app fonctionne toute seule, sans backend : les données (annonces, comptes, messages...) sont simulées dans le dossier `mocks/`. Pour brancher un vrai backend plus tard, il suffit de changer `USE_MOCKS` en `false` dans `src/api/client.js`.
+### 3. Validation des Tests Automatisés (Pytest)
+```bash
+cd backend
+pytest
+```
 
-## Les grandes parties du projet
-
-### 🔐 Authentification
-
-Fichiers : `context/AuthContext.jsx`, `pages/LoginPage.jsx`, `pages/RegisterPage.jsx`
-
-- `AuthContext` garde en mémoire qui est connecté et gère la connexion/inscription/déconnexion.
-- Après connexion, un token est enregistré (`utils/tokenStorage.js`) — soit de façon durable (case "se souvenir de moi" cochée), soit juste pour la session.
-- `ProtectedRoute` bloque l'accès à certaines pages (profil, messagerie, mes annonces...) si personne n'est connecté, et renvoie vers `/auth/login`.
-
-### 📦 Annonces (Listings)
-
-Fichiers : `pages/ListingsPage.jsx`, `ListingDetailPage.jsx`, `ListingCreatePage.jsx`, `MyListingsPage.jsx`
-
-- Publier, modifier, consulter et lister les annonces d'import/export.
-- `MyListingsPage` regroupe uniquement les annonces du compte connecté.
-- `ListingsShowcasePage` (`/listings`) est la vitrine publique, visible sans être connecté.
-
-### 🤝 Matching
-
-Fichier : `pages/MatchingPage.jsx`
-
-- Propose des correspondances entre les annonces de l'utilisateur et celles des autres, avec un score de pertinence.
-- Réservé aux utilisateurs connectés.
-
-### 💬 Messagerie
-
-Fichiers : `features/messaging/`
-
-- Permet d'échanger des messages entre un exportateur et un importateur intéressés par une même annonce.
-- `MessagingPage` = les vraies conversations (connecté uniquement). `MessagesPage` (route `/Vmessages`) = un aperçu visible par les visiteurs, pour donner envie de créer un compte.
-- Chaque message envoyé consomme un crédit du plan de facturation — la messagerie est donc reliée au module Facturation (voir plus bas) : au-delà d'un certain nombre de messages en plan gratuit, l'envoi est bloqué tant qu'on n'a pas upgradé son plan.
-
-### ⭐ Favoris
-
-Fichiers : `pages/FavoritesPage.jsx`, `api/favorites.js`
-
-- Permet de sauvegarder des annonces intéressantes pour les retrouver facilement.
-
-### 👤 Profil
-
-Fichiers : `pages/ProfilePage.jsx`, `ProfileCompletionPage.jsx`, `ProfileStatusPage.jsx`, `OnboardingListingPage.jsx`
-
-- Après inscription, l'utilisateur complète son profil (entreprise, secteur, certifications...).
-- Le profil passe ensuite par un statut : en attente → validé/refusé (`ProfileStatusPage`), avant de pouvoir publier des annonces.
-
-### 💳 Facturation & paiement (Stripe)
-
-Fichiers : `features/billing/`
-
-- Trois plans (gratuit / payants), visibles sur `PlansPage`.
-- `BillingPage` regroupe l'abonnement en cours, l'usage (messages envoyés) et les factures.
-- Le paiement d'une carte se fait avec **Stripe** : le champ où l'on tape son numéro de carte est directement fourni par Stripe (pas par nous), donc le numéro de carte ne passe jamais par notre code — on ne récupère qu'un jeton une fois la carte validée.
-- Pour tester un paiement, utiliser une carte de test Stripe : `4242 4242 4242 4242` (n'importe quelle date future, n'importe quel CVC à 3 chiffres) → paiement accepté. `4000 0000 0000 0002` → carte refusée exprès, pour tester ce cas.
-- Comme tout tourne en mocks, aucun vrai débit n'a lieu : Stripe valide juste que la carte est correcte, puis le plan est activé localement.
-
-## Performance
-
-Le site a été audité avec Lighthouse et optimisé (score Performance : 55 → 94), principalement en ne chargeant chaque page (et notamment Stripe) qu'au moment où elle est vraiment visitée.
-> Pour un audit Lighthouse fiable, toujours tester sur `npm run build` + `npm run preview` (port 4173), jamais sur `npm run dev` (port 5173).
