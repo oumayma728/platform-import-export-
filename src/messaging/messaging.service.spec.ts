@@ -2,9 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   NotFoundException,
 } from '@nestjs/common';
-import { ListingType } from '@prisma/client';
+import {
+  BillingStatus,
+  ConversationAccessSource,
+  ListingType,
+  SubscriptionStatus,
+} from '@prisma/client';
 
 import { MessagingService } from './messaging.service';
 import { MessagingRepository } from './messaging.repository';
@@ -12,6 +18,7 @@ import { ListingsRepository } from '../listings/listings.repository';
 import { UsersRepository } from '../users/users.repository';
 import { StorageService } from '../supabase/storage.service';
 import { BillingRepository } from '../billing/billing.repo';
+import { BillingService } from '../billing/billing.service';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -20,6 +27,7 @@ describe('MessagingService', () => {
   let usersRepository: jest.Mocked<UsersRepository>;
   let storageService: jest.Mocked<StorageService>;
   let billingRepository: jest.Mocked<BillingRepository>;
+  let billingService: jest.Mocked<BillingService>;
 
   const mockUserId = 'user-123';
   const mockCompanyId = 'company-123';
@@ -38,7 +46,7 @@ describe('MessagingService', () => {
             findAuthorizedConversationDetails: jest.fn(),
             findAuthorizedConversationMessages: jest.fn(),
             findConversationByListing: jest.fn(),
-            createSuggestedConversation: jest.fn(),
+            createConversationWithAccess: jest.fn(),
             findUserConversations: jest.fn(),
             createMessageAndStartContact: jest.fn(),
             updateConversationStatus: jest.fn(),
@@ -67,6 +75,13 @@ describe('MessagingService', () => {
           provide: BillingRepository,
           useValue: {
             findBillingAccount: jest.fn(),
+            ensureBillingAccount: jest.fn(),
+          },
+        },
+        {
+          provide: BillingService,
+          useValue: {
+            startConversationCheckout: jest.fn(),
           },
         },
       ],
@@ -78,6 +93,19 @@ describe('MessagingService', () => {
     usersRepository = module.get(UsersRepository);
     storageService = module.get(StorageService);
     billingRepository = module.get(BillingRepository);
+    billingService = module.get(BillingService);
+
+    billingRepository.ensureBillingAccount.mockResolvedValue({
+      id: 'ba-123',
+      userId: mockUserId,
+      freeChatsUsed: 0,
+      billingStatus: BillingStatus.GRATUIT,
+      subscription: null,
+    } as any);
+    messagingRepository.createConversationWithAccess.mockResolvedValue({
+      kind: 'created',
+      conversation: { id: mockConversationId },
+    } as any);
   });
 
   afterEach(() => {
@@ -133,10 +161,6 @@ describe('MessagingService', () => {
         type: ListingType.OFFRE,
       } as any);
       messagingRepository.findConversationByListing.mockResolvedValue(null);
-      messagingRepository.createSuggestedConversation.mockResolvedValue({
-        id: mockConversationId,
-      } as any);
-
       const result = await service.createConversation(mockUserId, {
         listingId: mockListingId,
       });
@@ -149,11 +173,13 @@ describe('MessagingService', () => {
         mockCompanyId, // Importer
       );
       expect(
-        messagingRepository.createSuggestedConversation,
+        messagingRepository.createConversationWithAccess,
       ).toHaveBeenCalledWith({
         listingId: mockListingId,
         exporterCompanyId: mockPartnerCompanyId,
         importerCompanyId: mockCompanyId,
+        billingAccountId: 'ba-123',
+        source: ConversationAccessSource.GRATUIT,
       });
       expect(result).toEqual({ id: mockConversationId });
     });
@@ -165,10 +191,6 @@ describe('MessagingService', () => {
         type: ListingType.DEMANDE,
       } as any);
       messagingRepository.findConversationByListing.mockResolvedValue(null);
-      messagingRepository.createSuggestedConversation.mockResolvedValue({
-        id: mockConversationId,
-      } as any);
-
       await service.createConversation(mockUserId, {
         listingId: mockListingId,
       });
@@ -181,11 +203,13 @@ describe('MessagingService', () => {
         mockPartnerCompanyId, // Importer
       );
       expect(
-        messagingRepository.createSuggestedConversation,
+        messagingRepository.createConversationWithAccess,
       ).toHaveBeenCalledWith({
         listingId: mockListingId,
         exporterCompanyId: mockCompanyId,
         importerCompanyId: mockPartnerCompanyId,
+        billingAccountId: 'ba-123',
+        source: ConversationAccessSource.GRATUIT,
       });
     });
 
@@ -206,8 +230,116 @@ describe('MessagingService', () => {
 
       expect(result).toBe(mockExisting);
       expect(
-        messagingRepository.createSuggestedConversation,
+        messagingRepository.createConversationWithAccess,
       ).not.toHaveBeenCalled();
+    });
+
+    it('should use subscription access without consuming a free conversation', async () => {
+      listingsRepository.findOne.mockResolvedValue({
+        id: mockListingId,
+        companyId: mockPartnerCompanyId,
+        type: ListingType.OFFRE,
+      } as any);
+      messagingRepository.findConversationByListing.mockResolvedValue(null);
+      billingRepository.ensureBillingAccount.mockResolvedValue({
+        id: 'ba-123',
+        freeChatsUsed: 50,
+        billingStatus: BillingStatus.ABONNE,
+        subscription: {
+          status: SubscriptionStatus.ACTIF,
+          currentPeriodEnd: new Date(Date.now() + 60_000),
+        },
+      } as any);
+
+      await service.createConversation(mockUserId, {
+        listingId: mockListingId,
+      });
+
+      expect(
+        messagingRepository.createConversationWithAccess,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: ConversationAccessSource.ABONNEMENT,
+        }),
+      );
+    });
+
+    it('should require checkout after 50 free conversations', async () => {
+      listingsRepository.findOne.mockResolvedValue({
+        id: mockListingId,
+        companyId: mockPartnerCompanyId,
+        type: ListingType.OFFRE,
+      } as any);
+      messagingRepository.findConversationByListing.mockResolvedValue(null);
+      billingRepository.ensureBillingAccount.mockResolvedValue({
+        id: 'ba-123',
+        freeChatsUsed: 50,
+        billingStatus: BillingStatus.LIMITE_ATTEINTE,
+        subscription: null,
+      } as any);
+
+      await expect(
+        service.createConversation(mockUserId, { listingId: mockListingId }),
+      ).rejects.toMatchObject({ status: 402 });
+      expect(
+        messagingRepository.createConversationWithAccess,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should require checkout if the atomic quota update is exhausted', async () => {
+      listingsRepository.findOne.mockResolvedValue({
+        id: mockListingId,
+        companyId: mockPartnerCompanyId,
+        type: ListingType.OFFRE,
+      } as any);
+      messagingRepository.findConversationByListing.mockResolvedValue(null);
+      messagingRepository.createConversationWithAccess.mockResolvedValue({
+        kind: 'quota_exhausted',
+        freeChatsUsed: 50,
+      } as any);
+
+      await expect(
+        service.createConversation(mockUserId, { listingId: mockListingId }),
+      ).rejects.toBeInstanceOf(HttpException);
+    });
+  });
+
+  describe('startConversationCheckout', () => {
+    it('should start the $2 checkout only after the free quota is exhausted', async () => {
+      usersRepository.getUserCompanyId.mockResolvedValue(mockCompanyId);
+      listingsRepository.findOne.mockResolvedValue({
+        id: mockListingId,
+        companyId: mockPartnerCompanyId,
+        type: ListingType.OFFRE,
+      } as any);
+      messagingRepository.findConversationByListing.mockResolvedValue(null);
+      billingRepository.ensureBillingAccount.mockResolvedValue({
+        id: 'ba-123',
+        freeChatsUsed: 50,
+        billingStatus: BillingStatus.LIMITE_ATTEINTE,
+        subscription: null,
+      } as any);
+      billingService.startConversationCheckout.mockResolvedValue({
+        sessionId: 'cs_123',
+        checkoutUrl: 'https://checkout.stripe.com/pay/cs_123',
+      });
+
+      await expect(
+        service.startConversationCheckout(mockUserId, {
+          listingId: mockListingId,
+        }),
+      ).resolves.toEqual({
+        sessionId: 'cs_123',
+        checkoutUrl: 'https://checkout.stripe.com/pay/cs_123',
+      });
+
+      expect(billingService.startConversationCheckout).toHaveBeenCalledWith({
+        userId: mockUserId,
+        billingAccountId: 'ba-123',
+        listingId: mockListingId,
+        exporterCompanyId: mockPartnerCompanyId,
+        importerCompanyId: mockCompanyId,
+      });
     });
   });
 
@@ -383,10 +515,6 @@ describe('MessagingService', () => {
 
     beforeEach(() => {
       usersRepository.getUserCompanyId.mockResolvedValue(mockCompanyId);
-      billingRepository.findBillingAccount.mockResolvedValue({
-        status: 'GRATUIT',
-        freeChatsUsed: 0,
-      } as any);
     });
 
     it('should create a message and pass null when no file is uploaded', async () => {
@@ -399,13 +527,16 @@ describe('MessagingService', () => {
 
       const result = await service.sendMessage(mockUserId, dto);
 
-      expect(messagingRepository.createMessageAndStartContact).toHaveBeenCalledWith({
+      expect(
+        messagingRepository.createMessageAndStartContact,
+      ).toHaveBeenCalledWith({
         conversationId: mockConversationId,
         senderId: mockUserId,
         content: 'Hello World',
         attachmentUrl: null,
       });
       expect(result).toEqual({ id: 'msg-1' });
+      expect(billingRepository.findBillingAccount).not.toHaveBeenCalled();
     });
 
     it('should upload file and send message with attachmentUrl when file is provided', async () => {
@@ -421,7 +552,9 @@ describe('MessagingService', () => {
       messagingRepository.findAuthorizedConversation.mockResolvedValue({
         id: mockConversationId,
       } as any);
-      storageService.uploadFile.mockResolvedValue('https://example.com/uploaded.pdf');
+      storageService.uploadFile.mockResolvedValue(
+        'https://example.com/uploaded.pdf',
+      );
       messagingRepository.createMessageAndStartContact.mockResolvedValue({
         id: 'msg-1',
         ...dto,
@@ -435,7 +568,9 @@ describe('MessagingService', () => {
         expect.stringMatching(/^message_conv-101\/\d+_test_file\.pdf$/),
         'conversation_attachment',
       );
-      expect(messagingRepository.createMessageAndStartContact).toHaveBeenCalledWith({
+      expect(
+        messagingRepository.createMessageAndStartContact,
+      ).toHaveBeenCalledWith({
         conversationId: mockConversationId,
         senderId: mockUserId,
         content: dto.content,
@@ -482,10 +617,9 @@ describe('MessagingService', () => {
         dto,
       );
 
-      expect(messagingRepository.findAuthorizedConversation).toHaveBeenCalledWith(
-        mockConversationId,
-        mockCompanyId,
-      );
+      expect(
+        messagingRepository.findAuthorizedConversation,
+      ).toHaveBeenCalledWith(mockConversationId, mockCompanyId);
       expect(messagingRepository.updateConversationStatus).toHaveBeenCalledWith(
         mockConversationId,
         'CLOSED',
@@ -499,7 +633,9 @@ describe('MessagingService', () => {
       await expect(
         service.updateConversationStatus(mockConversationId, mockUserId, dto),
       ).rejects.toThrow(ForbiddenException);
-      expect(messagingRepository.updateConversationStatus).not.toHaveBeenCalled();
+      expect(
+        messagingRepository.updateConversationStatus,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -519,10 +655,9 @@ describe('MessagingService', () => {
         mockUserId,
       );
 
-      expect(messagingRepository.findAuthorizedConversation).toHaveBeenCalledWith(
-        mockConversationId,
-        mockCompanyId,
-      );
+      expect(
+        messagingRepository.findAuthorizedConversation,
+      ).toHaveBeenCalledWith(mockConversationId, mockCompanyId);
       expect(messagingRepository.markMessagesAsRead).toHaveBeenCalledWith(
         mockConversationId,
         mockUserId,

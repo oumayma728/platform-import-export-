@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { UsersRepository } from '../../users/users.repository';
 import { BillingRepository } from '../billing.repo';
+import { CONVERSATION_COST } from '../../common/constants/variables';
 
 @Injectable()
 export class StripeService {
@@ -22,7 +23,9 @@ export class StripeService {
       );
     }
 
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
     if (!webhookSecret) {
       throw new Error(
         'STRIPE_WEBHOOK_SECRET is not defined. Please configure it in your environment.',
@@ -38,15 +41,24 @@ export class StripeService {
   /**
    * Construct and verify a Stripe Webhook Event using the raw body and signature.
    */
-  constructEventFromPayload(rawBody: Buffer | string, signature: string): Stripe.Event {
+  constructEventFromPayload(
+    rawBody: Buffer | string,
+    signature: string,
+  ): Stripe.Event {
     if (!signature) {
       throw new BadRequestException('Missing stripe-signature header.');
     }
 
     try {
-      return this.stripe.webhooks.constructEvent(rawBody, signature, this.webhookSecret);
+      return this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        this.webhookSecret,
+      );
     } catch (err: any) {
-      this.logger.error(`Webhook signature verification failed: ${err.message}`);
+      this.logger.error(
+        `Webhook signature verification failed: ${err.message}`,
+      );
       throw new BadRequestException(`Webhook Error: ${err.message}`);
     }
   }
@@ -69,7 +81,8 @@ export class StripeService {
     // Verify existing customer in Stripe if present
     if (customerId) {
       try {
-        const existingCustomer = await this.stripe.customers.retrieve(customerId);
+        const existingCustomer =
+          await this.stripe.customers.retrieve(customerId);
         if (!existingCustomer.deleted) {
           return existingCustomer.id;
         }
@@ -103,7 +116,10 @@ export class StripeService {
       { idempotencyKey: `customer:create:${userId}` },
     );
 
-    await this.billingRepository.setStripeCustomerIdByUserId(user.id, stripeCustomer.id);
+    await this.billingRepository.setStripeCustomerIdByUserId(
+      user.id,
+      stripeCustomer.id,
+    );
     return stripeCustomer.id;
   }
 
@@ -117,7 +133,9 @@ export class StripeService {
     billingAccountId: string,
   ): Promise<Stripe.Checkout.Session> {
     if (!priceId || !priceId.startsWith('price_')) {
-      throw new BadRequestException('Invalid price ID format in subscription plan');
+      throw new BadRequestException(
+        'Invalid price ID format in subscription plan',
+      );
     }
 
     const customerId = await this.getOrCreateCustomer(userId, billingAccountId);
@@ -156,7 +174,64 @@ export class StripeService {
       { idempotencyKey },
     );
 
-    this.logger.log(`Created checkout session ${session.id} for user ${userId}`);
+    this.logger.log(
+      `Created checkout session ${session.id} for user ${userId}`,
+    );
+    return session;
+  }
+
+  /**
+   * Create a one-time Checkout session for one conversation after the free
+   * quota has been exhausted. The metadata is copied to the PaymentIntent so
+   * the webhook can grant access only after Stripe marks it as succeeded.
+   */
+  async createConversationCheckoutSession(input: {
+    userId: string;
+    billingAccountId: string;
+    listingId: string;
+    exporterCompanyId: string;
+    importerCompanyId: string;
+  }): Promise<Stripe.Checkout.Session> {
+    const customerId = await this.getOrCreateCustomer(
+      input.userId,
+      input.billingAccountId,
+    );
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    const metadata = {
+      billingAccountId: input.billingAccountId,
+      listingId: input.listingId,
+      exporterCompanyId: input.exporterCompanyId,
+      importerCompanyId: input.importerCompanyId,
+    };
+
+    const session = await this.stripe.checkout.sessions.create(
+      {
+        mode: 'payment',
+        customer: customerId,
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              product_data: { name: 'Conversation access' },
+              unit_amount: CONVERSATION_COST * 100, // Convert dollars to cents
+            },
+            quantity: 1,
+          },
+        ],
+        metadata,
+        payment_intent_data: { metadata },
+        success_url: `${frontendUrl}/billing/conversation-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${frontendUrl}/billing/conversation-cancel`,
+      },
+      {
+        idempotencyKey: `conversation-checkout:${input.billingAccountId}:${input.listingId}:${input.exporterCompanyId}:${input.importerCompanyId}`,
+      },
+    );
+
+    this.logger.log(
+      `Created conversation checkout session ${session.id} for user ${input.userId}`,
+    );
     return session;
   }
 
@@ -170,7 +245,9 @@ export class StripeService {
   /**
    * Schedule cancellation of a subscription at the end of the current billing period.
    */
-  async cancelSubscriptionAtPeriodEnd(subscriptionId: string): Promise<Stripe.Subscription> {
+  async cancelSubscriptionAtPeriodEnd(
+    subscriptionId: string,
+  ): Promise<Stripe.Subscription> {
     return this.stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
@@ -179,7 +256,9 @@ export class StripeService {
   /**
    * Immediately cancel a subscription in Stripe.
    */
-  async cancelSubscriptionImmediately(subscriptionId: string): Promise<Stripe.Subscription> {
+  async cancelSubscriptionImmediately(
+    subscriptionId: string,
+  ): Promise<Stripe.Subscription> {
     return this.stripe.subscriptions.cancel(subscriptionId);
   }
 }

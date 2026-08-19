@@ -22,6 +22,7 @@ describe('BillingService', () => {
             findActiveSubscriptionPlanById: jest.fn(),
             findByUserId: jest.fn(),
             createBillingAccount: jest.fn(),
+            ensureBillingAccount: jest.fn(),
             updateSubscriptionStatus: jest.fn(),
           },
         },
@@ -29,6 +30,7 @@ describe('BillingService', () => {
           provide: StripeService,
           useValue: {
             createCheckoutSession: jest.fn(),
+            createConversationCheckoutSession: jest.fn(),
             cancelSubscriptionAtPeriodEnd: jest.fn(),
           },
         },
@@ -63,23 +65,34 @@ describe('BillingService', () => {
     it('should throw NotFoundException when plan is not found', async () => {
       billingRepo.findActiveSubscriptionPlanById.mockResolvedValue(null);
 
-      await expect(service.getSubscriptionPlanPrice('invalid-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getSubscriptionPlanPrice('invalid-id'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('startSubscriptionCheckout', () => {
     it('should return sessionId and checkoutUrl when plan and user are valid', async () => {
       const mockPlan = { id: 'plan-1', stripePriceId: 'price_123' } as any;
-      const mockBillingAccount = { id: 'ba-1', userId: 'user-1', subscription: null, status: BillingStatus.GRATUIT } as any;
-      const mockSession = { id: 'cs_123', url: 'https://checkout.stripe.com/pay/cs_123' } as any;
+      const mockBillingAccount = {
+        id: 'ba-1',
+        userId: 'user-1',
+        subscription: null,
+        billingStatus: BillingStatus.GRATUIT,
+      } as any;
+      const mockSession = {
+        id: 'cs_123',
+        url: 'https://checkout.stripe.com/pay/cs_123',
+      } as any;
 
       billingRepo.findActiveSubscriptionPlanById.mockResolvedValue(mockPlan);
-      billingRepo.findByUserId.mockResolvedValue(mockBillingAccount);
+      billingRepo.ensureBillingAccount.mockResolvedValue(mockBillingAccount);
       stripeService.createCheckoutSession.mockResolvedValue(mockSession);
 
-      const result = await service.startSubscriptionCheckout('user-1', 'plan-1');
+      const result = await service.startSubscriptionCheckout(
+        'user-1',
+        'plan-1',
+      );
 
       expect(result).toEqual({
         sessionId: 'cs_123',
@@ -98,54 +111,90 @@ describe('BillingService', () => {
       const activeAccount = {
         id: 'ba-1',
         userId: 'user-1',
-        status: BillingStatus.ABONNE,
-        subscription: { status: SubscriptionStatus.ACTIVE },
+        billingStatus: BillingStatus.ABONNE,
+        subscription: { status: SubscriptionStatus.ACTIF },
       } as any;
 
       billingRepo.findActiveSubscriptionPlanById.mockResolvedValue(mockPlan);
-      billingRepo.findByUserId.mockResolvedValue(activeAccount);
+      billingRepo.ensureBillingAccount.mockResolvedValue(activeAccount);
 
-      await expect(service.startSubscriptionCheckout('user-1', 'plan-1')).rejects.toThrow(
-        'User already has an active subscription',
-      );
+      await expect(
+        service.startSubscriptionCheckout('user-1', 'plan-1'),
+      ).rejects.toThrow('User already has an active subscription');
       expect(stripeService.createCheckoutSession).not.toHaveBeenCalled();
     });
 
-    it('should create a billing account if none exists', async () => {
+    it('should ensure a billing account before creating checkout', async () => {
       const mockPlan = { id: 'plan-1', stripePriceId: 'price_123' } as any;
-      const createdAccount = { id: 'ba-new', userId: 'user-1', subscription: null, status: BillingStatus.GRATUIT } as any;
-      const mockSession = { id: 'cs_123', url: 'https://checkout.stripe.com/pay/cs_123' } as any;
+      const createdAccount = {
+        id: 'ba-new',
+        userId: 'user-1',
+        subscription: null,
+        billingStatus: BillingStatus.GRATUIT,
+      } as any;
+      const mockSession = {
+        id: 'cs_123',
+        url: 'https://checkout.stripe.com/pay/cs_123',
+      } as any;
 
       billingRepo.findActiveSubscriptionPlanById.mockResolvedValue(mockPlan);
-      billingRepo.findByUserId.mockResolvedValue(null);
-      billingRepo.createBillingAccount.mockResolvedValue(createdAccount);
+      billingRepo.ensureBillingAccount.mockResolvedValue(createdAccount);
       stripeService.createCheckoutSession.mockResolvedValue(mockSession);
 
-      const result = await service.startSubscriptionCheckout('user-1', 'plan-1');
+      const result = await service.startSubscriptionCheckout(
+        'user-1',
+        'plan-1',
+      );
 
       expect(result).toEqual({
         sessionId: 'cs_123',
         checkoutUrl: 'https://checkout.stripe.com/pay/cs_123',
       });
-      expect(billingRepo.createBillingAccount).toHaveBeenCalledWith('user-1');
+      expect(billingRepo.ensureBillingAccount).toHaveBeenCalledWith('user-1');
     });
 
     it('should throw BadRequestException if plan is not found', async () => {
       billingRepo.findActiveSubscriptionPlanById.mockResolvedValue(null);
 
-      await expect(service.startSubscriptionCheckout('user-1', 'invalid-plan')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.startSubscriptionCheckout('user-1', 'invalid-plan'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('startConversationCheckout', () => {
+    it('should return a one-time Checkout session for a paid conversation', async () => {
+      const input = {
+        userId: 'user-1',
+        billingAccountId: 'ba-1',
+        listingId: 'listing-1',
+        exporterCompanyId: 'exporter-1',
+        importerCompanyId: 'importer-1',
+      };
+      stripeService.createConversationCheckoutSession.mockResolvedValue({
+        id: 'cs_conversation_123',
+        url: 'https://checkout.stripe.com/pay/cs_conversation_123',
+      } as any);
+
+      await expect(service.startConversationCheckout(input)).resolves.toEqual({
+        sessionId: 'cs_conversation_123',
+        checkoutUrl: 'https://checkout.stripe.com/pay/cs_conversation_123',
+      });
+      expect(
+        stripeService.createConversationCheckoutSession,
+      ).toHaveBeenCalledWith(input);
     });
   });
 
   describe('cancelSubscription', () => {
     it('should schedule cancellation at period end and retain active access', async () => {
-      const futureSeconds = Math.floor((Date.now() + 15 * 24 * 60 * 60 * 1000) / 1000);
+      const futureSeconds = Math.floor(
+        (Date.now() + 15 * 24 * 60 * 60 * 1000) / 1000,
+      );
       const futureDate = new Date(futureSeconds * 1000);
       const mockSub = {
         stripeSubscriptionId: 'sub_123',
-        status: 'ACTIVE',
+        status: 'ACTIF',
         currentPeriodEnd: futureDate,
       };
       const mockAccount = {
@@ -166,18 +215,29 @@ describe('BillingService', () => {
 
       expect(result.cancelAtPeriodEnd).toBe(true);
       expect(result.currentPeriodEnd).toEqual(futureDate);
-      expect(stripeService.cancelSubscriptionAtPeriodEnd).toHaveBeenCalledWith('sub_123');
-      expect(billingRepo.updateSubscriptionStatus).toHaveBeenCalledWith('sub_123', {
-        status: 'ACTIVE',
-        canceledAt: expect.any(Date),
-        currentPeriodEnd: futureDate,
-      });
+      expect(stripeService.cancelSubscriptionAtPeriodEnd).toHaveBeenCalledWith(
+        'sub_123',
+      );
+      expect(billingRepo.updateSubscriptionStatus).toHaveBeenCalledWith(
+        'sub_123',
+        {
+          status: 'ACTIF',
+          canceledAt: expect.any(Date),
+          currentPeriodEnd: futureDate,
+        },
+      );
     });
 
     it('should throw BadRequestException if no subscription exists for user', async () => {
-      billingRepo.findByUserId.mockResolvedValue({ id: 'ba-1', userId: 'user-1', subscription: null } as any);
+      billingRepo.findByUserId.mockResolvedValue({
+        id: 'ba-1',
+        userId: 'user-1',
+        subscription: null,
+      } as any);
 
-      await expect(service.cancelSubscription('user-1')).rejects.toThrow(BadRequestException);
+      await expect(service.cancelSubscription('user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

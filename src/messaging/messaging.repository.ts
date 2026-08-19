@@ -1,5 +1,10 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { BillingStatus, ConversationStatus, Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import {
+  BillingStatus,
+  ConversationAccessSource,
+  ConversationStatus,
+  Prisma,
+} from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -147,7 +152,9 @@ export class MessagingRepository {
     });
   }
 
-  async createSuggestedConversation(conversation: Prisma.ConversationUncheckedCreateInput) {
+  async createSuggestedConversation(
+    conversation: Prisma.ConversationUncheckedCreateInput,
+  ) {
     return this.prisma.conversation.create({
       data: {
         ...conversation,
@@ -157,45 +164,131 @@ export class MessagingRepository {
     });
   }
 
+  async createConversationWithAccess(input: {
+    listingId: string;
+    exporterCompanyId: string;
+    importerCompanyId: string;
+    billingAccountId: string;
+    source: ConversationAccessSource;
+  }) {
+    const execute = async (tx: Prisma.TransactionClient) => {
+      const conversationWhere = {
+        listingId_exporterCompanyId_importerCompanyId: {
+          listingId: input.listingId,
+          exporterCompanyId: input.exporterCompanyId,
+          importerCompanyId: input.importerCompanyId,
+        },
+      };
+
+      const existingConversation = await tx.conversation.findUnique({
+        where: conversationWhere,
+        include: this.conversationSummaryInclude,
+      });
+      if (existingConversation) {
+        return {
+          kind: 'existing' as const,
+          conversation: existingConversation,
+        };
+      }
+
+      if (input.source === ConversationAccessSource.GRATUIT) {
+        const quotaUpdate = await tx.billingAccount.updateMany({
+          where: {
+            id: input.billingAccountId,
+            freeChatsUsed: { lt: 50 },
+          },
+          data: { freeChatsUsed: { increment: 1 } },
+        });
+
+        if (quotaUpdate.count === 0) {
+          const billingAccount = await tx.billingAccount.findUnique({
+            where: { id: input.billingAccountId },
+            select: { freeChatsUsed: true },
+          });
+
+          if (billingAccount) {
+            await tx.billingAccount.update({
+              where: { id: input.billingAccountId },
+              data: { billingStatus: BillingStatus.LIMITE_ATTEINTE },
+            });
+          }
+
+          return {
+            kind: 'quota_exhausted' as const,
+            freeChatsUsed: billingAccount?.freeChatsUsed ?? 50,
+          };
+        }
+      }
+
+      const conversation = await tx.conversation.create({
+        data: {
+          listingId: input.listingId,
+          exporterCompanyId: input.exporterCompanyId,
+          importerCompanyId: input.importerCompanyId,
+          status: ConversationStatus.SUGGEREE,
+        },
+        include: this.conversationSummaryInclude,
+      });
+
+      await tx.conversationAccess.create({
+        data: {
+          billingAccountId: input.billingAccountId,
+          conversationId: conversation.id,
+          source: input.source,
+          amount: 0,
+        },
+      });
+
+      if (input.source === ConversationAccessSource.GRATUIT) {
+        await tx.billingAccount.updateMany({
+          where: {
+            id: input.billingAccountId,
+            freeChatsUsed: { gte: 50 },
+          },
+          data: { billingStatus: BillingStatus.LIMITE_ATTEINTE },
+        });
+      }
+
+      return { kind: 'created' as const, conversation };
+    };
+
+    try {
+      return await this.prisma.$transaction(execute);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existingConversation = await this.findConversationByListing(
+          input.listingId,
+          input.exporterCompanyId,
+          input.importerCompanyId,
+        );
+        if (existingConversation) {
+          return {
+            kind: 'existing' as const,
+            conversation: existingConversation,
+          };
+        }
+      }
+
+      throw error;
+    }
+  }
+
   async createMessageAndStartContact(
     data: Prisma.MessageUncheckedCreateInput,
     tx?: Prisma.TransactionClient,
   ) {
     const execute = async (prismaTx: Prisma.TransactionClient) => {
-      // 1. Fetch sender billing account within transaction
-      const billing = await prismaTx.billingAccount.findUnique({
-        where: { userId: data.senderId },
-      });
-
-      // 2. Check and increment counter if GRATUIT
-      if (billing && billing.status === BillingStatus.GRATUIT) {
-        if (billing.freeChatsUsed >= 50) {
-          await prismaTx.billingAccount.update({
-            where: { userId: data.senderId },
-            data: { status: BillingStatus.LIMITE_ATTEINTE },
-          });
-          throw new ForbiddenException({
-            code: 'FREE_CHAT_LIMIT_REACHED',
-            message: 'Vous avez atteint vos 50 messages gratuits.',
-            freeChatsUsed: billing.freeChatsUsed,
-            limit: 50,
-            requiresSubscription: true,
-          });
-        }
-
-        await prismaTx.billingAccount.update({
-          where: { userId: data.senderId },
-          data: { freeChatsUsed: { increment: 1 } },
-        });
-      }
-
-      // 3. Create message inside transaction
+      // Conversation access is granted during conversation creation. Messages
+      // must never consume the user's conversation quota.
       const message = await prismaTx.message.create({
         data,
         include: { sender: { select: this.senderSelect } },
       });
 
-      // 4. Update conversation status inside transaction
+      // Update conversation status inside the same transaction.
       await prismaTx.conversation.updateMany({
         where: {
           id: data.conversationId,

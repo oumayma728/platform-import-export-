@@ -36,14 +36,14 @@ function requireEnv(key: string): string {
 const PLANS = [
   {
     name: 'Monthly',
-    interval: BillingInterval.MONTHLY,
+    interval: BillingInterval.MENSUEL,
     price: 29,
     currency: 'USD',
     envKey: 'STRIPE_MONTHLY_PRICE_ID',
   },
   {
     name: 'Yearly',
-    interval: BillingInterval.YEARLY,
+    interval: BillingInterval.ANNUEL,
     price: 290,
     currency: 'USD',
     envKey: 'STRIPE_YEARLY_PRICE_ID',

@@ -31,7 +31,7 @@ export class SearchListingsDto {
 
   @ApiPropertyOptional({
     enum: ListingStatus,
-    example: ListingStatus.ACTIVE,
+    example: ListingStatus.ACTIF,
     description: 'Filter by listing status.',
   })
   @IsOptional()

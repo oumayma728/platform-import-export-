@@ -29,7 +29,7 @@ import {
   UnauthorizedErrorResponseDto,
   ValidationErrorResponseDto,
 } from '../common/dto/api-error-response.dto';
-import { REFRESH_COOKIE } from '../constants/variables';
+import { REFRESH_COOKIE } from '../common/constants/variables';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { AuthResponseDto, LogoutResponseDto } from './dto/auth-response.dto';

@@ -28,11 +28,18 @@ export class StripeWebhookService {
     rawBody: Buffer | string,
     signature: string,
   ): Promise<{ received: boolean; duplicate?: boolean }> {
-    const event = this.stripeService.constructEventFromPayload(rawBody, signature);
-    this.logger.log(`Processing Stripe event [${event.id}] of type: ${event.type}`);
+    const event = this.stripeService.constructEventFromPayload(
+      rawBody,
+      signature,
+    );
+    this.logger.log(
+      `Processing Stripe event [${event.id}] of type: ${event.type}`,
+    );
 
     // Quick idempotency check before any work
-    const alreadyProcessed = await this.billingRepo.isWebhookEventProcessed(event.id);
+    const alreadyProcessed = await this.billingRepo.isWebhookEventProcessed(
+      event.id,
+    );
     if (alreadyProcessed) {
       this.logger.log(`Event [${event.id}] was already processed. Skipping.`);
       return { received: true, duplicate: true };
@@ -43,25 +50,31 @@ export class StripeWebhookService {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode === 'subscription' && session.subscription) {
-        const subId = typeof session.subscription === 'string'
-          ? session.subscription
-          : session.subscription.id;
+        const subId =
+          typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription.id;
         try {
           subscriptionDetails = await this.stripeService.getSubscription(subId);
         } catch (err: any) {
-          this.logger.warn(`Could not pre-fetch subscription ${subId} from Stripe: ${err.message}`);
+          this.logger.warn(
+            `Could not pre-fetch subscription ${subId} from Stripe: ${err.message}`,
+          );
         }
       }
     } else if (event.type === 'invoice.paid') {
       const invoice = event.data.object as Stripe.Invoice;
-      const subId = typeof (invoice as any).subscription === 'string'
-        ? (invoice as any).subscription
-        : (invoice as any).subscription?.id;
+      const subId =
+        typeof (invoice as any).subscription === 'string'
+          ? (invoice as any).subscription
+          : (invoice as any).subscription?.id;
       if (subId) {
         try {
           subscriptionDetails = await this.stripeService.getSubscription(subId);
         } catch (err: any) {
-          this.logger.warn(`Could not pre-fetch subscription ${subId} from Stripe: ${err.message}`);
+          this.logger.warn(
+            `Could not pre-fetch subscription ${subId} from Stripe: ${err.message}`,
+          );
         }
       }
     }
@@ -69,9 +82,15 @@ export class StripeWebhookService {
     // Step 2: Atomic database operations within a bounded transaction
     const result = await this.prismaService.$transaction(async (tx) => {
       // Atomic deduplication lock inside transaction
-      const recorded = await this.billingRepo.recordWebhookEvent(event.id, event.type, tx);
+      const recorded = await this.billingRepo.recordWebhookEvent(
+        event.id,
+        event.type,
+        tx,
+      );
       if (!recorded) {
-        this.logger.log(`Event [${event.id}] duplicate detected during insertion. Skipping.`);
+        this.logger.log(
+          `Event [${event.id}] duplicate detected during insertion. Skipping.`,
+        );
         return { received: true, duplicate: true };
       }
 
@@ -116,6 +135,14 @@ export class StripeWebhookService {
           );
           break;
 
+        case 'payment_intent.succeeded':
+          await this.handleConversationPaymentSucceeded(
+            event.id,
+            event.data.object as Stripe.PaymentIntent,
+            tx,
+          );
+          break;
+
         default:
           this.logger.log(`Unhandled Stripe event type: ${event.type}`);
       }
@@ -144,18 +171,26 @@ export class StripeWebhookService {
     const userId = session.metadata?.userId;
     const planId = session.metadata?.planId;
     const billingAccountId = session.metadata?.billingAccountId;
-    const customerId = session.customer as string;
-    const stripeSubscriptionId = typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id;
+    const customerId = this.getStripeObjectId(session.customer);
+    const stripeSubscriptionId =
+      typeof session.subscription === 'string'
+        ? session.subscription
+        : session.subscription?.id;
 
     // Resolve BillingAccount by ID first, then by customer ID, then by user ID
     let billingAccount;
     if (billingAccountId) {
-      billingAccount = await this.billingRepo.findBillingAccountById(billingAccountId, tx);
+      billingAccount = await this.billingRepo.findBillingAccountById(
+        billingAccountId,
+        tx,
+      );
     }
     if (!billingAccount && customerId) {
-      billingAccount = await this.billingRepo.findBillingAccountByStripeCustomerId(customerId, tx);
+      billingAccount =
+        await this.billingRepo.findBillingAccountByStripeCustomerId(
+          customerId,
+          tx,
+        );
     }
     if (!billingAccount && userId) {
       billingAccount = await this.billingRepo.findByUserId(userId, tx);
@@ -169,7 +204,11 @@ export class StripeWebhookService {
 
     // Link Stripe customer ID if not already set
     if (customerId && !billingAccount.stripeCustomerId) {
-      await this.billingRepo.setStripeCustomerIdByAccountId(billingAccount.id, customerId, tx);
+      await this.billingRepo.setStripeCustomerIdByAccountId(
+        billingAccount.id,
+        customerId,
+        tx,
+      );
     }
 
     // NOTE: invoice.paid is authoritative for creating the local Subscription, recording transaction, and activating ABONNE.
@@ -188,23 +227,33 @@ export class StripeWebhookService {
     subscriptionDetails: Stripe.Subscription | null,
     tx: Prisma.TransactionClient,
   ) {
-    const customerId = invoice.customer as string;
-    const stripeSubscriptionId = typeof (invoice as any).subscription === 'string'
-      ? (invoice as any).subscription
-      : (invoice as any).subscription?.id;
+    const customerId = this.getStripeObjectId(invoice.customer);
+    const stripeSubscriptionId =
+      typeof (invoice as any).subscription === 'string'
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id;
 
     let billingAccount;
-    let existingSub: Awaited<ReturnType<BillingRepository['findSubscriptionByStripeId']>> = null;
+    let existingSub: Awaited<
+      ReturnType<BillingRepository['findSubscriptionByStripeId']>
+    > = null;
 
     if (stripeSubscriptionId) {
-      existingSub = await this.billingRepo.findSubscriptionByStripeId(stripeSubscriptionId, tx);
+      existingSub = await this.billingRepo.findSubscriptionByStripeId(
+        stripeSubscriptionId,
+        tx,
+      );
       if (existingSub) {
         billingAccount = existingSub.billingAccount;
       }
     }
 
     if (!billingAccount && customerId) {
-      billingAccount = await this.billingRepo.findBillingAccountByStripeCustomerId(customerId, tx);
+      billingAccount =
+        await this.billingRepo.findBillingAccountByStripeCustomerId(
+          customerId,
+          tx,
+        );
     }
 
     if (!billingAccount) {
@@ -221,7 +270,10 @@ export class StripeWebhookService {
         (invoice.lines?.data?.[0] as any)?.price?.id ||
         subscriptionDetails?.items?.data?.[0]?.price?.id;
       if (priceId) {
-        const plan = await this.billingRepo.findSubscriptionPlanByStripePriceId(priceId, tx);
+        const plan = await this.billingRepo.findSubscriptionPlanByStripePriceId(
+          priceId,
+          tx,
+        );
         if (plan) planId = plan.id;
       }
       if (!planId && subscriptionDetails?.metadata?.planId) {
@@ -231,14 +283,18 @@ export class StripeWebhookService {
 
     // Record PaymentTransaction
     const amountPaid = invoice.amount_paid ? invoice.amount_paid / 100 : 0;
-    const existingTx = await this.billingRepo.findPaymentTransactionByStripeEventId(eventId, tx);
+    const existingTx =
+      await this.billingRepo.findPaymentTransactionByStripeEventId(eventId, tx);
     if (!existingTx) {
       await this.billingRepo.createPaymentTransaction(
         {
           billingAccountId: billingAccount.id,
           stripeEventId: eventId,
+          stripeInvoiceId: invoice.id,
+          idempotencyKey: `invoice:${invoice.id}`,
           type: TransactionType.ABONNEMENT,
           amount: amountPaid,
+          currency: invoice.currency?.toUpperCase() ?? 'USD',
           status: TransactionStatus.REUSSI,
         },
         tx,
@@ -246,17 +302,27 @@ export class StripeWebhookService {
     }
 
     // Update or Upsert Subscription record
+    const periodStart = subscriptionDetails
+      ? this.extractPeriodStart(subscriptionDetails)
+      : this.extractInvoicePeriodStart(invoice);
     const periodEnd = subscriptionDetails
       ? this.extractPeriodEnd(subscriptionDetails)
       : this.extractInvoicePeriodEnd(invoice);
 
     if (stripeSubscriptionId && planId) {
+      if (!periodStart || !periodEnd) {
+        throw new Error(
+          `Subscription period is missing for invoice.paid event ${eventId}. Will retry.`,
+        );
+      }
+
       await this.billingRepo.upsertSubscription(
         {
           billingAccountId: billingAccount.id,
           planId,
           stripeSubscriptionId,
-          status: SubscriptionStatus.ACTIVE,
+          status: SubscriptionStatus.ACTIF,
+          currentPeriodStart: periodStart,
           currentPeriodEnd: periodEnd,
           canceledAt: null, // Clear canceledAt on renewal if renewed
         },
@@ -266,8 +332,9 @@ export class StripeWebhookService {
       await this.billingRepo.updateSubscriptionStatus(
         stripeSubscriptionId,
         {
-          status: SubscriptionStatus.ACTIVE,
-          currentPeriodEnd: periodEnd,
+          status: SubscriptionStatus.ACTIF,
+          ...(periodStart && { currentPeriodStart: periodStart }),
+          ...(periodEnd && { currentPeriodEnd: periodEnd }),
           canceledAt: null,
         },
         tx,
@@ -295,18 +362,26 @@ export class StripeWebhookService {
     invoice: Stripe.Invoice,
     tx: Prisma.TransactionClient,
   ) {
-    const customerId = invoice.customer as string;
-    const stripeSubscriptionId = typeof (invoice as any).subscription === 'string'
-      ? (invoice as any).subscription
-      : (invoice as any).subscription?.id;
+    const customerId = this.getStripeObjectId(invoice.customer);
+    const stripeSubscriptionId =
+      typeof (invoice as any).subscription === 'string'
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id;
 
     let billingAccount;
     if (stripeSubscriptionId) {
-      const sub = await this.billingRepo.findSubscriptionByStripeId(stripeSubscriptionId, tx);
+      const sub = await this.billingRepo.findSubscriptionByStripeId(
+        stripeSubscriptionId,
+        tx,
+      );
       if (sub) billingAccount = sub.billingAccount;
     }
     if (!billingAccount && customerId) {
-      billingAccount = await this.billingRepo.findBillingAccountByStripeCustomerId(customerId, tx);
+      billingAccount =
+        await this.billingRepo.findBillingAccountByStripeCustomerId(
+          customerId,
+          tx,
+        );
     }
 
     if (!billingAccount) {
@@ -318,14 +393,18 @@ export class StripeWebhookService {
     const amountDue = invoice.amount_due ? invoice.amount_due / 100 : 0;
 
     // Record failed payment transaction
-    const existingTx = await this.billingRepo.findPaymentTransactionByStripeEventId(eventId, tx);
+    const existingTx =
+      await this.billingRepo.findPaymentTransactionByStripeEventId(eventId, tx);
     if (!existingTx) {
       await this.billingRepo.createPaymentTransaction(
         {
           billingAccountId: billingAccount.id,
           stripeEventId: eventId,
+          stripeInvoiceId: invoice.id,
+          idempotencyKey: `invoice:${invoice.id}`,
           type: TransactionType.ABONNEMENT,
           amount: amountDue,
+          currency: invoice.currency?.toUpperCase() ?? 'USD',
           status: TransactionStatus.ECHOUE,
         },
         tx,
@@ -336,7 +415,7 @@ export class StripeWebhookService {
     if (stripeSubscriptionId) {
       await this.billingRepo.updateSubscriptionStatus(
         stripeSubscriptionId,
-        { status: SubscriptionStatus.PAST_DUE },
+        { status: SubscriptionStatus.IMPAYE },
         tx,
       );
     }
@@ -355,10 +434,14 @@ export class StripeWebhookService {
     subscription: Stripe.Subscription,
     tx: Prisma.TransactionClient,
   ) {
-    const customerId = subscription.customer as string;
-    let subRecord = await this.billingRepo.findSubscriptionByStripeId(subscription.id, tx);
+    const customerId = this.getStripeObjectId(subscription.customer);
+    let subRecord = await this.billingRepo.findSubscriptionByStripeId(
+      subscription.id,
+      tx,
+    );
 
     const mappedStatus = this.mapStripeStatusToPrisma(subscription.status);
+    const periodStart = this.extractPeriodStart(subscription);
     const periodEnd = this.extractPeriodEnd(subscription);
     const canceledAt = subscription.canceled_at
       ? new Date(subscription.canceled_at * 1000)
@@ -367,20 +450,34 @@ export class StripeWebhookService {
     const priceId = subscription.items?.data?.[0]?.price?.id;
     let planId: string | undefined;
     if (priceId) {
-      const plan = await this.billingRepo.findSubscriptionPlanByStripePriceId(priceId, tx);
+      const plan = await this.billingRepo.findSubscriptionPlanByStripePriceId(
+        priceId,
+        tx,
+      );
       if (plan) planId = plan.id;
     }
 
     // Out-of-order handling: If subRecord does not exist yet locally, resolve by customer and upsert
     if (!subRecord && customerId) {
-      const billingAccount = await this.billingRepo.findBillingAccountByStripeCustomerId(customerId, tx);
+      const billingAccount =
+        await this.billingRepo.findBillingAccountByStripeCustomerId(
+          customerId,
+          tx,
+        );
       if (billingAccount && planId) {
+        if (!periodStart || !periodEnd) {
+          throw new Error(
+            `Subscription period is missing for subscription ${subscription.id}. Will retry.`,
+          );
+        }
+
         subRecord = (await this.billingRepo.upsertSubscription(
           {
             billingAccountId: billingAccount.id,
             planId,
             stripeSubscriptionId: subscription.id,
             status: mappedStatus,
+            currentPeriodStart: periodStart,
             currentPeriodEnd: periodEnd,
             canceledAt,
           },
@@ -400,7 +497,8 @@ export class StripeWebhookService {
       subscription.id,
       {
         status: mappedStatus,
-        currentPeriodEnd: periodEnd,
+        ...(periodStart && { currentPeriodStart: periodStart }),
+        ...(periodEnd && { currentPeriodEnd: periodEnd }),
         canceledAt,
         ...(planId && { planId }),
       },
@@ -409,12 +507,15 @@ export class StripeWebhookService {
 
     // Determine BillingAccount status
     let newBillingStatus: BillingStatus;
-    if (mappedStatus === SubscriptionStatus.ACTIVE) {
+    if (mappedStatus === SubscriptionStatus.ACTIF) {
       newBillingStatus = BillingStatus.ABONNE;
-    } else if (mappedStatus === SubscriptionStatus.PAST_DUE) {
+    } else if (mappedStatus === SubscriptionStatus.IMPAYE) {
       // Grace period during dunning retries
       newBillingStatus = BillingStatus.ABONNE;
-    } else if (mappedStatus === SubscriptionStatus.CANCELED || mappedStatus === SubscriptionStatus.EXPIRED) {
+    } else if (
+      mappedStatus === SubscriptionStatus.ANNULE ||
+      mappedStatus === SubscriptionStatus.EXPIRE
+    ) {
       // If period has ended, expire account; otherwise allow access until periodEnd
       if (periodEnd && periodEnd.getTime() > Date.now()) {
         newBillingStatus = BillingStatus.ABONNE;
@@ -444,7 +545,10 @@ export class StripeWebhookService {
     subscription: Stripe.Subscription,
     tx: Prisma.TransactionClient,
   ) {
-    const subRecord = await this.billingRepo.findSubscriptionByStripeId(subscription.id, tx);
+    const subRecord = await this.billingRepo.findSubscriptionByStripeId(
+      subscription.id,
+      tx,
+    );
     if (!subRecord) {
       throw new Error(
         `Subscription ${subscription.id} not found in DB during delete event. Will retry.`,
@@ -458,7 +562,7 @@ export class StripeWebhookService {
     await this.billingRepo.updateSubscriptionStatus(
       subscription.id,
       {
-        status: SubscriptionStatus.CANCELED,
+        status: SubscriptionStatus.ANNULE,
         canceledAt,
       },
       tx,
@@ -470,22 +574,98 @@ export class StripeWebhookService {
       tx,
     );
 
-    this.logger.log(`Subscription ${subscription.id} marked as CANCELED. BillingAccount set to ABONNEMENT_EXPIRE.`);
+    this.logger.log(
+      `Subscription ${subscription.id} marked as CANCELED. BillingAccount set to ABONNEMENT_EXPIRE.`,
+    );
   }
 
-  private mapStripeStatusToPrisma(stripeStatus: Stripe.Subscription.Status): SubscriptionStatus {
+  /**
+   * Grants access for a $2 pay-as-you-go conversation only after Stripe has
+   * confirmed its PaymentIntent. Checkout completion alone is not payment
+   * confirmation, especially for delayed payment methods.
+   */
+  private async handleConversationPaymentSucceeded(
+    eventId: string,
+    paymentIntent: Stripe.PaymentIntent,
+    tx: Prisma.TransactionClient,
+  ) {
+    const metadata = paymentIntent.metadata;
+    const billingAccountId = metadata.billingAccountId;
+    const listingId = metadata.listingId;
+    const exporterCompanyId = metadata.exporterCompanyId;
+    const importerCompanyId = metadata.importerCompanyId;
+
+    // Ignore PaymentIntents that were not created for a conversation checkout.
+    if (
+      !billingAccountId ||
+      !listingId ||
+      !exporterCompanyId ||
+      !importerCompanyId
+    ) {
+      return;
+    }
+
+    if (
+      paymentIntent.status !== 'succeeded' ||
+      paymentIntent.amount_received !== 200 ||
+      paymentIntent.currency.toLowerCase() !== 'usd'
+    ) {
+      throw new Error(
+        `Invalid conversation payment ${paymentIntent.id}: expected a succeeded 200 USD PaymentIntent.`,
+      );
+    }
+
+    const billingAccount = await this.billingRepo.findBillingAccountById(
+      billingAccountId,
+      tx,
+    );
+    if (!billingAccount) {
+      throw new Error(
+        `BillingAccount ${billingAccountId} was not found for PaymentIntent ${paymentIntent.id}. Will retry.`,
+      );
+    }
+
+    const customerId = this.getStripeObjectId(paymentIntent.customer);
+    if (
+      customerId &&
+      billingAccount.stripeCustomerId &&
+      billingAccount.stripeCustomerId !== customerId
+    ) {
+      throw new Error(
+        `Stripe customer mismatch for PaymentIntent ${paymentIntent.id}. Will retry.`,
+      );
+    }
+
+    await this.billingRepo.recordPaidConversation(
+      {
+        billingAccountId,
+        listingId,
+        exporterCompanyId,
+        importerCompanyId,
+        stripePaymentIntentId: paymentIntent.id,
+        stripeEventId: eventId,
+        amount: paymentIntent.amount_received / 100,
+        currency: paymentIntent.currency,
+      },
+      tx,
+    );
+  }
+
+  private mapStripeStatusToPrisma(
+    stripeStatus: Stripe.Subscription.Status,
+  ): SubscriptionStatus {
     switch (stripeStatus) {
       case 'active':
-        return SubscriptionStatus.ACTIVE;
+        return SubscriptionStatus.ACTIF;
       case 'canceled':
-        return SubscriptionStatus.CANCELED;
+        return SubscriptionStatus.ANNULE;
       case 'past_due':
-        return SubscriptionStatus.PAST_DUE;
+        return SubscriptionStatus.IMPAYE;
       case 'unpaid':
       case 'incomplete_expired':
-        return SubscriptionStatus.EXPIRED;
+        return SubscriptionStatus.EXPIRE;
       default:
-        return SubscriptionStatus.ACTIVE;
+        return SubscriptionStatus.ACTIF;
     }
   }
 
@@ -501,11 +681,37 @@ export class StripeWebhookService {
     return null;
   }
 
+  private extractPeriodStart(subscription: Stripe.Subscription): Date | null {
+    const itemPeriodStart = subscription.items?.data?.[0]?.current_period_start;
+    if (typeof itemPeriodStart === 'number') {
+      return new Date(itemPeriodStart * 1000);
+    }
+    const topLevel = (subscription as any).current_period_start;
+    if (typeof topLevel === 'number') {
+      return new Date(topLevel * 1000);
+    }
+    return null;
+  }
+
   private extractInvoicePeriodEnd(invoice: Stripe.Invoice): Date | null {
     const lineEnd = invoice.lines?.data?.[0]?.period?.end;
     if (typeof lineEnd === 'number') {
       return new Date(lineEnd * 1000);
     }
     return null;
+  }
+
+  private extractInvoicePeriodStart(invoice: Stripe.Invoice): Date | null {
+    const lineStart = invoice.lines?.data?.[0]?.period?.start;
+    if (typeof lineStart === 'number') {
+      return new Date(lineStart * 1000);
+    }
+    return null;
+  }
+
+  private getStripeObjectId(
+    value: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined,
+  ): string | undefined {
+    return typeof value === 'string' ? value : value?.id;
   }
 }

@@ -8,7 +8,7 @@ CREATE TYPE "ValidationStatus" AS ENUM ('EN_ATTENTE_VALIDATION', 'VALIDE', 'REJE
 CREATE TYPE "ListingType" AS ENUM ('OFFRE', 'DEMANDE');
 
 -- CreateEnum
-CREATE TYPE "ListingStatus" AS ENUM ('ACTIVE', 'SUSPENDUE', 'CLOTUREE');
+CREATE TYPE "ListingStatus" AS ENUM ('ACTIF', 'SUSPENDUE', 'CLOTUREE');
 
 -- CreateEnum
 CREATE TYPE "ConversationStatus" AS ENUM ('SUGGEREE', 'CONSULTEE', 'EN_CONTACT', 'EN_NEGOCIATION', 'CONCLUE', 'REJETEE');
@@ -21,6 +21,15 @@ CREATE TYPE "TransactionType" AS ENUM ('PAIEMENT_USAGE', 'ABONNEMENT', 'REMBOURS
 
 -- CreateEnum
 CREATE TYPE "TransactionStatus" AS ENUM ('REUSSI', 'ECHOUE', 'EN_ATTENTE');
+
+-- CreateEnum
+CREATE TYPE "BillingInterval" AS ENUM ('MENSUEL', 'ANNUEL');
+
+-- CreateEnum
+CREATE TYPE "SubscriptionStatus" AS ENUM ('ACTIF', 'ANNULE', 'IMPAYE', 'EXPIRE');
+
+-- CreateEnum
+CREATE TYPE "ConversationAccessSource" AS ENUM ('GRATUIT', 'PAIEMENT_A_L_USAGE', 'ABONNEMENT');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -83,7 +92,7 @@ CREATE TABLE "listings" (
     "country" TEXT NOT NULL,
     "incoterm" TEXT NOT NULL,
     "deadline" DATE,
-    "status" "ListingStatus" NOT NULL DEFAULT 'ACTIVE',
+    "status" "ListingStatus" NOT NULL DEFAULT 'ACTIF',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -130,11 +139,10 @@ CREATE TABLE "messages" (
 -- CreateTable
 CREATE TABLE "billing_accounts" (
     "id" TEXT NOT NULL,
-    "company_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
     "free_chats_used" INTEGER NOT NULL DEFAULT 0,
-    "status" "BillingStatus" NOT NULL DEFAULT 'GRATUIT',
+    "billing_status" "BillingStatus" NOT NULL DEFAULT 'GRATUIT',
     "stripe_customer_id" TEXT,
-    "stripe_subscription_id" TEXT,
     "cumulative_usage_spend" DECIMAL(12,2) NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -165,6 +173,60 @@ CREATE TABLE "audit_logs" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "subscription_plans" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "interval" "BillingInterval" NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
+    "currency" VARCHAR(3) NOT NULL DEFAULT 'USD',
+    "stripe_price_id" TEXT NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "subscription_plans_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "subscriptions" (
+    "id" TEXT NOT NULL,
+    "billing_account_id" TEXT NOT NULL,
+    "plan_id" TEXT NOT NULL,
+    "stripe_subscription_id" TEXT NOT NULL,
+    "status" "SubscriptionStatus" NOT NULL DEFAULT 'ACTIF',
+    "current_period_start" TIMESTAMP(3) NOT NULL,
+    "current_period_end" TIMESTAMP(3) NOT NULL,
+    "cancel_at_period_end" BOOLEAN NOT NULL DEFAULT false,
+    "canceled_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "conversation_accesses" (
+    "id" TEXT NOT NULL,
+    "billing_account_id" TEXT NOT NULL,
+    "conversation_id" TEXT NOT NULL,
+    "source" "ConversationAccessSource" NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "conversation_accesses_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "processed_webhook_events" (
+    "id" TEXT NOT NULL,
+    "event_id" TEXT NOT NULL,
+    "event_type" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "processed_webhook_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -213,7 +275,7 @@ CREATE INDEX "messages_conversation_id_created_at_idx" ON "messages"("conversati
 CREATE INDEX "messages_sender_id_idx" ON "messages"("sender_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "billing_accounts_company_id_key" ON "billing_accounts"("company_id");
+CREATE UNIQUE INDEX "billing_accounts_user_id_key" ON "billing_accounts"("user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payment_transactions_stripe_event_id_key" ON "payment_transactions"("stripe_event_id");
@@ -223,6 +285,24 @@ CREATE INDEX "payment_transactions_billing_account_id_idx" ON "payment_transacti
 
 -- CreateIndex
 CREATE INDEX "audit_logs_user_id_idx" ON "audit_logs"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscription_plans_stripe_price_id_key" ON "subscription_plans"("stripe_price_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_stripe_subscription_id_key" ON "subscriptions"("stripe_subscription_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_billing_account_id_key" ON "subscriptions"("billing_account_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "conversation_accesses_billing_account_id_conversation_id_key" ON "conversation_accesses"("billing_account_id", "conversation_id");
+
+-- CreateIndex
+CREATE INDEX "conversation_accesses_conversation_id_idx" ON "conversation_accesses"("conversation_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "processed_webhook_events_event_id_key" ON "processed_webhook_events"("event_id");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "companies"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -252,10 +332,22 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_fkey" FOREIGN KE
 ALTER TABLE "messages" ADD CONSTRAINT "messages_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "billing_accounts" ADD CONSTRAINT "billing_accounts_company_id_fkey" FOREIGN KEY ("company_id") REFERENCES "companies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "billing_accounts" ADD CONSTRAINT "billing_accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "payment_transactions" ADD CONSTRAINT "payment_transactions_billing_account_id_fkey" FOREIGN KEY ("billing_account_id") REFERENCES "billing_accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_billing_account_id_fkey" FOREIGN KEY ("billing_account_id") REFERENCES "billing_accounts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_plan_id_fkey" FOREIGN KEY ("plan_id") REFERENCES "subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "conversation_accesses" ADD CONSTRAINT "conversation_accesses_billing_account_id_fkey" FOREIGN KEY ("billing_account_id") REFERENCES "billing_accounts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "conversation_accesses" ADD CONSTRAINT "conversation_accesses_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;

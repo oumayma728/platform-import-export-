@@ -27,7 +27,9 @@ export class BillingService {
   async getSubscriptionPlanPrice(id: string) {
     const plan = await this.billingRepo.findActiveSubscriptionPlanById(id);
     if (!plan) {
-      throw new NotFoundException(`Active subscription plan with ID '${id}' not found`);
+      throw new NotFoundException(
+        `Active subscription plan with ID '${id}' not found`,
+      );
     }
     return plan;
   }
@@ -44,19 +46,13 @@ export class BillingService {
     if (!plan) {
       throw new BadRequestException('Active subscription plan not found');
     }
- 
-    let billingAccount = await this.billingRepo.findByUserId(userId);
-    if (!billingAccount) {
-      billingAccount = await this.billingRepo.createBillingAccount(userId);
-    }
-    if (!billingAccount) {
-      throw new BadRequestException('Billing account could not be found or created');
-    }
+
+    const billingAccount = await this.billingRepo.ensureBillingAccount(userId);
 
     // Prevent duplicate subscriptions if user is already active
     if (
-      billingAccount.subscription?.status === SubscriptionStatus.ACTIVE ||
-      billingAccount.status === BillingStatus.ABONNE
+      billingAccount.subscription?.status === SubscriptionStatus.ACTIF ||
+      billingAccount.billingStatus === BillingStatus.ABONNE
     ) {
       throw new BadRequestException('User already has an active subscription');
     }
@@ -69,7 +65,35 @@ export class BillingService {
     );
 
     if (!session.url) {
-      throw new BadRequestException('Stripe Checkout Session URL was not generated');
+      throw new BadRequestException(
+        'Stripe Checkout Session URL was not generated',
+      );
+    }
+
+    return {
+      sessionId: session.id,
+      checkoutUrl: session.url,
+    };
+  }
+
+  /**
+   * Starts a one-time $2 Checkout session for a single conversation.
+   * Conversation access is granted only by the payment_intent.succeeded webhook.
+   */
+  async startConversationCheckout(input: {
+    userId: string;
+    billingAccountId: string;
+    listingId: string;
+    exporterCompanyId: string;
+    importerCompanyId: string;
+  }): Promise<CreateCheckoutSessionResponseDto> {
+    const session =
+      await this.stripeService.createConversationCheckoutSession(input);
+
+    if (!session.url) {
+      throw new BadRequestException(
+        'Stripe Checkout Session URL was not generated',
+      );
     }
 
     return {
@@ -89,7 +113,9 @@ export class BillingService {
    * Schedule subscription cancellation for an authenticated user at the end of their paid period.
    * Retains active access until the period expires.
    */
-  async cancelSubscription(userId: string): Promise<CancelSubscriptionResponseDto> {
+  async cancelSubscription(
+    userId: string,
+  ): Promise<CancelSubscriptionResponseDto> {
     const billingAccount = await this.billingRepo.findByUserId(userId);
     if (!billingAccount || !billingAccount.subscription) {
       throw new BadRequestException('No active subscription found for user');
@@ -99,7 +125,8 @@ export class BillingService {
     const stripeSubId = subRecord.stripeSubscriptionId;
 
     // Request Stripe to cancel subscription at current period end
-    const stripeSub = await this.stripeService.cancelSubscriptionAtPeriodEnd(stripeSubId);
+    const stripeSub =
+      await this.stripeService.cancelSubscriptionAtPeriodEnd(stripeSubId);
 
     const periodEnd = stripeSub.items?.data?.[0]?.current_period_end
       ? new Date(stripeSub.items.data[0].current_period_end * 1000)
@@ -117,7 +144,8 @@ export class BillingService {
     );
 
     return {
-      message: 'Subscription cancellation scheduled at the end of the billing period.',
+      message:
+        'Subscription cancellation scheduled at the end of the billing period.',
       cancelAtPeriodEnd: true,
       currentPeriodEnd: periodEnd,
     };

@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 
 import { JwtPayload } from '../interfaces/jwt-payload';
-import { REFRESH_COOKIE } from '../../constants/variables';
+import { REFRESH_COOKIE } from '../../common/constants/variables';
 
 @Injectable()
 export class RefreshJwtGuard implements CanActivate {

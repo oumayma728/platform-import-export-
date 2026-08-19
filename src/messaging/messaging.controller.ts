@@ -31,7 +31,6 @@ import { UpdateConversationStatusDto } from './dto/update-conversation-status.dt
 import { MessagingService } from './messaging.service';
 import type { UploadedFileLike } from '../common/types/uploaded-file.type';
 
-
 @ApiTags('Messaging')
 @ApiBearerAuth()
 @Controller('messaging')
@@ -42,7 +41,7 @@ export class MessagingController {
   @ApiOperation({
     summary: 'Create or retrieve an AI match suggestion for a listing',
     description:
-      'Creates an empty suggested conversation for the matching companies. Returns an existing suggestion when present.',
+      'Creates an empty suggested conversation. It consumes one of the first 50 free conversations unless the user has an active subscription. Returns an existing suggestion when present.',
   })
   @ApiResponse({
     status: 201,
@@ -52,11 +51,38 @@ export class MessagingController {
     status: 400,
     description: 'User has no company or target is own listing.',
   })
+  @ApiResponse({
+    status: 402,
+    description:
+      'Free conversation quota reached; an active subscription or a $2 conversation payment is required.',
+  })
   createConversation(
     @CurrentUser() user: AuthRequest['user'],
     @Body() dto: CreateConversationDto,
   ) {
     return this.messagingService.createConversation(user.id, dto);
+  }
+
+  @Post('conversations/checkout')
+  @ApiOperation({
+    summary: 'Create a $2 Checkout session for one conversation',
+    description:
+      'Available after the 50 free-conversation quota is reached. Conversation access is granted only after Stripe confirms payment.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Stripe Checkout session created.',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Conversation already exists, the user has an active subscription, or free quota remains.',
+  })
+  startConversationCheckout(
+    @CurrentUser() user: AuthRequest['user'],
+    @Body() dto: CreateConversationDto,
+  ) {
+    return this.messagingService.startConversationCheckout(user.id, dto);
   }
 
   @Get('conversations')
@@ -149,7 +175,7 @@ export class MessagingController {
   @ApiResponse({ status: 201, description: 'Message sent successfully.' })
   @ApiResponse({
     status: 403,
-    description: 'Vous avez atteint vos 50 messages gratuits.',
+    description: 'Forbidden if the user is not a participant.',
   })
   sendMessage(
     @CurrentUser() user: AuthRequest['user'],
@@ -179,7 +205,6 @@ export class MessagingController {
       file,
     );
   }
-
 
   @Patch('conversations/:id/status')
   @ApiOperation({

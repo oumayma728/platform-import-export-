@@ -58,7 +58,7 @@ export class UsersRepository {
         phone: data.phone,
         billingAccount: {
           create: {
-            status: BillingStatus.GRATUIT,
+            billingStatus: BillingStatus.GRATUIT,
           },
         },
       },

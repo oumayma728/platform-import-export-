@@ -111,7 +111,7 @@ export class ListingsController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: ['ACTIVE', 'SUSPENDUE', 'CLOTUREE'],
+    enum: ['ACTIF', 'SUSPENDUE', 'CLOTUREE'],
   })
   @ApiQuery({ name: 'minPrice', required: false, type: Number })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })

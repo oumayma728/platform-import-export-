@@ -64,7 +64,7 @@ export class ListingEntity {
   })
   deadline!: string | null;
 
-  @ApiProperty({ enum: ListingStatus, example: ListingStatus.ACTIVE })
+  @ApiProperty({ enum: ListingStatus, example: ListingStatus.ACTIF })
   status!: ListingStatus;
 
   @ApiProperty({ type: () => CompanyEntity })
