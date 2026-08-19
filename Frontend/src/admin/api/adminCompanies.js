@@ -98,3 +98,16 @@ export async function assignBadge(companyId, body) {
   const { data } = await adminClient.post(`/admin/companies/${companyId}/badges`, body);
   return data;
 }
+
+/**
+ * GET /companies/:id/reviews/summary
+ * Retourne la note moyenne et le nombre d'avis d'une entreprise.
+ * Endpoint public (pas de guard admin).
+ *
+ * @param {string} companyId
+ * @returns {{ companyId, averageRating: number|null, reviewCount: number }}
+ */
+export async function getCompanyReviewsSummary(companyId) {
+  const { data } = await adminClient.get(`/companies/${companyId}/reviews/summary`);
+  return data;
+}

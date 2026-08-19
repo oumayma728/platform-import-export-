@@ -7,8 +7,10 @@ import { AdminDashboardController } from './admin-dashboard.controller';
 import { AdminDashboardService } from './admin-dashboard.service';
 
 
+import { ModerationHistoryModule } from '../moderation-history/moderation-history.module';
+
 @Module({
-  imports: [AuthModule, CompaniesModule, UsersModule],
+  imports: [AuthModule, CompaniesModule, UsersModule, ModerationHistoryModule],
   controllers: [AdminDashboardController],
   providers: [AdminDashboardService],
 })

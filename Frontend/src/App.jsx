@@ -12,6 +12,7 @@ import AdminProtectedRoute from "./admin/components/AdminProtectedRoute";
 const AdminLoginPage = lazy(() => import("./admin/pages/AdminLoginPage"));
 const AdminDashboardPage = lazy(() => import("./admin/pages/AdminDashboardPage"));
 const PendingCompaniesPage = lazy(() => import("./admin/pages/PendingCompaniesPage"));
+const ModerationHistoryPage = lazy(() => import("./admin/pages/ModerationHistoryPage"));
 // ──────────────────────────────────────────────────────────────────────────
 
 import LandingPage from "./pages/LandingPage";
@@ -221,6 +222,7 @@ export default function App() {
             >
               <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
               <Route path="/admin/pending-companies" element={<PendingCompaniesPage />} />
+              <Route path="/admin/moderation-history" element={<ModerationHistoryPage />} />
             </Route>
             {/* ─────────────────────────────────────────────────────────── */}
           </Routes>

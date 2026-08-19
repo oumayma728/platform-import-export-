@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards,  ParseUUIDPipe } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { ModerationActionType, ModerationEntityType, UserRole } from '@prisma/client';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -28,6 +28,7 @@ import { CompaniesService } from '../../companies/companies.service';
 import { SuspendUserDto } from '../../users/dto/suspend-user.dto';
 import { UsersService } from '../../users/users.service';
 import { AdminDashboardService } from './admin-dashboard.service';
+import { ModerationHistoryService } from '../moderation-history/moderation-history.service';
 
 import {
   AdminCompaniesResponseDto,
@@ -58,6 +59,7 @@ export class AdminDashboardController {
     private readonly adminDashboardService: AdminDashboardService,
     private readonly companiesService: CompaniesService,
     private readonly usersService: UsersService,
+    private readonly moderationHistoryService: ModerationHistoryService,
   ) {}
 
 
@@ -236,6 +238,17 @@ export class AdminDashboardController {
       adminId: admin.id,
       motif: dto.motif,
       suspensionDurationDays: dto.suspensionDurationDays,
+    });
+
+    await this.moderationHistoryService.createModerationHistory({
+      entityType: ModerationEntityType.USER,
+      entityId: userId,
+      actionType: ModerationActionType.SUSPENSION,
+      adminId: admin.id,
+      details: {
+        reason: dto.motif || 'Compte suspendu',
+        suspensionDurationDays: dto.suspensionDurationDays ?? null,
+      },
     });
 
     return {

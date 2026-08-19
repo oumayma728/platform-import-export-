@@ -7,6 +7,7 @@ import AdminFilterBar from "../components/AdminFilterBar";
 import Pagination from "../components/Pagination";
 import CompanyDocumentsModal from "../components/CompanyDocumentsModal";
 import KybModal from "../components/KybModal";
+import BadgesReviewsModal from "../components/BadgesReviewsModal";
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, color, bg, icon }) {
@@ -201,6 +202,11 @@ const COMPANY_COLUMNS = [
     label: "KYB",
     sortable: false,
   },
+  {
+    key: "_badges",
+    label: "Badges & Avis",
+    sortable: false,
+  },
 ];
 
 const EMPTY_FILTERS = {
@@ -233,6 +239,9 @@ export default function AdminDashboardPage() {
 
   // ── State: KYB modal ──
   const [selectedKybCompany, setSelectedKybCompany] = useState(null);
+
+  // ── State: Badges & Avis modal ──
+  const [selectedBadgeCompany, setSelectedBadgeCompany] = useState(null);
 
   // ─── Fetch Users ───────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async (filters) => {
@@ -552,6 +561,43 @@ export default function AdminDashboardPage() {
                 KYB
               </button>
             ),
+            _badges: (
+              <button
+                onClick={() => setSelectedBadgeCompany(c)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  height: "30px",
+                  padding: "0 11px",
+                  borderRadius: "7px",
+                  border: "1px solid #ddd6fe",
+                  background: "#f5f3ff",
+                  fontSize: "12px",
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 700,
+                  color: "#5b21b6",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#5b21b6";
+                  e.currentTarget.style.color = "#fff";
+                  e.currentTarget.style.borderColor = "#5b21b6";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#f5f3ff";
+                  e.currentTarget.style.color = "#5b21b6";
+                  e.currentTarget.style.borderColor = "#ddd6fe";
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+                </svg>
+                Badges & Avis
+              </button>
+            ),
           }))}
           isLoading={companiesLoading}
           emptyText="Aucune entreprise trouvée pour ces critères."
@@ -580,6 +626,14 @@ export default function AdminDashboardPage() {
           company={selectedKybCompany}
           onClose={() => setSelectedKybCompany(null)}
           onSuccess={() => fetchCompanies(companiesFilters)}
+        />
+      )}
+
+      {/* ── Modal Badges & Avis ── */}
+      {selectedBadgeCompany && (
+        <BadgesReviewsModal
+          company={selectedBadgeCompany}
+          onClose={() => setSelectedBadgeCompany(null)}
         />
       )}
     </div>

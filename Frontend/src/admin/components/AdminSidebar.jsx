@@ -24,6 +24,16 @@ const NAV_ITEMS = [
     ),
     label: "File d'attente",
   },
+  {
+    to: "/admin/moderation-history",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 8v4l3 3" />
+        <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" />
+      </svg>
+    ),
+    label: "Historique",
+  },
 ];
 
 export default function AdminSidebar() {
