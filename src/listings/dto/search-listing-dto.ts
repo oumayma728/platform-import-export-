@@ -71,4 +71,13 @@ export class SearchListingsDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  @ApiPropertyOptional({
+    example: 'EUR',
+    description:
+      'Target currency code (ISO 4217). When provided, each listing will include convertedPrice and convertedCurrency fields.',
+  })
+  @IsOptional()
+  @IsString()
+  convertTo?: string;
 }

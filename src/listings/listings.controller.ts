@@ -117,6 +117,13 @@ export class ListingsController {
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })
   @ApiQuery({ name: 'certification', required: false, type: String })
   @ApiQuery({ name: 'q', required: false, type: String })
+  @ApiQuery({
+    name: 'convertTo',
+    required: false,
+    type: String,
+    description:
+      'Target currency code (ISO 4217). When provided, each listing includes convertedPrice and convertedCurrency.',
+  })
   @ApiOkResponse({
     description: 'Listing search completed successfully.',
     type: ListingEntity,

@@ -16,6 +16,8 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { StorageService } from './supabase/storage.service';
 import { AdminModule } from './admin/admin.module';
 import { BillingModule } from './billing/billing.module';
+import { CurrencyModule } from './integrations/currency/currency.module';
+import { LogisticsModule } from './integrations/logistics/logistics.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { BillingModule } from './billing/billing.module';
     SupabaseModule,
     AdminModule,
     BillingModule,
+    CurrencyModule,
+    LogisticsModule,
   ],
   controllers: [AppController],
   providers: [
