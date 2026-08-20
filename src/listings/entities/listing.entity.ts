@@ -4,6 +4,38 @@ import { ListingStatus, ListingType } from '@prisma/client';
 import { CompanyEntity } from '../../companies/entities/company.entity';
 
 
+export class LogisticsEstimateEntity {
+  @ApiProperty({
+    example: 'Tunisia',
+    description: 'Origin country (company location).',
+  })
+  origin_country!: string;
+
+  @ApiProperty({
+    example: 'France',
+    description: 'Destination country (listing location).',
+  })
+  destination_country!: string;
+
+  @ApiProperty({
+    example: 1780.5,
+    description: 'Estimated route distance in kilometers.',
+  })
+  distance_km!: number;
+
+  @ApiProperty({
+    example: 851.23,
+    description: 'Estimated transport cost in USD.',
+  })
+  estimated_cost_usd!: number;
+
+  @ApiProperty({
+    example: 5,
+    description: 'Estimated transit and clearance time in days.',
+  })
+  estimated_days!: number;
+}
+
 /**
  * This File Exists Only To Add Clarity In Type Of Response In Swagger Docs
  */
@@ -69,6 +101,14 @@ export class ListingEntity {
 
   @ApiProperty({ type: () => CompanyEntity })
   company!: CompanyEntity;
+
+  @ApiPropertyOptional({
+    type: () => LogisticsEstimateEntity,
+    nullable: true,
+    description:
+      'Enriched logistics estimate between company country and listing country.',
+  })
+  logisticsEstimate?: LogisticsEstimateEntity | null;
 
   @ApiProperty({
     example: '2026-07-15T10:00:00.000Z',

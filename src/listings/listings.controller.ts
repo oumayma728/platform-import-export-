@@ -57,11 +57,12 @@ export class ListingsController {
   @UseGuards(CompanyWorkersGuard)
   @ApiOperation({
     summary: 'Create a listing',
-    description: 'Creates a new listing for an existing company.',
+    description:
+      'Creates a new listing for an existing company. Automatically converts the price to USD if not provided and calculates logistics estimation (distance_km, estimated_cost_usd, estimated_days) between the company country and listing country using OpenRouteService.',
   })
   @ApiBody({ type: CreateListingDto })
   @ApiCreatedResponse({
-    description: 'Listing created successfully.',
+    description: 'Listing created successfully with enriched logistics estimation.',
     type: ListingEntity,
   })
   @ApiBadRequestResponse({

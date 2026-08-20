@@ -2,6 +2,10 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { CompaniesRepository } from '../companies/companies.repository';
 import { CurrencyService } from '../integrations/currency/currency.service';
+import {
+  LogisticsEstimateResult,
+  LogisticsService,
+} from '../integrations/logistics/logistics.service';
 import { UploadedFileLike } from '../common/types/uploaded-file.type';
 import { StorageService } from '../supabase/storage.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -19,8 +23,8 @@ export class ListingsService {
     private readonly storageService: StorageService,
     private readonly companiesRepository: CompaniesRepository,
     private readonly currencyService: CurrencyService,
+    private readonly logisticsService: LogisticsService,
   ) {}
-  
 
   async create(createListingDto: CreateListingDto) {
     const company = await this.companiesRepository.findOne(
@@ -31,7 +35,43 @@ export class ListingsService {
       throw new NotFoundException('Company not found');
     }
 
-    return this.listingsRepository.create(createListingDto);
+    // Auto-enrich priceUsd if not explicitly provided
+    if (createListingDto.priceUsd === undefined && createListingDto.price && createListingDto.currency) {
+      try {
+        const currencyUpper = createListingDto.currency.toUpperCase();
+        if (currencyUpper === 'USD') {
+          createListingDto.priceUsd = createListingDto.price;
+        } else {
+          const conv = await this.currencyService.convert(
+            createListingDto.price,
+            currencyUpper,
+            'USD',
+          );
+          createListingDto.priceUsd = conv.convertedAmount;
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to auto-convert price to USD during listing creation: ${error}`);
+      }
+    }
+
+    const listing = await this.listingsRepository.create(createListingDto);
+
+    // Auto-enrich logistics estimate if company country and listing country are available
+    let logisticsEstimate: LogisticsEstimateResult | null = null;
+    if (company.country && createListingDto.country) {
+      try {
+        logisticsEstimate = await this.logisticsService.calculate_route(
+          company.country,
+          createListingDto.country,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to calculate logistics estimate for new listing ${listing.id}: ${error}`,
+        );
+      }
+    }
+
+    return logisticsEstimate ? { ...listing, logisticsEstimate } : listing;
   }
 
   async findAll() {
@@ -105,7 +145,52 @@ export class ListingsService {
       throw new NotFoundException('Listing not found');
     }
 
-    return this.listingsRepository.update(id, updateListingDto);
+    // If price or currency updated without priceUsd, compute priceUsd
+    const effectivePrice = updateListingDto.price ?? Number(existing.price);
+    const effectiveCurrency = (updateListingDto.currency ?? existing.currency)?.toUpperCase();
+
+    if (
+      updateListingDto.priceUsd === undefined &&
+      (updateListingDto.price !== undefined || updateListingDto.currency !== undefined) &&
+      effectiveCurrency
+    ) {
+      try {
+        if (effectiveCurrency === 'USD') {
+          updateListingDto.priceUsd = effectivePrice;
+        } else {
+          const conv = await this.currencyService.convert(
+            effectivePrice,
+            effectiveCurrency,
+            'USD',
+          );
+          updateListingDto.priceUsd = conv.convertedAmount;
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to convert price to USD during listing update: ${error}`);
+      }
+    }
+
+    const updated = await this.listingsRepository.update(id, updateListingDto);
+
+    // Auto-enrich logistics estimate if company country and listing country are available
+    let logisticsEstimate: LogisticsEstimateResult | null = null;
+    const originCountry = updated.company?.country;
+    const destCountry = updated.country;
+
+    if (originCountry && destCountry) {
+      try {
+        logisticsEstimate = await this.logisticsService.calculate_route(
+          originCountry,
+          destCountry,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Failed to calculate logistics estimate for updated listing ${id}: ${error}`,
+        );
+      }
+    }
+
+    return logisticsEstimate ? { ...updated, logisticsEstimate } : updated;
   }
 
   async updateStatus(id: string, dto: UpdateListingStatusDto) {
