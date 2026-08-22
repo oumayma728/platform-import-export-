@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Date
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.config.database import Base
@@ -23,6 +23,9 @@ class Listing(Base):
     documents = Column(String, nullable=True)  # URLs séparées par des virgules
     statut = Column(String(20), default="active")
     suspendue = Column(Boolean, default=False, nullable=False)
+    quantity_unit = Column(String(50), nullable=True)
+    date_disponibilite = Column(Date, nullable=True)
+    date_limite = Column(Date, nullable=True)
     
     distance_km = Column(Float, nullable=True)
     estimated_cost_usd = Column(Float, nullable=True)

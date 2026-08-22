@@ -79,42 +79,72 @@ export async function sendMessage(conversationId, text, attachment) {
 }
 
 export async function updateConversationStatus(conversationId, status) {
-  await delay(300);
-  const conversation = mockConversations.find((c) => c.id === conversationId);
-  if (!conversation) throw new Error("Conversation introuvable");
-  conversation.status = status;
-  return conversation;
+  if (USE_MOCKS) {
+    await delay(300);
+    const conversation = mockConversations.find((c) => c.id === conversationId);
+    if (!conversation) throw new Error("Conversation introuvable");
+    conversation.status = status;
+    return conversation;
+  }
+
+  try {
+    const { data } = await apiClient.put(`/conversations/${conversationId}/status`, {
+      statut: status,
+    });
+    return data;
+  } catch (err) {
+    throw new Error(
+      err.response?.data?.detail || "Impossible de mettre à jour le statut."
+    );
+  }
 }
 
 export async function getOrCreateConversation(listingId, listing, counterpartInfo) {
-  await delay(300);
+  if (USE_MOCKS) {
+    await delay(300);
 
-  const counterpartName = counterpartInfo?.name || "Vendeur";
+    const counterpartName = counterpartInfo?.name || "Vendeur";
 
-  // Une même annonce (la vôtre) peut être mise en correspondance avec
-  // PLUSIEURS entreprises différentes (ex: plusieurs matches IA sur le même
-  // produit). Chercher uniquement par `listingId` fusionnait à tort ces
-  // conversations entre elles dès qu'elles portaient sur la même annonce.
-  // On identifie donc une conversation par la paire (annonce, partenaire).
-  let conversation = mockConversations.find(
-    (c) => c.listingId === listingId && c.counterpart?.name === counterpartName
-  );
-  
-  if (!conversation) {
-    // Créer une nouvelle conversation
-    conversation = {
-      id: `c-${Date.now()}`,
-      listingId: listingId,
-      listingProduct: listing?.product || "Annonce",
-      counterpart: counterpartInfo || { name: "Vendeur", country: "Non spécifié" },
-      status: "suggested",
-      updatedAt: new Date().toISOString(),
-      messages: [],
-    };
-    mockConversations.push(conversation);
+    let conversation = mockConversations.find(
+      (c) => c.listingId === listingId && c.counterpart?.name === counterpartName
+    );
+
+    if (!conversation) {
+      conversation = {
+        id: `c-${Date.now()}`,
+        listingId: listingId,
+        listingProduct: listing?.product || "Annonce",
+        counterpart: counterpartInfo || { name: "Vendeur", country: "Non spécifié" },
+        status: "suggested",
+        updatedAt: new Date().toISOString(),
+        messages: [],
+      };
+      mockConversations.push(conversation);
+    }
+
+    return conversation;
   }
-  
-  return conversation;
+
+  // Backend réel : POST /conversations crée (ou réouvre, s'il en existe déjà
+  // une pour cette paire annonce/destinataire) une conversation persistée.
+  const destinataireId = listing?.ownerId;
+  if (!destinataireId) {
+    throw new Error(
+      "Impossible d'identifier le propriétaire de cette annonce."
+    );
+  }
+
+  try {
+    const { data } = await apiClient.post("/conversations", {
+      destinataire_id: destinataireId,
+      listing_id: listingId,
+    });
+    return data;
+  } catch (err) {
+    throw new Error(
+      err.response?.data?.detail || "Impossible de démarrer la conversation."
+    );
+  }
 }
 
 export { CURRENT_USER_ID };

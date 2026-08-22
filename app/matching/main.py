@@ -1,14 +1,14 @@
 from fastapi import FastAPI, HTTPException, Query
-from app.models import Listing, MatchResult
+from app.matching.models import Listing, MatchResult
 from pydantic import BaseModel, Field
-from app.mock_client import (
+from app.matching.mock_client import (
     get_listing_by_id,
     get_annonces_opposees,
     get_profil_entreprise,
     get_donnees_logistiques,
     enregistrer_match,
 )
-from app.scoring import calcul_score_global
+from app.matching.scoring import calcul_score_global
 
 app = FastAPI(title="Agent de Matching IA - Import/Export")
 

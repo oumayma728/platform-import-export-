@@ -96,6 +96,15 @@ def test_suspend_and_resume_listing(client, registered_user, mock_logistics):
     assert r3.json()["suspendue"] is False
 
 
+def test_get_listings_public_returns_array_for_frontend_compatibility(client, registered_user, mock_logistics):
+    client.post("/api/listings", json=_payload_annonce(categorie="Textile"), headers=registered_user["headers"])
+
+    r = client.get("/api/listings")
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+    assert any(a["categorie"] == "Textile" for a in r.json())
+
+
 def test_search_listings_route_atteignable(client):
     """Non-régression : /search était auparavant intercepté par /{listing_id} et
     renvoyait systématiquement 422 (bug de routage corrigé)."""
@@ -110,6 +119,16 @@ def test_search_listings_filtre_par_categorie(client, registered_user, mock_logi
     r = client.get("/api/listings/search?categorie=Textile")
     assert r.status_code == 200
     assert all(a["categorie"] == "Textile" for a in r.json()["annonces"])
+
+
+def test_search_listings_par_terme_texte(client, registered_user, mock_logistics):
+    client.post("/api/listings", json=_payload_annonce(titre="Export dattes Deglet Nour"), headers=registered_user["headers"])
+    client.post("/api/listings", json=_payload_annonce(titre="Graines de blé premium"), headers=registered_user["headers"])
+
+    r = client.get("/api/listings?q=dattes")
+    assert r.status_code == 200
+    assert any("dattes" in a["titre"].lower() for a in r.json())
+    assert not any("blé" in a["titre"].lower() for a in r.json())
 
 
 def test_search_listings_conversion_devise(client, registered_user, mock_logistics, mock_currency):

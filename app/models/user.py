@@ -2,6 +2,7 @@ from sqlalchemy import Column, ForeignKey, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from app.config.database import Base
 from sqlalchemy.orm import relationship
+from sqlalchemy import JSON
 
 
 class User(Base):
@@ -14,7 +15,7 @@ class User(Base):
     type_compte = Column(String(20))
     pays = Column(String(100))
     telephone = Column(String(20))
-    role = Column(String(20), default="EXPORTATEUR", nullable=False)
+    role = Column(String(50), default="EXPORTATEUR", nullable=False)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     statut_validation = Column(String(30), default="EN_ATTENTE_VALIDATION", nullable=False)
     email_verifie = Column(Boolean, default=False, nullable=False)
@@ -28,6 +29,7 @@ class User(Base):
     annonces = relationship("Listing", back_populates="owner")
     role_obj = relationship("Role", back_populates="users")
     quota = relationship("UserQuota", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    logo_url = Column(String(255), nullable=True)
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 

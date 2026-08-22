@@ -1,5 +1,6 @@
 import logging
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.models.listing import Listing
 from app.schemas.listing import ListingCreate, ListingUpdate
@@ -11,8 +12,65 @@ logger = logging.getLogger("import_export_api")
 
 def serialize(listing: Listing):
     data = {column.name: getattr(listing, column.name) for column in Listing.__table__.columns}
-    data["documents"] = data["documents"].split(",") if data.get("documents") else []
+    documents = data.get("documents")
+    data["documents"] = documents.split(",") if documents else []
+
+    raw_type = data.get("type")
+    if raw_type == "offre":
+        data["type"] = "offer"
+    elif raw_type == "demande":
+        data["type"] = "demand"
+
+    data["product"] = data.get("titre")
+    data["quantity"] = data.get("quantite")
+    data["category"] = data.get("categorie")
+    data["price"] = data.get("prix")
+    data["currency"] = data.get("devise")
+    data["status"] = data.get("statut")
+    data["ownerId"] = data.get("user_id")
+    data["country"] = data.get("pays_origine") or data.get("pays_destination")
+    data["country_label"] = data["country"]
+    data["quantityUnit"] = data.get("quantity_unit")
+
+    raw_backend_type = data.get("type")
+
+    if raw_backend_type == "offre":
+        data["deadline"] = data.get("date_disponibilite")
+    else:
+        data["deadline"] = data.get("date_limite")
+
+    data["destination"] = data.get("pays_destination")
+    data["destinationCountry"] = data.get("pays_destination")
+    data["originCountry"] = data.get("pays_origine")
+    iso_to_label = {
+        "TN": "Tunisie",
+        "FR": "France",
+        "IT": "Italie",
+        "ES": "Espagne",
+        "DE": "Allemagne",
+        "BE": "Belgique",
+        "NL": "Pays-Bas",
+        "MA": "Maroc",
+        "DZ": "Algérie",
+        "EG": "Égypte",
+        "TR": "Turquie",
+        "CN": "Chine",
+        "IN": "Inde",
+        "US": "États-Unis",
+        "CA": "Canada",
+    }
+    if isinstance(data.get("country"), str):
+        country_code = data["country"].strip().upper()
+        data["country"] = iso_to_label.get(country_code, country_code)
+
+    raw_certification = data.get("certification")
+    if raw_certification:
+        data["certifications"] = [item.strip() for item in str(raw_certification).split(",") if item.strip()]
+    else:
+        data["certifications"] = []
+
     return data
+
 
 
 async def _enrichir_logistique(values: dict) -> dict:
@@ -37,23 +95,91 @@ async def _enrichir_logistique(values: dict) -> dict:
 
 async def create_listing(data: ListingCreate, user_id: int, db: Session):
     values = data.model_dump()
-    values["documents"] = ",".join(values["documents"] or [])
+
+    values["documents"] = ",".join(
+        values.get("documents") or []
+)
+
+    deadline = values.pop("deadline", None)
+
+    if values.get("type") == "offre":
+        values["date_disponibilite"] = deadline
+        values["date_limite"] = None
+
+    elif values.get("type") == "demande":
+        values["date_limite"] = deadline
+        values["date_disponibilite"] = None
+
     values = await _enrichir_logistique(values)
-    listing = Listing(user_id=user_id, **values)
-    db.add(listing); db.commit(); db.refresh(listing)
+
+    listing = Listing(
+        user_id=user_id,
+        **values,
+)
+
+    db.add(listing)
+    db.commit()
+    db.refresh(listing)
+
     return serialize(listing)
 
 
 async def get_all_listings(db: Session, country=None, category=None, listing_type=None, min_price=None, max_price=None,
-                            certification=None, incoterm=None, page=1, page_size=20, devise_affichage=None):
+                            certification=None, incoterm=None, page=1, page_size=20, devise_affichage=None, q=None):
+    # Convert country name to ISO code if needed
+    country_iso = None
+    if country:
+        country_mapping = {
+            "Tunisie": "TN",
+            "France": "FR",
+            "Italie": "IT",
+            "Espagne": "ES",
+            "Allemagne": "DE",
+            "Belgique": "BE",
+            "Pays-Bas": "NL",
+            "Maroc": "MA",
+            "Algérie": "DZ",
+            "Égypte": "EG",
+            "Turquie": "TR",
+            "Chine": "CN",
+            "Inde": "IN",
+            "États-Unis": "US",
+            "Canada": "CA",
+        }
+        country_iso = country_mapping.get(country, country.upper())
+    
+    # Convert listing type from frontend format to backend format
+    listing_type_normalized = None
+    if listing_type:
+        type_mapping = {
+            "offer": "offre",
+            "demand": "demande",
+            "offre": "offre",
+            "demande": "demande",
+        }
+        listing_type_normalized = type_mapping.get(listing_type.lower(), listing_type)
+    
     query = db.query(Listing).filter(Listing.statut == "active", Listing.suspendue.is_(False))
-    if country: query = query.filter((Listing.pays_origine == country.upper()) | (Listing.pays_destination == country.upper()))
+    if country_iso: query = query.filter((Listing.pays_origine == country_iso) | (Listing.pays_destination == country_iso))
     if category: query = query.filter(Listing.categorie == category)
-    if listing_type: query = query.filter(Listing.type == listing_type)
+    if listing_type_normalized: query = query.filter(Listing.type == listing_type_normalized)
     if min_price is not None: query = query.filter(Listing.prix >= min_price)
     if max_price is not None: query = query.filter(Listing.prix <= max_price)
     if certification: query = query.filter(Listing.certification.ilike(certification))
     if incoterm: query = query.filter(Listing.incoterm == incoterm.upper())
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Listing.titre.ilike(term),
+                Listing.description.ilike(term),
+                Listing.categorie.ilike(term),
+                Listing.certification.ilike(term),
+                Listing.pays_origine.ilike(term),
+                Listing.pays_destination.ilike(term),
+                Listing.incoterm.ilike(term),
+            )
+        )
     total = query.count()
     rows = query.order_by(Listing.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
     annonces = [serialize(row) for row in rows]
@@ -91,6 +217,17 @@ def owned_listing(listing_id: int, user_id: int, db: Session):
 async def update_listing(listing_id: int, data: ListingUpdate, user_id: int, db: Session):
     listing = owned_listing(listing_id, user_id, db)
     values = data.model_dump(exclude_unset=True)
+    deadline = values.pop("deadline", None)
+
+    listing_type = listing.type
+    if deadline is not None:
+        if listing_type == "offre":
+            values["date_disponibilite"] = deadline
+            values["date_limite"] = None
+
+        elif listing_type == "demande":
+            values["date_limite"] = deadline
+            values["date_disponibilite"] = None
     if "documents" in values: values["documents"] = ",".join(values["documents"] or [])
 
     # Ré-enrichir uniquement si le pays d'origine ou de destination a changé dans cette requête

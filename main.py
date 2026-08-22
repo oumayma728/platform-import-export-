@@ -3,15 +3,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from app.routes import auth, listings, conversations, billing, notifications, webhooks, integrations
+from app.routes import auth, listings, conversations, billing, notifications, webhooks, integrations, favorites, matching, payments_alias, accounts, invoices_alias
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
-
+from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.config.database import SessionLocal
 from app.services.notification_service import retry_failed_notifications
-
+import os
 load_dotenv()
 
 scheduler = BackgroundScheduler()
@@ -49,7 +49,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+os.makedirs("uploads/logos", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(auth.router, prefix="/api")
 app.include_router(listings.router, prefix="/api")
 app.include_router(conversations.router, prefix="/api")
@@ -57,8 +58,11 @@ app.include_router(billing.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(webhooks.router, prefix="/api")
 app.include_router(integrations.router, prefix="/api")
-
-
+app.include_router(favorites.router, prefix="/api")
+app.include_router(matching.router, prefix="/api")
+app.include_router(payments_alias.router, prefix="/api")
+app.include_router(invoices_alias.router, prefix="/api")
+app.include_router(accounts.router, prefix="/api")
 @app.get("/", tags=["Système"], summary="État de l'API")
 def root():
     return {"message": "Import Export API", "docs": "/docs", "version": app.version}

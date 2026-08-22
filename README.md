@@ -232,7 +232,7 @@ requirements.txt
 - **Listings / annonces** : CRUD complet, recherche avec filtres, suspension/clôture
 - **Messagerie** : conversations avec cycle de statuts (SUGGEREE → CONSULTEE → EN_CONTACT → EN_NEGOCIATION → CONCLUE/REJETEE), envoi de messages et documents, WebSocket temps réel
 - **Facturation** : compteur de 50 chats gratuits, blocage automatique au dépassement, paiement à l'usage et abonnement récurrent via Stripe, webhooks sécurisés (vérification de signature), recommandation automatique d'abonnement
-- SMTP Gmail pour les emails (alternative à SendGrid, inaccessible en Tunisie)
+- **Notifications** : email (SMTP Gmail — SendGrid étant inaccessible depuis la Tunisie) et SMS (Twilio), centre de notifications consultable (`GET /notifications/me`), statut lu/non lu, déclenchement automatique sur les événements clés (nouveau message, paiement confirmé, limite atteinte)
 - **Intégrations** : conversion de devises (taux réels), estimation logistique entre pays (distance, coût, délai — jeu de données local couvrant ~250 pays, sans dépendance réseau)
 - **Documentation API** : Swagger UI (`/docs`), ReDoc (`/redoc`), schéma OpenAPI, collection Postman
 

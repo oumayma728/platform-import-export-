@@ -9,7 +9,6 @@ import {
   getConversationById,
   sendMessage,
   updateConversationStatus,
-  CURRENT_USER_ID,
 } from "../api/messages";
 import { checkPaywallStatus } from "../../billing/api/billing";
 import {
@@ -50,7 +49,7 @@ export default function MessagingPage() {
   const sorted = [...conversations].sort(
     (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
   );
-  const selected = sorted.find((c) => c.id === id) || null;
+  const selected = sorted.find((c) => String(c.id) === String(id)) || null;
 
   // Sur mobile : une seule vue à la fois (liste OU conversation), comme
   // Messenger — la liste n'est même pas montée dans le DOM une fois une
@@ -89,7 +88,7 @@ export default function MessagingPage() {
         >
           <div style={{ flex: 1, overflowY: "auto" }}>
             {sorted.map((conv) => {
-              const isActive = conv.id === id;
+              const isActive = String(conv.id) === String(id);
               const lastMessage = conv.messages[conv.messages.length - 1];
               return (
                 <button
@@ -379,7 +378,7 @@ function ConversationThread({ conversation, onRefetch }) {
           </p>
         )}
         {conversation.messages.map((msg) => {
-          const isMine = msg.senderId === CURRENT_USER_ID;
+          const isMine = String(msg.senderId) === String(user?.id);
           const avatarName = isMine ? "Moi" : conversation.counterpart.name;
           return (
             <div

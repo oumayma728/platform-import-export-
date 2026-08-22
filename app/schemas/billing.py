@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field, HttpUrl, field_validator
-from typing import Literal
+from pydantic import BaseModel, Field, HttpUrl, field_validator, AliasChoices
+from typing import Literal, Optional
 
 DEVISES_SUPPORTEES = ("usd", "eur", "gbp", "tnd")
 
 MONTANT_MIN_CENTIMES = 50
 class PaymentIntentCreate(BaseModel):
-    amount: int = Field(gt=0, le=10_000_000, description="Montant en plus petite unité de la devise(centimes pour USD/EUR)")
-    currency: Literal["usd", "eur", "gbp", "tnd"] = Field(default="usd", description="Code devise ISO en minuscules")
+    amount: Optional[int] = None
+    currency: str = "usd"
+    plan_id: Optional[str] = Field(default=None, validation_alias=AliasChoices("plan_id", "planId"))
     @field_validator("amount")
     @classmethod
     def montant_minimum(cls, value: int) -> int:

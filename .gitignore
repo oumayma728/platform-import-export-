@@ -25,3 +25,7 @@ platform-import-export/
 *.egg-info/
 .DS_Store
 .coverage
+node_modules/
+dist/
+
+uploads/logos/

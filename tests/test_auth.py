@@ -42,6 +42,19 @@ def test_register_mot_de_passe_trop_faible(client):
     assert r.status_code == 422
 
 
+def test_register_user_accepts_front_compat_fields(client):
+    payload = {
+        "nom": "Front Compatible",
+        "email": "front.compat@example.com",
+        "password": "MotDePasse123",
+        "role": "IMPORTATEUR",
+        "pays": "Tunisie",
+    }
+    r = client.post("/api/auth/register", json=payload)
+    assert r.status_code == 201, r.text
+    assert r.json()["user"]["email"] == "front.compat@example.com"
+
+
 def test_login_success(client, registered_user):
     r = client.post("/api/auth/login", json={
         "email": registered_user["email"], "mot_de_passe": "TestPass123",
@@ -50,6 +63,14 @@ def test_login_success(client, registered_user):
     data = r.json()
     assert "access_token" in data
     assert "refresh_token" in data
+
+
+def test_login_accepts_front_password_alias(client, registered_user):
+    r = client.post("/api/auth/login", json={
+        "email": registered_user["email"], "password": "TestPass123",
+    })
+    assert r.status_code == 200, r.text
+    assert "access_token" in r.json()
 
 
 def test_login_invalid_credentials(client, registered_user):

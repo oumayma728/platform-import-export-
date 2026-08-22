@@ -12,7 +12,10 @@ from app.schemas.billing import PaymentIntentCreate, SubscriptionCreate
 router = APIRouter(prefix="/billing", tags=["Facturation"])
 SUBSCRIPTION_PRICE = float(os.getenv("SUBSCRIPTION_PRICE", "29"))
 logger = logging.getLogger("import_export_api")
-
+PLAN_PRICES_CENTS = {
+    "pay-per-use": 500,    # 5.00 USD, exemple — à confirmer avec l'équipe
+    "premium": 2900,       # 29.00 USD
+}
 def quota_for(user_id: int, db: Session):
     quota = db.query(UserQuota).filter(UserQuota.user_id == user_id).first()
     if not quota:
@@ -43,17 +46,23 @@ def billing_status(user: dict = Depends(verify_token), db: Session = Depends(get
 @router.post("/create-payment-intent", summary="Créer un paiement à l'usage")
 def payment_intent(data: PaymentIntentCreate, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     stripe_module = _require_stripe()
-    try:    
+
+    amount = data.amount
+    if amount is None and data.plan_id:
+        amount = PLAN_PRICES_CENTS.get(data.plan_id)
+    if amount is None:
+        raise HTTPException(status_code=400, detail="amount ou plan_id requis")
+
+    try:
         intent = stripe_module.PaymentIntent.create(
-            amount=data.amount,
+            amount=amount,
             currency=data.currency,
-            metadata={"user_id": str(user["id"]), "type": "usage"},
+            metadata={"user_id": str(user["id"]), "type": "usage", "plan_id": data.plan_id or ""},
         )
-        return {"client_secret": intent.client_secret, "payment_intent_id": intent.id}
+        return {"client_secret": intent.client_secret, "clientSecret": intent.client_secret,"payment_intent_id": intent.id, "paymentIntentId": intent.id}
     except Exception as e:
         logger.error(f"Erreur Stripe: {str(e)}")
         raise HTTPException(status_code=500, detail="Erreur lors de la création du paiement")
-
 @router.post("/subscribe", summary="Créer un abonnement Stripe")
 def subscribe(data: SubscriptionCreate, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
     stripe_module = _require_stripe()
@@ -93,3 +102,22 @@ def subscribe(data: SubscriptionCreate, user: dict = Depends(verify_token), db: 
         logger.error(f"Erreur Stripe (subscribe) : {str(e)}")
         # Renvoi de l'erreur détaillée pour faciliter le diagnostic
         raise HTTPException(status_code=400, detail="Impossible de créer l'abonnement, veilleez réessayer.")
+
+
+@router.get("/invoices", summary="Lister les factures de l'utilisateur")
+def get_invoices(user: dict = Depends(verify_token), db: Session = Depends(get_db)):
+    """
+    Retourne une liste vide pour l'instant (Stripe webhooks pour la facturation
+    récurrente ne sont pas encore implémentés).
+    """
+    # TODO: Implémenter la synchronisation des factures Stripe
+    return []
+
+
+@router.get("/invoices/{invoice_id}", summary="Détail d'une facture")
+def get_invoice(invoice_id: str, user: dict = Depends(verify_token), db: Session = Depends(get_db)):
+    """
+    Retourne les détails d'une facture spécifique.
+    """
+    # TODO: Implémenter la récupération de facture depuis Stripe
+    raise HTTPException(status_code=404, detail="Facture introuvable")

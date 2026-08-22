@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
-from app.models import Listing, ProfilEntreprise, DonneesLogistiques
+from app.matching.models import Listing, ProfilEntreprise, DonneesLogistiques
 from datetime import datetime, timezone
 
 
-DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).parent.parent / "data"
 HISTORY_PATH = DATA_DIR / "match_history.json"
 
 def get_annonces() -> list[Listing]:

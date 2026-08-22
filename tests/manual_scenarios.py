@@ -1,8 +1,8 @@
 """Script manuel pour tester plusieurs scénarios de matching et inspecter les résultats.
 Usage : python -m tests.manual_scenarios
 """
-from app.mock_client import get_listing_by_id, get_annonces_opposees
-from app.scoring import calcul_score_global
+from app.matching.mock_client import get_listing_by_id, get_annonces_opposees
+from app.matching.scoring import calcul_score_global
 
 SCENARIOS = [
     ("D001", "Jeans (excellent match attendu)"),
