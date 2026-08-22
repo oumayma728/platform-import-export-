@@ -1,0 +1,361 @@
+[
+  {
+    "annonce_id": "A001",
+    "produit": "jeans",
+    "entreprise_id": "ENT001",
+    "score_global": 0.845,
+    "detail_scores": {
+      "produit": 1.0,
+      "prix_quantite": 0.881,
+      "geo_logistique": 0.458,
+      "fiabilite": 0.85,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T11:17:27.757060+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A002",
+    "produit": "pantalons denim",
+    "entreprise_id": "ENT002",
+    "score_global": 0.64,
+    "detail_scores": {
+      "produit": 0.5,
+      "prix_quantite": 0.839,
+      "geo_logistique": 0.408,
+      "fiabilite": 0.6,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T11:17:27.770531+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A001",
+    "produit": "jeans",
+    "entreprise_id": "ENT001",
+    "score_global": 0.845,
+    "detail_scores": {
+      "produit": 1.0,
+      "prix_quantite": 0.881,
+      "geo_logistique": 0.458,
+      "fiabilite": 0.85,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T17:48:08.697537+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A001",
+    "produit": "jeans",
+    "entreprise_id": "ENT001",
+    "score_global": 0.845,
+    "detail_scores": {
+      "produit": 1.0,
+      "prix_quantite": 0.881,
+      "geo_logistique": 0.458,
+      "fiabilite": 0.85,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T17:49:39.408304+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A002",
+    "produit": "pantalons denim",
+    "entreprise_id": "ENT002",
+    "score_global": 0.751,
+    "detail_scores": {
+      "produit": 0.871,
+      "prix_quantite": 0.839,
+      "geo_logistique": 0.408,
+      "fiabilite": 0.6,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T17:49:39.498271+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A001",
+    "produit": "jeans",
+    "entreprise_id": "ENT001",
+    "score_global": 0.845,
+    "detail_scores": {
+      "produit": 1.0,
+      "prix_quantite": 0.881,
+      "geo_logistique": 0.458,
+      "fiabilite": 0.85,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T17:53:56.965317+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A002",
+    "produit": "pantalons denim",
+    "entreprise_id": "ENT002",
+    "score_global": 0.751,
+    "detail_scores": {
+      "produit": 0.871,
+      "prix_quantite": 0.839,
+      "geo_logistique": 0.408,
+      "fiabilite": 0.6,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-10T17:53:57.053806+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A001",
+    "produit": "jeans",
+    "entreprise_id": "ENT001",
+    "score_global": 0.666,
+    "detail_scores": {
+      "produit": 0.499,
+      "prix_quantite": 0.737,
+      "geo_logistique": 0.458,
+      "fiabilite": 0.85,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-13T12:08:36.842933+00:00",
+    "status": "propose"
+  },
+  {
+    "annonce_id": "A002",
+    "produit": "pantalons denim",
+    "entreprise_id": "ENT002",
+    "score_global": 0.598,
+    "detail_scores": {
+      "produit": 0.565,
+      "prix_quantite": 0.536,
+      "geo_logistique": 0.408,
+      "fiabilite": 0.6,
+      "delais": 1.0
+    },
+    "timestamp": "2026-07-13T12:08:36.873523+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A001",
+    "score_global": 75.5,
+    "scores_detailles": {
+      "produit": 1.0,
+      "prix_quantite": 0.796,
+      "geo_logistique": 0.4675,
+      "fiabilite": 0.593,
+      "delais": 1.0
+    },
+    "explication": "Produit correspondant exactement, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T18:24:35.894781+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A002",
+    "score_global": 64.9,
+    "scores_detailles": {
+      "produit": 0.58,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.4175,
+      "fiabilite": 0.33199999999999996,
+      "delais": 1.0
+    },
+    "explication": "Produit similaire, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T18:24:35.909123+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A001",
+    "score_global": 75.5,
+    "scores_detailles": {
+      "produit": 1.0,
+      "prix_quantite": 0.796,
+      "geo_logistique": 0.4675,
+      "fiabilite": 0.593,
+      "delais": 1.0
+    },
+    "explication": "Produit correspondant exactement, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T18:30:20.677382+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A002",
+    "score_global": 64.9,
+    "scores_detailles": {
+      "produit": 0.58,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.4175,
+      "fiabilite": 0.33199999999999996,
+      "delais": 1.0
+    },
+    "explication": "Produit similaire, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T18:30:20.691041+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A001",
+    "score_global": 75.5,
+    "scores_detailles": {
+      "produit": 1.0,
+      "prix_quantite": 0.796,
+      "geo_logistique": 0.4675,
+      "fiabilite": 0.593,
+      "delais": 1.0
+    },
+    "explication": "Produit correspondant exactement, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T18:31:52.158374+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A002",
+    "score_global": 64.9,
+    "scores_detailles": {
+      "produit": 0.58,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.4175,
+      "fiabilite": 0.33199999999999996,
+      "delais": 1.0
+    },
+    "explication": "Produit similaire, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T18:31:52.171390+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A001",
+    "score_global": 75.5,
+    "scores_detailles": {
+      "produit": 1.0,
+      "prix_quantite": 0.796,
+      "geo_logistique": 0.4675,
+      "fiabilite": 0.593,
+      "delais": 1.0
+    },
+    "explication": "Produit correspondant exactement, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.162419+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A002",
+    "score_global": 64.9,
+    "scores_detailles": {
+      "produit": 0.58,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.4175,
+      "fiabilite": 0.33199999999999996,
+      "delais": 1.0
+    },
+    "explication": "Produit similaire, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.174871+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A003",
+    "score_global": 48.4,
+    "scores_detailles": {
+      "produit": 0.49090909090909085,
+      "prix_quantite": 0.222,
+      "geo_logistique": 0.4675,
+      "fiabilite": 0.593,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, écart de prix ou quantité important, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.187517+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A004",
+    "score_global": 56.6,
+    "scores_detailles": {
+      "produit": 0.11666666666666663,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.5,
+      "fiabilite": 0.41,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.200708+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A005",
+    "score_global": 59.1,
+    "scores_detailles": {
+      "produit": 0.18064516129032257,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.5,
+      "fiabilite": 0.47500000000000003,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.214521+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A006",
+    "score_global": 40.2,
+    "scores_detailles": {
+      "produit": 0.2434782608695652,
+      "prix_quantite": 0.178,
+      "geo_logistique": 0.5,
+      "fiabilite": 0.47500000000000003,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, écart de prix ou quantité important, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.227812+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A007",
+    "score_global": 46.4,
+    "scores_detailles": {
+      "produit": 0.43999999999999995,
+      "prix_quantite": 0.4,
+      "geo_logistique": 0.4175,
+      "fiabilite": 0.33199999999999996,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, écart de prix ou quantité important, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.241579+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A008",
+    "score_global": 36.4,
+    "scores_detailles": {
+      "produit": 0.11200000000000002,
+      "prix_quantite": 0.119,
+      "geo_logistique": 0.4675,
+      "fiabilite": 0.593,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, écart de prix ou quantité important, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.255037+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A009",
+    "score_global": 40.1,
+    "scores_detailles": {
+      "produit": 0.4826086956521739,
+      "prix_quantite": 0.296,
+      "geo_logistique": 0.5,
+      "fiabilite": 0.21200000000000002,
+      "delais": 0.5
+    },
+    "explication": "Produit peu correspondant, écart de prix ou quantité important, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés de justesse.",
+    "timestamp": "2026-07-25T19:22:43.268677+00:00",
+    "status": "propose"
+  },
+  {
+    "listing_id": "A010",
+    "score_global": 58.0,
+    "scores_detailles": {
+      "produit": 0.1365853658536585,
+      "prix_quantite": 1.0,
+      "geo_logistique": 0.5,
+      "fiabilite": 0.47500000000000003,
+      "delais": 1.0
+    },
+    "explication": "Produit peu correspondant, prix et quantité compatibles, logistique coûteuse ou lente, fiabilité du partenaire incertaine, délais respectés avec marge confortable.",
+    "timestamp": "2026-07-25T19:22:43.282902+00:00",
+    "status": "propose"
+  }
+]

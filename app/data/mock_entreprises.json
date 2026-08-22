@@ -1,0 +1,12 @@
+[
+  { "entreprise_id": "ENT001", "reputation_score": 0.85, "certifications": ["ISO 9001", "OEKO-TEX"], "nb_transactions": 42 },
+  { "entreprise_id": "ENT002", "reputation_score": 0.6, "certifications": ["ISO 9001"], "nb_transactions": 8 },
+  { "entreprise_id": "ENT003", "reputation_score": 0.7, "certifications": [], "nb_transactions": 15 },
+  { "entreprise_id": "ENT004", "reputation_score": 0.55, "certifications": ["ISO 14001"], "nb_transactions": 60 },
+  { "entreprise_id": "ENT005", "reputation_score": 0.4, "certifications": [], "nb_transactions": 3 },
+  { "entreprise_id": "ENT010", "reputation_score": 0.9, "certifications": ["ISO 9001", "GOTS", "Fair Trade"], "nb_transactions": 120 },
+  { "entreprise_id": "ENT011", "reputation_score": 0.75, "certifications": ["ISO 9001"], "nb_transactions": 30 },
+  { "entreprise_id": "ENT012", "reputation_score": 0.65, "certifications": [], "nb_transactions": 20 },
+  { "entreprise_id": "ENT013", "reputation_score": 0.8, "certifications": ["ISO 14001", "OEKO-TEX"], "nb_transactions": 55 },
+  { "entreprise_id": "ENT014", "reputation_score": 0.5, "certifications": [], "nb_transactions": 5 }
+]
