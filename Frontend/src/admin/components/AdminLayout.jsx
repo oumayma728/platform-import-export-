@@ -1,11 +1,7 @@
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 
-/**
- * Layout principal de l'espace admin.
- * Sidebar fixe à gauche + zone de contenu scrollable à droite.
- * Complètement séparé du RootLayout utilisateur.
- */
+
 export default function AdminLayout() {
   return (
     <div

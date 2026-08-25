@@ -6,7 +6,7 @@ import ValidationModal from "../components/ValidationModal";
 import CompanyDocumentsModal from "../components/CompanyDocumentsModal";
 import KybModal from "../components/KybModal";
 
-// ─── Colonnes du tableau ───────────────────────────────────────────────────
+
 const COLUMNS = [
   {
     key: "name",
@@ -56,7 +56,7 @@ const COLUMNS = [
   },
 ];
 
-// ─── Page principale ───────────────────────────────────────────────────────
+
 export default function PendingCompaniesPage() {
   const [companies, setCompanies] = useState([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, limit: 10 });
@@ -71,7 +71,7 @@ export default function PendingCompaniesPage() {
   // Modal KYB
   const [selectedKybCompany, setSelectedKybCompany] = useState(null);
 
-  // ─── Fetch ───────────────────────────────────────────────────────────────
+ 
   const fetchPending = useCallback(async (p = 1) => {
     setIsLoading(true);
     setError("");
@@ -94,13 +94,13 @@ export default function PendingCompaniesPage() {
     fetchPending(page);
   }, [page, fetchPending]);
 
-  // Après action réussie : fermer modal + recharger la liste
+  
   function handleActionSuccess() {
     setSelectedCompany(null);
     fetchPending(page);
   }
 
-  // Enrichir les données avec les colonnes Action et Justificatifs
+  
   const enrichedData = companies.map((company) => ({
     ...company,
     _docs: (
@@ -219,7 +219,7 @@ export default function PendingCompaniesPage() {
     ),
   }));
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  
   return (
     <div
       style={{

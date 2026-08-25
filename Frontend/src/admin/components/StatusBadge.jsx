@@ -1,8 +1,3 @@
-/**
- * Badge de couleur pour les statuts de validation.
- * Utilisé dans les tableaux utilisateurs et entreprises.
- */
-
 const STATUS_CONFIG = {
   VALIDE: {
     label: "Validé",

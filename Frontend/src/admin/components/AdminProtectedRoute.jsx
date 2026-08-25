@@ -1,12 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
-/**
- * Guard de route admin.
- * - Si l'auth est en cours de vérification → Spinner
- * - Si pas de session admin valide → redirect /admin/login
- * - Sinon → rend children (si fourni) ou <Outlet /> pour les layouts imbriqués
- */
+
 export default function AdminProtectedRoute({ children }) {
   const { adminUser, isLoading } = useAdminAuth();
 

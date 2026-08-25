@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { assignBadge, getCompanyReviewsSummary } from "../api/adminCompanies";
 
-// ─── Types de badges disponibles ─────────────────────────────────────────────
+
 const BADGE_TYPES = [
   {
     value: "ENTREPRISE_VERIFIEE",
@@ -37,7 +37,7 @@ const BADGE_TYPES = [
   },
 ];
 
-// ─── Composant étoile ─────────────────────────────────────────────────────────
+
 function StarRating({ value }) {
   return (
     <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
@@ -65,38 +65,32 @@ function StarRating({ value }) {
   );
 }
 
-/**
- * Modal combiné Avis + Attribution de badge avec affichage des badges actifs.
- *
- * Props:
- *   company   {Object}   - { id, name }
- *   onClose   {function} - Fermer le modal
- */
+
 export default function BadgesReviewsModal({ company, onClose }) {
-  // ── Avis ──
+  
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviews, setReviews] = useState(null); // { averageRating, reviewCount }
   const [reviewsError, setReviewsError] = useState("");
 
-  // ── Badges attribués ──
+  
   const [awardedBadges, setAwardedBadges] = useState(() => {
     if (!company?.id) return [];
     try {
       const saved = localStorage.getItem(`company_badges_${company.id}`);
       if (saved) return JSON.parse(saved);
     } catch {
-      // fallback
+    
     }
     return [];
   });
 
-  // ── Formulaire d'attribution ──
+  
   const [selectedBadge, setSelectedBadge] = useState(BADGE_TYPES[0].value);
   const [badgeLoading, setBadgeLoading] = useState(false);
   const [badgeError, setBadgeError] = useState("");
   const [badgeSuccess, setBadgeSuccess] = useState("");
 
-  // Recharger badges sauvegardés si changement d'entreprise
+  
   useEffect(() => {
     if (!company?.id) return;
     try {
@@ -106,12 +100,12 @@ export default function BadgesReviewsModal({ company, onClose }) {
         return;
       }
     } catch {
-      // fallback
+      
     }
     setAwardedBadges([]);
   }, [company?.id]);
 
-  // ─── Charger les avis à l'ouverture ──────────────────────────────────────
+  
   useEffect(() => {
     if (!company?.id) return;
     let cancelled = false;
@@ -139,7 +133,7 @@ export default function BadgesReviewsModal({ company, onClose }) {
 
   if (!company) return null;
 
-  // ─── Attribuer un badge ───────────────────────────────────────────────────
+  
   async function handleAssignBadge() {
     setBadgeLoading(true);
     setBadgeError("");
@@ -150,13 +144,13 @@ export default function BadgesReviewsModal({ company, onClose }) {
       const found = BADGE_TYPES.find((b) => b.value === selectedBadge);
       setBadgeSuccess(`Badge "${found?.label}" attribué avec succès !`);
 
-      // Mettre à jour la liste des badges attribués
+      
       setAwardedBadges((prev) => {
         const updated = prev.includes(selectedBadge) ? prev : [...prev, selectedBadge];
         try {
           localStorage.setItem(`company_badges_${company.id}`, JSON.stringify(updated));
         } catch {
-          // ignore
+          
         }
         return updated;
       });
@@ -172,7 +166,7 @@ export default function BadgesReviewsModal({ company, onClose }) {
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <div
       style={{

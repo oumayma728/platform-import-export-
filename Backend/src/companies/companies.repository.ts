@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ValidationStatus } from '@prisma/client';
+import { ModerationActionType, ModerationEntityType, Prisma, ValidationStatus } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
@@ -209,4 +209,56 @@ export class CompaniesRepository {
       reviewCount: result._count.id,
     };
   }
+
+  // ─── Reputation Score ───────────────────────────────────────────────────────
+
+  async getReputationData(companyId: string): Promise<{
+    kybScore: number;
+    averageRating: number | null;
+    reviewCount: number;
+    badges: string[];
+    malusCount: number;
+  }> {
+    const [kyb, reviewAgg, badgeList, malusAgg] = await Promise.all([
+      // KYB score (null if not verified yet)
+      this.prisma.kybVerification.findUnique({
+        where: { companyId },
+        select: { kybScore: true },
+      }),
+
+      // Average rating + review count
+      this.prisma.review.aggregate({
+        where: { companyId },
+        _avg: { rating: true },
+        _count: { id: true },
+      }),
+
+      // All badges assigned to this company
+      this.prisma.companyBadge.findMany({
+        where: { companyId },
+        select: { badgeType: true },
+      }),
+
+      // Malus = count of REJECTION actions in moderation_history for this company
+      this.prisma.moderationHistory.count({
+        where: {
+          entityType: ModerationEntityType.COMPANY,
+          entityId: companyId,
+          actionType: ModerationActionType.REJECTION,
+        },
+      }),
+    ]);
+
+    return {
+      kybScore: kyb?.kybScore ?? 0,
+      averageRating:
+        reviewAgg._avg.rating !== null
+          ? Math.round(reviewAgg._avg.rating * 100) / 100
+          : null,
+      reviewCount: reviewAgg._count.id,
+      badges: badgeList.map((b) => b.badgeType),
+      malusCount: malusAgg,
+    };
+  }
 }
+

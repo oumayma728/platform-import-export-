@@ -2,10 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { adminLogin as apiAdminLogin, adminLogout as apiAdminLogout } from "../api/adminAuth";
 import { getAdminToken, saveAdminToken, clearAdminToken } from "../api/adminClient";
 
-/**
- * Décode le payload d'un JWT sans vérifier la signature.
- * Utilisé uniquement pour lire le rôle/expiration côté client.
- */
+
 function decodeJwtPayload(token) {
   try {
     const base64 = token.split(".")[1];
@@ -28,7 +25,7 @@ export function AdminAuthProvider({ children }) {
   const [adminUser, setAdminUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Au montage : on restaure la session admin si un token valide existe
+  
   useEffect(() => {
     const token = getAdminToken();
 
@@ -38,11 +35,11 @@ export function AdminAuthProvider({ children }) {
       return;
     }
 
-    // Décode les infos de l'admin directement depuis le JWT
+    
     const payload = decodeJwtPayload(token);
 
     if (payload?.role !== "ADMIN") {
-      // Token présent mais pas admin → nettoyage sécurité
+      
       clearAdminToken();
       setIsLoading(false);
       return;
@@ -52,10 +49,7 @@ export function AdminAuthProvider({ children }) {
     setIsLoading(false);
   }, []);
 
-  /**
-   * Connexion admin.
-   * Appelle POST /admin/login, stocke le token, lit le payload.
-   */
+  
   const login = useCallback(async (credentials) => {
     const { accessToken } = await apiAdminLogin(credentials);
     const payload = decodeJwtPayload(accessToken);
@@ -70,10 +64,7 @@ export function AdminAuthProvider({ children }) {
     return user;
   }, []);
 
-  /**
-   * Déconnexion admin.
-   * Appelle POST /admin/logout, efface le token local.
-   */
+  
   const logout = useCallback(async () => {
     await apiAdminLogout();
     clearAdminToken();

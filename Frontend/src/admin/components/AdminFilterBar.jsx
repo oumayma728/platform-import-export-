@@ -33,15 +33,7 @@ const labelStyle = {
   display: "block",
 };
 
-/**
- * Barre de filtres pour le dashboard admin.
- *
- * Props:
- *   filters    {Object}   - Valeurs actuelles des filtres
- *   onChange   {function} - Appelée à chaque changement avec les nouveaux filtres
- *   onReset    {function} - Appelée pour réinitialiser tous les filtres
- *   showSector {boolean}  - Affiche ou non le filtre secteur (pour companies)
- */
+
 export default function AdminFilterBar({ filters = {}, onChange, onReset, showSector = false }) {
   const [localFilters, setLocalFilters] = useState(filters);
 

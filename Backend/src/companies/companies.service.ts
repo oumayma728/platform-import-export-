@@ -291,4 +291,38 @@ export class CompaniesService {
       ...summary,
     };
   }
+
+  // ─── Reputation Score ───────────────────────────────────────────────────────
+
+  async getReputationScore(companyId: string) {
+    const company = await this.companiesRepository.findOne(companyId);
+    if (!company) throw new NotFoundException('Company not found');
+
+    const { kybScore, averageRating, reviewCount, badges, malusCount } =
+      await this.companiesRepository.getReputationData(companyId);
+
+    // Intermediate scores
+    const ratingScore = averageRating !== null ? (averageRating / 5) * 100 : 0;
+    const badgeScore = Math.min(badges.length * 20, 100);
+
+    // Final reputation score — deterministic formula
+    const raw =
+      0.5 * kybScore +
+      0.3 * ratingScore +
+      0.2 * badgeScore -
+      5 * malusCount;
+
+    const finalReputationScore = Math.max(0, Math.min(100, Math.round(raw)));
+
+    return {
+      company_id: companyId,
+      kyb_score: kybScore,
+      average_rating: averageRating,
+      review_count: reviewCount,
+      badges,
+      malus_count: malusCount,
+      final_reputation_score: finalReputationScore,
+    };
+  }
 }
+

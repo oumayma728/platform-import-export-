@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { validateCompany, rejectCompany } from "../api/adminCompanies";
 
-/**
- * Modal de validation / rejet d'une entreprise.
- *
- * Props:
- *   company   {Object}   - L'entreprise à examiner { id, name, country, sector }
- *   onClose   {function} - Appelée pour fermer le modal (annulation)
- *   onSuccess {function} - Appelée après une action réussie (rechargement de la liste)
- */
+
 export default function ValidationModal({ company, onClose, onSuccess }) {
   const [motif, setMotif] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +35,7 @@ export default function ValidationModal({ company, onClose, onSuccess }) {
     }
   }
 
-  // ─── Styles ───────────────────────────────────────────────────────────────
+  
   const overlayStyle = {
     position: "fixed",
     inset: 0,

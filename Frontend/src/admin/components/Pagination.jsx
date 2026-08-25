@@ -1,12 +1,4 @@
-/**
- * Contrôles de pagination réutilisables.
- *
- * Props:
- *   page      {number}   - Page courante (1-indexed)
- *   total     {number}   - Nombre total de résultats
- *   limit     {number}   - Résultats par page
- *   onChange  {function} - Appelée avec le nouveau numéro de page
- */
+
 export default function Pagination({ page, total, limit, onChange }) {
   const totalPages = Math.ceil(total / limit);
 
@@ -15,7 +7,7 @@ export default function Pagination({ page, total, limit, onChange }) {
   const from = (page - 1) * limit + 1;
   const to = Math.min(page * limit, total);
 
-  // Génère les numéros de page à afficher (avec ellipsis si > 7 pages)
+  
   function getPageNumbers() {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);

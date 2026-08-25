@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { kybVerify } from "../api/adminCompanies";
 
-// ─── Critères KYB (exactement ceux du backend) ───────────────────────────────
+
 const KYB_CRITERIA = [
   {
     key: "siret",
@@ -20,22 +20,14 @@ const KYB_CRITERIA = [
   },
 ];
 
-/**
- * Détermine le statut KYB automatiquement selon le score :
- *  - 100%    → VALIDE
- *  - 1–99%   → EN_ATTENTE
- *  - 0%      → REJETE
- */
+
 function deriveStatus(verifiedCount, total) {
   if (verifiedCount === 0) return "REJETE";
   if (verifiedCount === total) return "VALIDE";
   return "EN_ATTENTE";
 }
 
-/**
- * Modal de vérification KYB.
- * Props: company { id, name }, onClose, onSuccess
- */
+
 export default function KybModal({ company, onClose, onSuccess }) {
   const [checklist, setChecklist] = useState(() => {
     if (!company?.id) return KYB_CRITERIA.map((c) => ({ ...c, verified: false }));
@@ -50,7 +42,7 @@ export default function KybModal({ company, onClose, onSuccess }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Recharger l'état sauvegardé si l'entreprise change
+  
   useEffect(() => {
     if (!company?.id) return;
     try {
@@ -67,7 +59,6 @@ export default function KybModal({ company, onClose, onSuccess }) {
 
   if (!company) return null;
 
-  // ─── Score en temps réel ──────────────────────────────────────────────────
   const verifiedCount = checklist.filter((c) => c.verified).length;
   const total = checklist.length;
   const score = total > 0 ? Math.round((verifiedCount / total) * 10000) / 100 : 0;
@@ -91,7 +82,7 @@ export default function KybModal({ company, onClose, onSuccess }) {
     REJETE:     { label: "Non vérifié", color: "#991b1b", bg: "#fee2e2" },
   }[autoStatus];
 
-  // ─── Toggle critère ───────────────────────────────────────────────────────
+  
   function toggleCriteria(key) {
     if (isLoading) return;
     setChecklist((prev) =>
@@ -99,7 +90,7 @@ export default function KybModal({ company, onClose, onSuccess }) {
     );
   }
 
-  // ─── Soumettre ────────────────────────────────────────────────────────────
+  
   async function handleSubmit() {
     setIsLoading(true);
     setError("");

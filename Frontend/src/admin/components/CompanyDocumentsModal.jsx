@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { getCompanyDocuments } from "../api/adminCompanies";
 
-/**
- * Modal galerie des justificatifs d'une entreprise.
- *
- * Props:
- *   company  {Object}   - { id, name } de l'entreprise
- *   onClose  {function} - Fermer le modal
- */
+
 export default function CompanyDocumentsModal({ company, onClose }) {
   const [documents, setDocuments] = useState([]);
   const [companyName, setCompanyName] = useState(company?.name ?? "");
@@ -46,7 +40,7 @@ export default function CompanyDocumentsModal({ company, onClose }) {
 
   if (!company) return null;
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  
 
   function getFileIcon(nom) {
     const lower = (nom ?? "").toLowerCase();
@@ -88,7 +82,7 @@ export default function CompanyDocumentsModal({ company, onClose }) {
     });
   }
 
-  // ─── Styles ───────────────────────────────────────────────────────────────
+  
   const overlayStyle = {
     position: "fixed",
     inset: 0,
@@ -116,7 +110,7 @@ export default function CompanyDocumentsModal({ company, onClose }) {
     overflow: "hidden",
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  
   return (
     <div
       style={overlayStyle}

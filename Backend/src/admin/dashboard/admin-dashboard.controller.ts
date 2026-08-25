@@ -36,6 +36,7 @@ import {
   AdminPendingCompaniesResponseDto,
   AdminUsersResponseDto,
   CompanyBadgeResponseDto,
+  CompanyReputationScoreResponseDto,
   CompanyValidationResponseDto,
   KybVerifyResponseDto,
   SuspendUserResponseDto,
@@ -462,4 +463,44 @@ export class AdminDashboardController {
       awardedBy: admin.id,
     });
   }
+
+  // ─── Reputation Score ──────────────────────────────────────────────────────
+
+  @ApiOperation({
+    summary: 'Admin — company reputation score',
+    description:
+      'Returns the full reputation/reliability score for a given company. ' +
+      'The score aggregates KYB result, average review rating, assigned badges, ' +
+      'and negative moderation events (malus). ' +
+      'Intended for consumption by the AI Matching Agent (Stagiaire 3). ' +
+      'Protected — ADMIN role required.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'UUID of the company to score.',
+  })
+  @ApiOkResponse({
+    description: 'Reputation score returned successfully.',
+    type: CompanyReputationScoreResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'Company not found.',
+    type: NotFoundErrorResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Access token is missing or invalid.',
+    type: UnauthorizedErrorResponseDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'The authenticated user does not have the ADMIN role.',
+    type: ForbiddenErrorResponseDto,
+  })
+  @Get('companies/:id/reputation-score')
+  async getReputationScore(
+    @Param('id', ParseUUIDPipe) companyId: string,
+  ): Promise<CompanyReputationScoreResponseDto> {
+    return this.companiesService.getReputationScore(companyId);
+  }
 }
+

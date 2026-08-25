@@ -9,7 +9,7 @@ import CompanyDocumentsModal from "../components/CompanyDocumentsModal";
 import KybModal from "../components/KybModal";
 import BadgesReviewsModal from "../components/BadgesReviewsModal";
 
-// ─── KPI Card ────────────────────────────────────────────────────────────────
+
 function KpiCard({ label, value, color, bg, icon }) {
   return (
     <div
@@ -67,7 +67,7 @@ function KpiCard({ label, value, color, bg, icon }) {
   );
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+
 function SectionHeader({ title, subtitle, total, isLoading }) {
   return (
     <div style={{ marginBottom: "16px" }}>
@@ -113,7 +113,7 @@ function SectionHeader({ title, subtitle, total, isLoading }) {
   );
 }
 
-// ─── Colonnes utilisateurs ────────────────────────────────────────────────────
+
 const USER_COLUMNS = [
   { key: "name", label: "Nom" },
   { key: "email", label: "Email" },
@@ -147,7 +147,7 @@ const USER_COLUMNS = [
   },
 ];
 
-// ─── Colonnes entreprises ─────────────────────────────────────────────────────
+
 const COMPANY_COLUMNS = [
   { key: "name", label: "Entreprise" },
   { key: "country", label: "Pays" },
@@ -217,9 +217,9 @@ const EMPTY_FILTERS = {
   date_to: "",
 };
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+
 export default function AdminDashboardPage() {
-  // ── State: Users ──
+ 
   const [usersData, setUsersData] = useState([]);
   const [usersMeta, setUsersMeta] = useState({ total: 0, page: 1, limit: 10 });
   const [statusCounts, setStatusCounts] = useState(null);
@@ -227,23 +227,22 @@ export default function AdminDashboardPage() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState("");
 
-  // ── State: Companies ──
+
   const [companiesData, setCompaniesData] = useState([]);
   const [companiesMeta, setCompaniesMeta] = useState({ total: 0, page: 1, limit: 10 });
   const [companiesFilters, setCompaniesFilters] = useState({ ...EMPTY_FILTERS, page: 1, limit: 10 });
   const [companiesLoading, setCompaniesLoading] = useState(true);
   const [companiesError, setCompaniesError] = useState("");
 
-  // ── State: Documents modal ──
   const [selectedDocCompany, setSelectedDocCompany] = useState(null);
 
-  // ── State: KYB modal ──
+  
   const [selectedKybCompany, setSelectedKybCompany] = useState(null);
 
-  // ── State: Badges & Avis modal ──
+ 
   const [selectedBadgeCompany, setSelectedBadgeCompany] = useState(null);
 
-  // ─── Fetch Users ───────────────────────────────────────────────────────────
+  
   const fetchUsers = useCallback(async (filters) => {
     setUsersLoading(true);
     setUsersError("");
@@ -261,7 +260,7 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // ─── Fetch Companies ───────────────────────────────────────────────────────
+
   const fetchCompanies = useCallback(async (filters) => {
     setCompaniesLoading(true);
     setCompaniesError("");
@@ -278,7 +277,7 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Chargement initial et à chaque changement de filtres
+  
   useEffect(() => {
     fetchUsers(usersFilters);
   }, [usersFilters, fetchUsers]);
@@ -287,7 +286,7 @@ export default function AdminDashboardPage() {
     fetchCompanies(companiesFilters);
   }, [companiesFilters, fetchCompanies]);
 
-  // ─── Handlers filtres ──────────────────────────────────────────────────────
+
   function handleUsersFilterChange(newFilters) {
     setUsersFilters({ ...newFilters, page: 1, limit: 10 });
   }
@@ -304,7 +303,7 @@ export default function AdminDashboardPage() {
     setCompaniesFilters({ ...EMPTY_FILTERS, page: 1, limit: 10 });
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  
   return (
     <div
       style={{

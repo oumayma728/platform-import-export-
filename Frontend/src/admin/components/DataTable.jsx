@@ -1,14 +1,6 @@
 import { useState } from "react";
 
-/**
- * Tableau de données réutilisable avec tri par colonne et squelette de chargement.
- *
- * Props:
- *   columns    {Array<{ key, label, render?, sortable? }>}
- *   data       {Array}
- *   isLoading  {boolean}
- *   emptyText  {string}
- */
+
 export default function DataTable({ columns = [], data = [], isLoading = false, emptyText = "Aucun résultat" }) {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
@@ -22,7 +14,7 @@ export default function DataTable({ columns = [], data = [], isLoading = false, 
     }
   }
 
-  // Tri côté client sur les données déjà chargées
+
   const sorted = [...data].sort((a, b) => {
     if (!sortKey) return 0;
     const av = a[sortKey];

@@ -6,7 +6,7 @@ import { getAdminUsers } from "../api/adminUsers";
 import DataTable from "../components/DataTable";
 import Pagination from "../components/Pagination";
 
-// ─── Métadonnées des types d'actions ──────────────────────────────────────────
+
 const ACTION_META = {
   VALIDATION: {
     label: "Validation",
@@ -45,7 +45,7 @@ const ACTION_META = {
   },
 };
 
-// ─── Formatage lisible des détails selon l'action ─────────────────────────────
+
 function ActionDetails({ actionType, details }) {
   if (!details || (typeof details === "object" && Object.keys(details).length === 0)) {
     return <span style={{ color: "#9ca3af", fontStyle: "italic" }}>Aucun détail</span>;
@@ -125,7 +125,7 @@ function ActionDetails({ actionType, details }) {
   return <span style={{ fontSize: "11px", color: "#6b7280", fontFamily: "monospace" }}>{JSON.stringify(d)}</span>;
 }
 
-// ─── Colonnes du tableau ───────────────────────────────────────────────────────
+
 const COLUMNS = [
   {
     key: "timestamp",
@@ -202,7 +202,7 @@ const COLUMNS = [
   },
 ];
 
-// ─── Composant Sélecteur d'Entité avec Recherche Intégrée ─────────────────────
+
 function EntitySearchSelector({
   entityType,
   entities,
@@ -214,7 +214,7 @@ function EntitySearchSelector({
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef(null);
 
-  // Fermer la liste déroulante au clic extérieur
+ 
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -225,13 +225,13 @@ function EntitySearchSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Entité actuellement sélectionnée
+
   const selectedEntity = useMemo(
     () => entities.find((e) => e.id === selectedEntityId),
     [entities, selectedEntityId]
   );
 
-  // Filtrage local en direct sur les entités
+
   const filteredEntities = useMemo(() => {
     if (!searchTerm.trim()) return entities;
     const q = searchTerm.toLowerCase();
@@ -421,7 +421,7 @@ function EntitySearchSelector({
   );
 }
 
-// ─── Page principale ───────────────────────────────────────────────────────────
+
 export default function ModerationHistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -446,10 +446,10 @@ export default function ModerationHistoryPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
 
-  // Ref pour annuler les requêtes obsolètes
+  
   const fetchRef = useRef(0);
 
-  // ─── 1. Charger la liste des entités ────────────────────────────────────────
+  
   useEffect(() => {
     let cancelled = false;
     setEntitiesLoading(true);
@@ -479,7 +479,7 @@ export default function ModerationHistoryPage() {
     return () => { cancelled = true; };
   }, [entityType]);
 
-  // ─── 2. Charger l'historique quand entité ou page change ────────────────────
+
   useEffect(() => {
     if (!selectedEntityId) {
       setHistoryData([]);
@@ -512,7 +512,7 @@ export default function ModerationHistoryPage() {
       });
   }, [entityType, selectedEntityId, currentPage]);
 
-  // ─── Handlers ────────────────────────────────────────────────────────────
+ 
   function handleTypeChange(type) {
     setEntityType(type);
     setCurrentPage(1);
@@ -533,7 +533,7 @@ export default function ModerationHistoryPage() {
     setCurrentPage(p);
   }
 
-  // ─── Filtrage local (action + recherche texte) ────────────────────────────
+ 
   const filteredHistory = historyData.filter((item) => {
     if (actionFilter !== "TOUS" && item.actionType !== actionFilter) return false;
     if (searchKeyword.trim()) {
@@ -547,7 +547,7 @@ export default function ModerationHistoryPage() {
 
   const selectedEntity = entityList.find((e) => e.id === selectedEntityId);
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  
   return (
     <div style={{ padding: "32px", maxWidth: "1280px", margin: "0 auto" }}>
 
