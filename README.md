@@ -16,7 +16,15 @@ npm install
 npx prisma generate
 ```
 
-3. Start the server:
+3. Configure Bird:
+
+Create a `.env` file and add your Bird API key:
+
+```env
+BIRD_API_KEY=bk_your_api_key
+```
+
+4. Start the server:
 
 ```bash
 npm run start

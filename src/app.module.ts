@@ -18,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 import { BillingModule } from './billing/billing.module';
 import { CurrencyModule } from './integrations/currency/currency.module';
 import { LogisticsModule } from './integrations/logistics/logistics.module';
+import { NotificationsModule } from './integrations/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { LogisticsModule } from './integrations/logistics/logistics.module';
     BillingModule,
     CurrencyModule,
     LogisticsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -52,7 +54,6 @@ import { LogisticsModule } from './integrations/logistics/logistics.module';
   ],
 })
 export class AppModule {}
-
 
 // TODO add log logic in all modules
 // TODO change the english messages that goes back to the front in french

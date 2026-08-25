@@ -79,7 +79,7 @@ export class CurrencyService {
       cacheKey,
     );
     if (cached) {
-      this.logger.debug(`Cache hit for ${cacheKey}`);
+      this.logger.log(`Cache hit for ${cacheKey}`);
       return cached;
     }
 
