@@ -65,10 +65,12 @@ export default function StripeCardForm({ planId, price, onSuccess }) {
         // Backend réel : le PaymentIntent est créé côté serveur (clé
         // secrète), puis confirmé ici avec le moyen de paiement tokenisé.
         const intent = await createPaymentIntent(planId);
-        const { error: confirmError } = await stripe.confirmCardPayment(intent.clientSecret, {
-          payment_method: paymentMethod.id,
-        });
-        if (confirmError) throw new Error(confirmError.message);
+        if (intent.clientSecret && !intent.clientSecret.startsWith("mock_")) {
+          const { error: confirmError } = await stripe.confirmCardPayment(intent.clientSecret, {
+            payment_method: paymentMethod.id,
+          });
+          if (confirmError) throw new Error(confirmError.message);
+        }
         await changePlan(planId);
       }
       onSuccess();

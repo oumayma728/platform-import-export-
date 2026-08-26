@@ -578,6 +578,45 @@ const isMyListing =
                           )}
                         </div>
 
+                        {ownerAccount.badges?.length > 0 && (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "6px",
+                              flexWrap: "wrap",
+                              marginTop: "8px",
+                            }}
+                          >
+                            {ownerAccount.badges.map((badge) => {
+                              const label =
+                                typeof badge === "string" ? badge : badge.type;
+                              const desc =
+                                typeof badge === "string" ? badge : badge.description;
+                              return (
+                                <span
+                                  key={label}
+                                  title={desc || label}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    padding: "3px 10px",
+                                    borderRadius: "999px",
+                                    background: "#FBF0DC",
+                                    color: "#B8720A",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.3px",
+                                  }}
+                                >
+                                  🏅 {label.replace(/_/g, " ")}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+
                         <p
                           style={{
                             margin: "6px 0 0",
@@ -597,6 +636,86 @@ const isMyListing =
                     )}
                   </div>
                 )}
+
+        {ownerAccount &&
+          (ownerAccount.averageRating != null ||
+            ownerAccount.reviews?.length > 0) && (
+          <div
+            style={{
+              padding: "16px 20px",
+              borderRadius: "16px",
+              background: "#F6F5F2",
+              border: "1px solid #E4E2DC",
+              marginBottom: "25px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "16px", color: "#B8720A", letterSpacing: 2 }}>
+                {"★".repeat(Math.round(ownerAccount.averageRating || 0))}
+                {"☆".repeat(5 - Math.round(ownerAccount.averageRating || 0))}
+              </span>
+              <strong style={{ fontSize: "15px", color: "#14161C" }}>
+                {ownerAccount.averageRating != null
+                  ? `${ownerAccount.averageRating.toFixed(1)} / 5`
+                  : "—"}
+              </strong>
+              <span style={{ color: "#6B6D76", fontSize: "13px" }}>
+                ({ownerAccount.reviewCount || 0} avis)
+              </span>
+              {ownerAccount.trustScore != null && (
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a", marginLeft: "auto" }}>
+                  Score de fiabilité : {ownerAccount.trustScore}/100
+                </span>
+              )}
+            </div>
+
+            {ownerAccount.reviews?.length > 0 && (
+              <details style={{ marginTop: "12px" }}>
+                <summary
+                  style={{
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "#B8720A",
+                  }}
+                >
+                  Voir les avis ({ownerAccount.reviews.length})
+                </summary>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+                  {ownerAccount.reviews.map((r) => (
+                    <div
+                      key={r.id}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "12px",
+                        background: "#fff",
+                        border: "1px solid #E4E2DC",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span style={{ color: "#B8720A", letterSpacing: 1, fontSize: "13px" }}>
+                          {"★".repeat(r.note)}
+                          {"☆".repeat(5 - r.note)}
+                        </span>
+                        <strong style={{ fontSize: "13px", color: "#14161C" }}>
+                          {r.auteur ? `${r.auteur.prenom} ${r.auteur.nom}` : "Utilisateur"}
+                        </strong>
+                        <span style={{ fontSize: "12px", color: "#9ca3af" }}>
+                          {r.createdAt?.split("T")[0]}
+                        </span>
+                      </div>
+                      {r.commentaire && (
+                        <p style={{ margin: "6px 0 0", fontSize: "13px", color: "#6B6D76" }}>
+                          {r.commentaire}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
 
 <div
   style={{

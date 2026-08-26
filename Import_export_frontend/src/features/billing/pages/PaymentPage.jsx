@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import {
@@ -10,11 +10,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { mockPlans } from "../mocks/billing.mock";
-import { changePlan } from "../api/billing";
+import { changePlan, getPaymentMethods } from "../api/billing";
 import { stripePromise } from "../stripe/stripeClient";
 import StripeCardForm from "../components/StripeCardForm";
 
-const PAYMENT_METHODS = [
+const PAYMENT_TYPES = [
   { id: "card", label: "Carte bancaire", Icon: CreditCard },
   { id: "paypal", label: "PayPal", Icon: Wallet },
   { id: "bank", label: "Virement bancaire", Icon: Landmark },
@@ -29,20 +29,36 @@ export default function PaymentPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [savedMethods, setSavedMethods] = useState([]);
+  const [selectedSavedId, setSelectedSavedId] = useState(null);
+  const [showNewCard, setShowNewCard] = useState(false);
 
-  // Référence de commande unique — c'est CE code, pas l'email, qui permettra
-  // de faire correspondre un virement reçu à cette commande précise.
   const [orderReference] = useState(
     () => `IND2-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
   );
 
+  useEffect(() => {
+    getPaymentMethods().then(setSavedMethods).catch(() => {});
+  }, []);
+
+  const savedCards = savedMethods.filter((m) => m.type === "card");
+  const savedPaypals = savedMethods.filter((m) => m.type === "paypal");
+  const defaultMethod = savedMethods.find((m) => m.isDefault);
+
+  async function handlePayWithSaved() {
+    setIsPaying(true);
+    try {
+      await changePlan(planId);
+      setIsPaid(true);
+    } catch (err) {
+      alert(err.message || "Le paiement a échoué.");
+    } finally {
+      setIsPaying(false);
+    }
+  }
+
   function handleNonCardSubmit(e) {
     e.preventDefault();
-    // Pas de vrai traitement de paiement pour PayPal/virement — on simule
-    // juste le comportement attendu : PayPal est vérifiable instantanément
-    // par le prestataire, un virement bancaire ne l'est jamais (il faut
-    // recevoir les fonds et rapprocher la référence, ce qui prend
-    // plusieurs jours).
     setIsPaying(true);
     setTimeout(async () => {
       setIsPaying(false);
@@ -92,7 +108,7 @@ export default function PaymentPage() {
           }}
         >
           <p style={{ margin: "0 0 8px", fontSize: 13, color: "#92400e", fontWeight: 700 }}>
-            ⚠️ Référence obligatoire à indiquer dans le virement
+            Référence obligatoire à indiquer dans le virement
           </p>
           <p
             style={{
@@ -174,8 +190,6 @@ export default function PaymentPage() {
 
   return (
     <div style={{ maxWidth: 520, margin: "0 auto" }}>
-      
-
       <div
         style={{
           display: "flex",
@@ -191,7 +205,6 @@ export default function PaymentPage() {
         Vos informations sont chiffrées et ne sont jamais stockées sur nos serveurs.
       </p>
 
-      {/* Récapitulatif du plan choisi */}
       <div
         style={{
           background: "#F6F5F2",
@@ -211,15 +224,14 @@ export default function PaymentPage() {
         <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#B8720A" }}>{plan.price}</p>
       </div>
 
-      {/* Choix du mode de paiement */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {PAYMENT_METHODS.map(({ id, label, Icon }) => {
+        {PAYMENT_TYPES.map(({ id, label, Icon }) => {
           const selected = method === id;
           return (
             <button
               key={id}
               type="button"
-              onClick={() => setMethod(id)}
+              onClick={() => { setMethod(id); setSelectedSavedId(null); setShowNewCard(false); }}
               style={{
                 flex: 1,
                 display: "flex",
@@ -249,51 +261,276 @@ export default function PaymentPage() {
         })}
       </div>
 
-      {method === "card" ? (
-        <Elements stripe={stripePromise}>
-          <StripeCardForm
-            planId={planId}
-            price={plan.price}
-            onSuccess={() => setIsPaid(true)}
-          />
-        </Elements>
-      ) : (
-        <form onSubmit={handleNonCardSubmit}>
-          {method === "paypal" && (
-            <div
-              style={{
-                backgroundColor: "#F6F5F2",
-                border: "1px solid #E4E2DC",
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 20,
-                fontSize: 14,
-                color: "#374151",
-              }}
-            >
-              Vous serez redirigé vers PayPal pour finaliser le paiement en toute sécurité.
+      {method === "card" && (
+        <>
+          {savedCards.length > 0 && !showNewCard && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Carte enregistrée
+              </p>
+              {savedCards.map((card) => (
+                <div
+                  key={card.id}
+                  onClick={() => setSelectedSavedId(card.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    border: selectedSavedId === card.id ? "2px solid #B8720A" : "1px solid #E4E2DC",
+                    backgroundColor: selectedSavedId === card.id ? "#FBF0DC" : "#fff",
+                    cursor: "pointer",
+                    marginBottom: 8,
+                  }}
+                >
+                  <CreditCard size={20} color="#B8720A" />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#14161C" }}>
+                      {card.brand} •••• {card.last4}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+                      Expire {card.expiry} · {card.holder}
+                    </p>
+                  </div>
+                  {card.isDefault && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#B8720A", backgroundColor: "#FBF0DC", padding: "2px 8px", borderRadius: 6 }}>
+                      Par défaut
+                    </span>
+                  )}
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      border: selectedSavedId === card.id ? "2px solid #B8720A" : "2px solid #d1d5db",
+                      backgroundColor: selectedSavedId === card.id ? "#B8720A" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {selectedSavedId === card.id && <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#fff" }} />}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowNewCard(true)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "10px 0",
+                  marginTop: 4,
+                  background: "none",
+                  border: "1px dashed #d1d5db",
+                  borderRadius: 12,
+                  color: "#6b7280",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                + Utiliser une autre carte
+              </button>
+              {selectedSavedId && (
+                <button
+                  type="button"
+                  disabled={isPaying}
+                  onClick={handlePayWithSaved}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    marginTop: 16,
+                    border: "none",
+                    borderRadius: 14,
+                    background: "linear-gradient(135deg,#B8720A,#9C5E08)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    cursor: isPaying ? "default" : "pointer",
+                    opacity: isPaying ? 0.7 : 1,
+                  }}
+                >
+                  <Lock size={16} />
+                  {isPaying ? "Traitement en cours..." : `Payer ${plan.price}`}
+                </button>
+              )}
             </div>
           )}
 
-          {method === "bank" && (
-            <div
-              style={{
-                backgroundColor: "#F6F5F2",
-                border: "1px solid #E4E2DC",
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 20,
-                fontSize: 14,
-                color: "#374151",
-                lineHeight: 1.8,
-              }}
-            >
-              IBAN : TN59 1000 6035 0000 0012 3456 <br />
-              BIC : BIATTNTT <br />
-              Référence à indiquer (obligatoire) :{" "}
-              <strong style={{ fontFamily: "monospace" }}>{orderReference}</strong>
+          {(showNewCard || savedCards.length === 0) && (
+            <Elements stripe={stripePromise}>
+              <StripeCardForm
+                planId={planId}
+                price={plan.price}
+                onSuccess={() => setIsPaid(true)}
+              />
+            </Elements>
+          )}
+        </>
+      )}
+
+      {method === "paypal" && (
+        <>
+          {savedPaypals.length > 0 && !showNewCard && (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Compte PayPal enregistré
+              </p>
+              {savedPaypals.map((pp) => (
+                <div
+                  key={pp.id}
+                  onClick={() => setSelectedSavedId(pp.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    border: selectedSavedId === pp.id ? "2px solid #B8720A" : "1px solid #E4E2DC",
+                    backgroundColor: selectedSavedId === pp.id ? "#FBF0DC" : "#fff",
+                    cursor: "pointer",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Wallet size={20} color="#B8720A" />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#14161C" }}>PayPal</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>{pp.email}</p>
+                  </div>
+                  {pp.isDefault && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#B8720A", backgroundColor: "#FBF0DC", padding: "2px 8px", borderRadius: 6 }}>
+                      Par défaut
+                    </span>
+                  )}
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      border: selectedSavedId === pp.id ? "2px solid #B8720A" : "2px solid #d1d5db",
+                      backgroundColor: selectedSavedId === pp.id ? "#B8720A" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {selectedSavedId === pp.id && <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#fff" }} />}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowNewCard(true)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "10px 0",
+                  marginTop: 4,
+                  background: "none",
+                  border: "1px dashed #d1d5db",
+                  borderRadius: 12,
+                  color: "#6b7280",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                + Utiliser un autre compte PayPal
+              </button>
+              {selectedSavedId && (
+                <button
+                  type="button"
+                  disabled={isPaying}
+                  onClick={handlePayWithSaved}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    marginTop: 16,
+                    border: "none",
+                    borderRadius: 14,
+                    background: "linear-gradient(135deg,#B8720A,#9C5E08)",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    cursor: isPaying ? "default" : "pointer",
+                    opacity: isPaying ? 0.7 : 1,
+                  }}
+                >
+                  <Lock size={16} />
+                  {isPaying ? "Traitement en cours..." : `Payer ${plan.price}`}
+                </button>
+              )}
             </div>
           )}
+
+          {(!savedPaypals.length || showNewCard) && (
+            <form onSubmit={handleNonCardSubmit}>
+              <div
+                style={{
+                  backgroundColor: "#F6F5F2",
+                  border: "1px solid #E4E2DC",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 20,
+                  fontSize: 14,
+                  color: "#374151",
+                }}
+              >
+                Vous serez redirigé vers PayPal pour finaliser le paiement en toute sécurité.
+              </div>
+
+              <button
+                type="submit"
+                disabled={isPaying}
+                style={{
+                  width: "100%",
+                  padding: 16,
+                  border: "none",
+                  borderRadius: 14,
+                  background: "linear-gradient(135deg,#B8720A,#9C5E08)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: isPaying ? "default" : "pointer",
+                  opacity: isPaying ? 0.7 : 1,
+                }}
+              >
+                {isPaying ? "Traitement en cours..." : `Payer ${plan.price}`}
+              </button>
+            </form>
+          )}
+        </>
+      )}
+
+      {method === "bank" && (
+        <form onSubmit={handleNonCardSubmit}>
+          <div
+            style={{
+              backgroundColor: "#F6F5F2",
+              border: "1px solid #E4E2DC",
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 20,
+              fontSize: 14,
+              color: "#374151",
+              lineHeight: 1.8,
+            }}
+          >
+            IBAN : TN59 1000 6035 0000 0012 3456 <br />
+            BIC : BIATTNTT <br />
+            Référence à indiquer (obligatoire) :{" "}
+            <strong style={{ fontFamily: "monospace" }}>{orderReference}</strong>
+          </div>
 
           <button
             type="submit"
@@ -313,9 +550,7 @@ export default function PaymentPage() {
           >
             {isPaying
               ? "Traitement en cours..."
-              : method === "bank"
-              ? "Confirmer la demande de virement"
-              : `🔒 Payer ${plan.price}`}
+              : "Confirmer la demande de virement"}
           </button>
         </form>
       )}

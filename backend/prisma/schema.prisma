@@ -1,0 +1,535 @@
+generator client {
+  provider = "prisma-client-py"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  nom          String
+  prenom       String
+  role         String    @default("moderateur")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("Admin")
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  pays      String
+  ville     String
+  codePostal String  @map("code_postal")
+  adresse   String
+  region    String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  entreprises        Entreprise[]
+  annoncesOrigine     Annonce[] @relation("LocationOrigine")
+  annoncesDestination Annonce[] @relation("LocationDestination")
+
+  @@map("Location")
+}
+
+model Entreprise {
+  id              String   @id @default(uuid())
+  locationId      String   @map("location_id")
+  nom             String
+  siret           String?
+  numeroTva       String?  @map("numero_tva")
+  description     String?
+  siteWeb         String?  @map("site_web")
+  logo            String?
+  role            String   @default("importer")
+  anneeCreation   Int?     @map("annee_creation")
+  capitalSocial   Float?   @map("capital_social")
+  chiffreAffaires Float?   @map("chiffre_affaires")
+  nombreEmployes  Int?     @map("nombre_employes")
+  secteurActivite String?  @map("secteur_activite")
+  trustScore      Float?   @map("trust_score")
+  trustScoreDetails String? @map("trust_score_details")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  location        Location @relation(fields: [locationId], references: [id])
+  utilisateurs    Utilisateur[]
+  documents       DocumentEntreprise[]
+  badges          TrustBadge[]
+  entrepriseBadges EntrepriseBadge[]
+  reviewsRecus    Review[]     @relation("ReviewRecu")
+  certifications  EntrepriseCertification[]
+  kybVerifications KYBVerification[]
+
+  @@map("Entreprise")
+}
+
+model EntrepriseCertification {
+  id             String    @id @default(uuid())
+  entrepriseId   String    @map("entreprise_id")
+  nom            String
+  fichier        String?
+  dateObtention  DateTime? @map("date_obtention")
+  dateExpiration DateTime? @map("date_expiration")
+  estVerifie     Boolean   @default(false) @map("est_verifie")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@map("EntrepriseCertification")
+}
+
+model Utilisateur {
+  id               String    @id @default(uuid())
+  entrepriseId     String?   @map("entrepriseId")
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  freeAccount      Boolean   @default(true) @map("freeAccount")
+  nom              String
+  prenom           String
+  telephone        String?
+  fonction         String?
+  validationStatus String    @default("pending") @map("validation_status")
+  role             String    @default("user")
+  photoProfile     String?   @map("photoProfile")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  entreprise           Entreprise?       @relation(fields: [entrepriseId], references: [id])
+  annonces             Annonce[]
+  messages             Message[]
+  notifications        Notification[]
+  facturations         Facturation[]
+  favoris              Favori[]
+  conversationsAcheteur Conversation[] @relation("ConversationsAcheteur")
+  conversationsVendeur Conversation[] @relation("ConversationsVendeur")
+  documentsSent        DocumentConversation[]
+  reviewsDonnes        Review[]          @relation("ReviewDonne")
+  reports              Report[]
+  matchingResults      MatchingResult[]
+  modesPaiement        ModePaiement[]
+
+  @@map("Utilisateur")
+}
+
+model Message {
+  id             String    @id @default(uuid())
+  conversationId String    @map("conversationId")
+  expediteurId   String    @map("expediteurId")
+  contenu        String
+  estLu          Boolean   @default(false) @map("est_lu")
+  dateEnvoi      DateTime  @default(now()) @map("date_envoi")
+  dateLecture    DateTime? @map("date_lecture")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  expediteur   Utilisateur  @relation(fields: [expediteurId], references: [id])
+
+  @@map("Message")
+}
+
+model Conversation {
+  id                 String    @id @default(uuid())
+  annonceId          String    @map("annonceId")
+  vendeurId          String    @map("vendeurId")
+  acheteurId         String    @map("acheteurId")
+  statut             String    @default("SUGGEREE")
+  dateDernierMessage DateTime? @map("date_dernier_message")
+  nombreMessages     Int       @default(0) @map("nombre_messages")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  annonce       Annonce     @relation(fields: [annonceId], references: [id])
+  vendeur       Utilisateur @relation("ConversationsVendeur", fields: [vendeurId], references: [id])
+  acheteur      Utilisateur @relation("ConversationsAcheteur", fields: [acheteurId], references: [id])
+  messages      Message[]
+  facturations  Facturation[]
+  documents     DocumentConversation[]
+  reports       Report[]
+  reviews       Review[]
+
+  @@map("Conversation")
+}
+
+model DocumentConversation {
+  id             String    @id @default(uuid())
+  expediteurId   String    @map("expediteurId")
+  conversationId String    @map("conversationId")
+  nomFichier     String    @map("nom_fichier")
+  cheminFichier  String    @map("chemin_fichier")
+  extention      String
+  taille         BigInt
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  expediteur   Utilisateur  @relation(fields: [expediteurId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("DocumentConversation")
+}
+
+model DocumentAnnonce {
+  id            String    @id @default(uuid())
+  annonceId     String    @map("annonce_id")
+  nomFichier    String    @map("nom_fichier")
+  cheminFichier String    @map("chemin_fichier")
+  extention     String
+  taille        BigInt
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  annonce Annonce @relation(fields: [annonceId], references: [id], onDelete: Cascade)
+
+  @@map("DocumentAnnonce")
+}
+
+model DocumentEntreprise {
+  id            String    @id @default(uuid())
+  entrepriseId  String    @map("entreprise_id")
+  typeDocument  String    @default("AUTRE") @map("type_document")
+  nomFichier    String    @map("nom_fichier")
+  cheminFichier String    @map("chemin_fichier")
+  bucket        String?   @default("kyb-documents")
+  mimeType      String?   @map("mime_type")
+  extention     String
+  taille        BigInt
+  statut        String    @default("en_attente")
+  motifRejet    String?   @map("motif_rejet")
+  type          String    @default("document")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@map("DocumentEntreprise")
+}
+
+model Categorie {
+  id          String   @id @default(uuid())
+  nom         String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  annonces Annonce[]
+
+  @@map("Categorie")
+}
+
+model Annonce {
+  id                    String    @id @default(uuid())
+  utilisateurId         String    @map("utilisateurId")
+  categorieId           String    @map("categorieId")
+  locationOrigineId     String    @map("locationOrigineId")
+  locationDestinationId String?   @map("locationDestinationId")
+  titre                 String
+  description           String?
+  type                  String    @default("offer")
+  prix                  Float
+  devise                String    @default("EUR")
+  quantite              Float
+  uniteQuantite         String    @map("unite_quantite")
+  prixParUnite          Float?    @map("prix_par_unite")
+  dateLimite            DateTime? @map("date_limite")
+  statut                String    @default("active")
+  dureeLivraison        Int?      @map("duree_livraison")
+  uniteDureeLivraison   String?   @map("unite_duree_livraison")
+  certifications        String    @default("[]")
+  publishedAt           DateTime? @map("published_at")
+  expiresAt             DateTime? @map("expires_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  utilisateur         Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  categorie           Categorie     @relation(fields: [categorieId], references: [id])
+  locationOrigine     Location      @relation("LocationOrigine", fields: [locationOrigineId], references: [id])
+  locationDestination Location?     @relation("LocationDestination", fields: [locationDestinationId], references: [id])
+  documents           DocumentAnnonce[]
+  incotermeAnnonces   IncotermeAnnonce[]
+  conversations       Conversation[]
+  matchingResults     MatchingResult[]
+  favoris             Favori[]
+  reports             Report[]
+
+  @@map("Annonce")
+}
+
+model Incoterme {
+  id          String   @id @default(uuid())
+  code        String
+  nom         String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  incotermeAnnonces IncotermeAnnonce[]
+
+  @@map("Incoterme")
+}
+
+model IncotermeAnnonce {
+  id         String    @id @default(uuid())
+  annonceId  String    @map("annonce_id")
+  incotermId String    @map("incoterm_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  annonce   Annonce   @relation(fields: [annonceId], references: [id], onDelete: Cascade)
+  incoterme Incoterme @relation(fields: [incotermId], references: [id])
+
+  @@map("IncotermeAnnonce")
+}
+
+model Notification {
+  id                   String    @id @default(uuid())
+  utilisateurId        String    @map("utilisateur_id")
+  titre                String
+  contenu              String?
+  typeNotification     String    @map("type_notification") @default("EMAIL")
+  statut               String    @default("pending") @map("statut_notif")
+  emailDestinataire    String?   @map("email_destinataire")
+  telephoneDestinataire String?  @map("telephone_destinataire")
+  dateEnvoi            DateTime? @map("date_envoi")
+  dateLecture          DateTime? @map("date_lecture")
+  tentativesEnvoi      Int       @default(0) @map("tentatives_envoi")
+  estLu                Boolean   @default(false) @map("est_lu")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@map("Notification")
+}
+
+model Facturation {
+  id                  String    @id @default(uuid())
+  utilisateurId       String    @map("utilisateurId")
+  conversationId      String?   @map("conversationId")
+  numeroFacture       String    @map("numero_facture")
+  montantHt           Float     @map("montant_ht")
+  tva                 Float
+  montantTva          Float     @map("montant_tva")
+  montantTtc          Float     @map("montant_ttc")
+  datePaiement        DateTime? @map("date_paiement")
+  statut              String    @default("free")
+  methodePaiement     String?   @map("methode_paiement")
+  nombreChatsFactures Int       @default(0) @map("nombre_chats_factures")
+  dateDebutAbonnement DateTime? @map("date_debut_abonnement")
+  dateFinAbonnement   DateTime? @map("date_fin_abonnement")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  utilisateur  Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+  paiements    Paiement[]
+
+  @@map("Facturation")
+}
+
+model Paiement {
+  id                    String    @id @default(uuid())
+  facturationId         String    @map("facturation_id")
+  montant               Float
+  devise                String    @default("EUR")
+  stripePaymentIntentId String?   @map("stripe_payment_intent_id")
+  stripeChargeId        String?   @map("stripe_charge_id")
+  statutPaiement        String    @default("pending") @map("statut_paiement")
+  datePaiement          DateTime? @map("date_paiement")
+  messageErreur         String?   @map("message_erreur")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  facturation Facturation @relation(fields: [facturationId], references: [id])
+
+  @@map("Paiement")
+}
+
+model Favori {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  listingId String   @map("listing_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  utilisateur Utilisateur @relation(fields: [userId], references: [id])
+  annonce     Annonce     @relation(fields: [listingId], references: [id])
+
+  @@unique([userId, listingId])
+  @@map("Favori")
+}
+
+model AdminAction {
+  id          String   @id @default(uuid())
+  adminId     String   @map("admin_id")
+  cibleUserId String?  @map("cible_user_id")
+  cibleType   String?  @map("cible_type")
+  cibleId     String?  @map("cible_id")
+  action      String?
+  typeAction  String   @map("type_action")
+  motif       String?
+  description String?
+  metadata    String   @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("AdminAction")
+}
+
+model UserModerationHistory {
+  id                      String    @id @default(uuid())
+  userId                  String    @map("user_id")
+  adminId                 String    @map("admin_id")
+  action                  String
+  motif                   String?
+  suspensionDurationDays  Int?      @map("suspension_duration_days")
+  suspensionEndDate       DateTime? @map("suspension_end_date")
+  createdAt               DateTime  @default(now()) @map("created_at")
+
+  @@map("UserModerationHistory")
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  nom         String
+  description String?
+  criteres    String   @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  entreprises EntrepriseBadge[]
+
+  @@map("Badge")
+}
+
+model EntrepriseBadge {
+  id           String    @id @default(uuid())
+  entrepriseId String    @map("entreprise_id")
+  badgeId      String    @map("badge_id")
+  obtenuLe     DateTime  @default(now()) @map("obtenu_le")
+
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  badge      Badge      @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([entrepriseId, badgeId])
+  @@map("EntrepriseBadge")
+}
+
+model Report {
+  id             String        @id @default(uuid())
+  reporterId     String        @map("reporter_id")
+  annonceId      String?       @map("annonce_id")
+  cibleUserId    String?       @map("cible_user_id")
+  cibleType      String?       @map("cible_type")
+  cibleId        String?       @map("cible_id")
+  conversationId String?       @map("conversation_id")
+  type           String
+  motif          String
+  statut         String        @default("pending")
+  traitePar      String?       @map("traite_par")
+  traiteParAdminId String?     @map("traite_par_admin_id")
+  dateTraitement DateTime?     @map("date_traitement")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  reporter     Utilisateur  @relation(fields: [reporterId], references: [id])
+  annonce      Annonce?     @relation(fields: [annonceId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+
+  @@map("Report")
+}
+
+model TrustBadge {
+  id            String    @id @default(uuid())
+  entrepriseId  String    @map("entreprise_id")
+  badgeType     String    @map("badge_type")
+  description   String?
+  dateObtention DateTime  @default(now()) @map("date_obtention")
+  estActif      Boolean   @default(true) @map("est_actif")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@map("TrustBadge")
+}
+
+model Review {
+  id           String    @id @default(uuid())
+  auteurId     String    @map("auteur_id")
+  entrepriseId String    @map("entreprise_id")
+  annonceId    String?   @map("annonce_id")
+  conversationId String? @map("conversation_id")
+  note         Int
+  commentaire  String?
+  dateVisite   DateTime? @map("date_visite")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  auteur       Utilisateur @relation("ReviewDonne", fields: [auteurId], references: [id])
+  entreprise   Entreprise  @relation("ReviewRecu", fields: [entrepriseId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+
+  @@unique([auteurId, conversationId])
+  @@map("Review")
+}
+
+model KYBVerification {
+  id               String    @id @default(uuid())
+  entrepriseId     String    @map("entreprise_id")
+  statut           String    @default("pending")
+  documents        String    @default("[]")
+  verifiedBy       String?   @map("verified_by")
+  dateVerification DateTime? @map("date_verification")
+  commentaire      String?
+  score            Int?
+  checklist        String    @default("[]")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  entreprise Entreprise @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@map("KYBVerification")
+}
+
+model MatchingResult {
+  id                   String    @id @default(uuid())
+  utilisateurId        String    @map("utilisateur_id")
+  annonceId            String    @map("annonce_id")
+  counterpartListingId String    @map("counterpart_listing_id")
+  matchScore           Int       @map("match_score")
+  reasons              String    @default("{}")
+  counterpartName      String?   @map("counterpart_name")
+  counterpartCountry   String?   @map("counterpart_country")
+  counterpartOwnerId   String?   @map("counterpart_owner_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id])
+  annonce     Annonce     @relation(fields: [annonceId], references: [id])
+
+  @@map("MatchingResult")
+}
+
+model ModePaiement {
+  id             String   @id @default(uuid())
+  utilisateurId  String   @map("utilisateurId")
+  type           String
+  brand          String?
+  last4          String?
+  expiry         String?
+  holder         String?
+  email          String?
+  isDefault      Boolean  @default(false) @map("is_default")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id])
+
+  @@map("ModePaiement")
+}

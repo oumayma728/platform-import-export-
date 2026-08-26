@@ -11,8 +11,11 @@ const NAV_ITEMS = [
   { to: "/matching", label: "Matching IA" },
   { to: "/messages", label: "Messagerie" },
   { to: "/billing", label: "Facturation" },
+  { to: "/notifications", label: "Notifications" },
   { to: "/profile", label: "Profil" },
 ];
+
+const ADMIN_NAV_ITEM = { to: "/admin", label: "Admin" };
 
 const FULL_BLEED_PATHS = ["/messages"];
 
@@ -20,7 +23,7 @@ const FULL_BLEED_PATHS = ["/messages"];
 const ONBOARDING_PATHS = ["/profile/complete", "/profile/status"];
 
 export default function UserHeaderLayout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
   const isFullBleed = FULL_BLEED_PATHS.some((path) => location.pathname.startsWith(path));
   const isOnboarding = ONBOARDING_PATHS.some((path) => location.pathname.startsWith(path));
@@ -80,7 +83,7 @@ export default function UserHeaderLayout() {
           {/* Masquée pendant les étapes obligatoires d'onboarding (profil incomplet/en attente) */}
           {!isOnboarding && (
             <nav className="desktop-nav" style={{ display: "flex", gap: spacing.sm, alignItems: "center", flexWrap: "wrap" }}>
-              {NAV_ITEMS.map((item) => (
+              {[...NAV_ITEMS, ...(user?.role === "admin" ? [ADMIN_NAV_ITEM] : [])].map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -161,7 +164,7 @@ export default function UserHeaderLayout() {
               borderTop: `1px solid ${colors.border}`,
             }}
           >
-            {NAV_ITEMS.map((item) => (
+            {[...NAV_ITEMS, ...(user?.role === "admin" ? [ADMIN_NAV_ITEM] : [])].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

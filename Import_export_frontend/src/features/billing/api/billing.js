@@ -1,4 +1,5 @@
 import { createResourceApi } from "../../../api/createResourceApi";
+import apiClient, { USE_MOCKS } from "../../../api/client";
 import { delay } from "../../../utils/delay";
 import {
   mockInvoices,
@@ -66,120 +67,168 @@ function addOneMonth(isoDate) {
 }
 
 export async function getUsage() {
-  await delay(150);
-  resolveBillingCycle();
-  return mockUsage;
+  if (USE_MOCKS) {
+    await delay(150);
+    resolveBillingCycle();
+    return mockUsage;
+  }
+  const { data } = await apiClient.get("/billing/usage");
+  return data;
 }
 
 // Consomme un crédit de message — appelé à chaque envoi de message réussi.
 // Ne fait rien si l'utilisateur a un abonnement actif illimité (Premium).
 export async function incrementUsage() {
-  await delay(100);
-  resolveBillingCycle();
-  if (mockSubscription.planId !== "premium" || mockSubscription.status !== "active") {
-    mockUsage.usedChats += 1;
+  if (USE_MOCKS) {
+    await delay(100);
+    resolveBillingCycle();
+    if (mockSubscription.planId !== "premium" || mockSubscription.status !== "active") {
+      mockUsage.usedChats += 1;
+    }
+    return mockUsage;
   }
-  return mockUsage;
+  const { data } = await apiClient.post("/billing/increment-usage");
+  return data;
 }
 
 // Un seul point de vérité pour savoir si l'envoi de messages doit être
 // bloqué : plan gratuit + crédits épuisés + pas d'abonnement payant actif.
 export async function checkPaywallStatus() {
-  await delay(100);
-  resolveBillingCycle();
-  const hasUnlimitedPlan = mockSubscription.planId === "premium" && mockSubscription.status === "active";
-  const isPayPerUse = mockSubscription.planId === "pay-per-use";
-  const isBlocked = !hasUnlimitedPlan && !isPayPerUse && mockUsage.usedChats >= mockUsage.maxChats;
-  return {
-    isBlocked,
-    usage: mockUsage,
-    // Pratique pour l'affichage d'un compteur en amont (ex: dans le fil de
-    // discussion) sans avoir à réimplémenter la logique de plan illimité.
-    isUnlimited: hasUnlimitedPlan || isPayPerUse,
-    remaining: Math.max(0, mockUsage.maxChats - mockUsage.usedChats),
-  };
+  if (USE_MOCKS) {
+    await delay(100);
+    resolveBillingCycle();
+    const hasUnlimitedPlan = mockSubscription.planId === "premium" && mockSubscription.status === "active";
+    const isPayPerUse = mockSubscription.planId === "pay-per-use";
+    const isBlocked = !hasUnlimitedPlan && !isPayPerUse && mockUsage.usedChats >= mockUsage.maxChats;
+    return {
+      isBlocked,
+      usage: mockUsage,
+      isUnlimited: hasUnlimitedPlan || isPayPerUse,
+      remaining: Math.max(0, mockUsage.maxChats - mockUsage.usedChats),
+    };
+  }
+  try {
+    const { data } = await apiClient.post("/billing/check-paywall");
+    return data;
+  } catch {
+    return { isBlocked: false, usage: { usedChats: 0, maxChats: 50 }, isUnlimited: false, remaining: 50 };
+  }
 }
 
 // Notification intelligente : si le coût cumulé du paiement à l'usage
 // dépasse le prix de l'abonnement Premium, on le signale à l'utilisateur.
 export async function getSmartRecommendation() {
-  await delay(100);
-  const payPerUsePlan = mockPlans.find((p) => p.id === "pay-per-use");
-  const premiumPlan = mockPlans.find((p) => p.id === "premium");
-  if (!payPerUsePlan || !premiumPlan) return null;
+  if (USE_MOCKS) {
+    await delay(100);
+    const payPerUsePlan = mockPlans.find((p) => p.id === "pay-per-use");
+    const premiumPlan = mockPlans.find((p) => p.id === "premium");
+    if (!payPerUsePlan || !premiumPlan) return null;
 
-  const estimatedPayPerUseCost = mockUsage.usedChats * payPerUsePlan.priceValue;
-  const isPremiumCheaper = estimatedPayPerUseCost > premiumPlan.priceValue;
-  const isRelevant = mockSubscription.planId !== "premium" || mockSubscription.status !== "active";
+    const estimatedPayPerUseCost = mockUsage.usedChats * payPerUsePlan.priceValue;
+    const isPremiumCheaper = estimatedPayPerUseCost > premiumPlan.priceValue;
+    const isRelevant = mockSubscription.planId !== "premium" || mockSubscription.status !== "active";
 
-  if (!isPremiumCheaper || !isRelevant) return null;
+    if (!isPremiumCheaper || !isRelevant) return null;
 
-  return {
-    estimatedPayPerUseCost,
-    premiumPrice: premiumPlan.priceValue,
-    savings: estimatedPayPerUseCost - premiumPlan.priceValue,
-    messageCount: mockUsage.usedChats,
-  };
+    return {
+      estimatedPayPerUseCost,
+      premiumPrice: premiumPlan.priceValue,
+      savings: estimatedPayPerUseCost - premiumPlan.priceValue,
+      messageCount: mockUsage.usedChats,
+    };
+  }
+  return null;
 }
 
 export async function getSubscription() {
-  await delay(250);
-  resolveBillingCycle();
-  return mockSubscription;
+  if (USE_MOCKS) {
+    await delay(250);
+    resolveBillingCycle();
+    return mockSubscription;
+  }
+  const { data } = await apiClient.get("/billing/subscription");
+  return data;
 }
 
 export async function cancelSubscription() {
-  await delay(400);
-  mockSubscription.cancelAtPeriodEnd = true;
-  return mockSubscription;
+  if (USE_MOCKS) {
+    await delay(400);
+    mockSubscription.cancelAtPeriodEnd = true;
+    return mockSubscription;
+  }
+  const { data } = await apiClient.post("/billing/cancel-subscription");
+  return data;
 }
 
 export async function reactivateSubscription() {
-  await delay(300);
-  mockSubscription.cancelAtPeriodEnd = false;
-  return mockSubscription;
+  if (USE_MOCKS) {
+    await delay(300);
+    mockSubscription.cancelAtPeriodEnd = false;
+    return mockSubscription;
+  }
+  const { data } = await apiClient.post("/billing/reactivate-subscription");
+  return data;
 }
 
 export async function changePlan(planId) {
-  await delay(400);
-  const plan = mockPlans.find((p) => p.id === planId);
-  if (!plan) throw new Error("Offre introuvable");
-  mockSubscription.planId = plan.id;
-  mockSubscription.planTitle = plan.title;
-  mockSubscription.price = plan.price;
-  mockSubscription.status = "active";
-
-  if (!mockSubscription.usedPlanIds.includes(plan.id)) {
-    mockSubscription.usedPlanIds.push(plan.id);
+  if (USE_MOCKS) {
+    await delay(400);
+    const plan = mockPlans.find((p) => p.id === planId);
+    if (!plan) throw new Error("Offre introuvable");
+    mockSubscription.planId = plan.id;
+    mockSubscription.planTitle = plan.title;
+    mockSubscription.price = plan.price;
+    mockSubscription.status = "active";
+    if (!mockSubscription.usedPlanIds.includes(plan.id)) {
+      mockSubscription.usedPlanIds.push(plan.id);
+    }
+    return mockSubscription;
   }
-  return mockSubscription;
+  const { data } = await apiClient.post("/billing/change-plan", { planId });
+  return data;
 }
 
 export async function getPaymentMethods() {
-  await delay(250);
-  return mockPaymentMethods;
+  if (USE_MOCKS) {
+    await delay(250);
+    return mockPaymentMethods;
+  }
+  const { data } = await apiClient.get("/billing/payment-methods");
+  return data;
 }
 
 export async function addPaymentMethod(method) {
-  await delay(400);
-  const newMethod = { ...method, id: `pm-${Date.now()}`, isDefault: false };
-  mockPaymentMethods.push(newMethod);
-  return newMethod;
+  if (USE_MOCKS) {
+    await delay(400);
+    const newMethod = { ...method, id: `pm-${Date.now()}`, isDefault: false };
+    mockPaymentMethods.push(newMethod);
+    return newMethod;
+  }
+  const { data } = await apiClient.post("/billing/payment-methods", method);
+  return data;
 }
 
 export async function removePaymentMethod(id) {
-  await delay(300);
-  const index = mockPaymentMethods.findIndex((m) => m.id === id);
-  if (index === -1) throw new Error("Moyen de paiement introuvable");
-  mockPaymentMethods.splice(index, 1);
-  return { success: true };
+  if (USE_MOCKS) {
+    await delay(300);
+    const index = mockPaymentMethods.findIndex((m) => m.id === id);
+    if (index === -1) throw new Error("Moyen de paiement introuvable");
+    mockPaymentMethods.splice(index, 1);
+    return { success: true };
+  }
+  const { data } = await apiClient.delete(`/billing/payment-methods/${id}`);
+  return data;
 }
 
 export async function setDefaultPaymentMethod(id) {
-  await delay(300);
-  mockPaymentMethods.forEach((m) => {
-    m.isDefault = m.id === id;
-  });
-  mockSubscription.defaultPaymentMethodId = id;
-  return mockPaymentMethods;
+  if (USE_MOCKS) {
+    await delay(300);
+    mockPaymentMethods.forEach((m) => {
+      m.isDefault = m.id === id;
+    });
+    mockSubscription.defaultPaymentMethodId = id;
+    return mockPaymentMethods;
+  }
+  const { data } = await apiClient.put(`/billing/payment-methods/${id}/default`);
+  return data;
 }

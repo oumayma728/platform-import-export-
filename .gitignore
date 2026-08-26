@@ -1,0 +1,45 @@
+# Test / backups (do not push)
+backend/prisma/dev.db.bak-*
+backend/prisma/book_documents/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+IOvenv/
+venv/
+.venv/
+*.egg-info/
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+
+
+# Uploads
+backend/uploads/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Debug
+*.log
+npm-debug.log*
+
+
+
+# Vite cache
+.vite/

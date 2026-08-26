@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
@@ -12,6 +12,8 @@ export default function LoginPage() {
 
   const [submitError, setSubmitError] = useState(null);
   const [remember, setRemember] = useState(true);
+  const [searchParams] = useSearchParams();
+  const suspendedMessage = searchParams.get("reason") === "suspended";
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -168,6 +170,22 @@ export default function LoginPage() {
             )}
           </div>
 
+          {/* Compte suspendu */}
+          {suspendedMessage && (
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "12px",
+                borderRadius: "10px",
+                background: "#fef2f2",
+                color: "#C22D2D",
+                border: "1px solid #fecaca",
+              }}
+            >
+              Votre compte a été suspendu. Veuillez contacter l'administration.
+            </div>
+          )}
+
           {/* Erreur de connexion */}
           {submitError && (
             <div
@@ -246,6 +264,21 @@ export default function LoginPage() {
   🔐 Se connecter
 </button>
         </form>
+
+        {/* Accès espace admin (identité séparée, spec §4) */}
+        <div style={{ textAlign: "center", marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #eee" }}>
+          <Link
+            to="/admin/login"
+            style={{
+              textDecoration: "none",
+              color: "#6b7280",
+              fontWeight: "600",
+              fontSize: "13px",
+            }}
+          >
+            Espace administrateur →
+          </Link>
+        </div>
 
         {/* Inscription */}
         <p

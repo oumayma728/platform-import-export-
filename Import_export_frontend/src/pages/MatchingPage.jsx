@@ -567,6 +567,35 @@ export default function MatchingPage() {
                       </div>
                     )}
 
+                    {ownerAccount.badges?.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: spacing.sm }}>
+                        {ownerAccount.badges.map((badge) => {
+                          const label =
+                            typeof badge === "string" ? badge : badge.type;
+                          const desc =
+                            typeof badge === "string" ? badge : badge.description;
+                          return (
+                            <span
+                              key={label}
+                              title={desc || label}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.3px",
+                                padding: "3px 10px",
+                                borderRadius: "999px",
+                                background: "#FBF0DC",
+                                color: colors.primary,
+                              }}
+                            >
+                              🏅 {label.replace(/_/g, " ")}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {ownerAccount.description && (
                       <p style={{ margin: 0, color: colors.textPrimary, fontSize: 14, lineHeight: 1.5 }}>
                         {ownerAccount.description}

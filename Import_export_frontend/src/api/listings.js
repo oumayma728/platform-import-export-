@@ -78,11 +78,21 @@ export async function createListing(payload) {
 }
 
 export async function updateListing(id, payload) {
-  await delay(300);
-  const index = mockListings.findIndex((l) => l.id === id);
-  if (index === -1) throw new Error("Annonce introuvable");
-  mockListings[index] = { ...mockListings[index], ...payload };
-  return mockListings[index];
+  if (USE_MOCKS) {
+    await delay(300);
+    const index = mockListings.findIndex((l) => l.id === id);
+    if (index === -1) throw new Error("Annonce introuvable");
+    mockListings[index] = { ...mockListings[index], ...payload };
+    return mockListings[index];
+  }
+  try {
+    const { data } = await apiClient.put(`/listings/${id}`, payload);
+    return data;
+  } catch (err) {
+    throw new Error(
+      err.response?.data?.message || "Impossible de modifier cette annonce."
+    );
+  }
 }
 
 /**
@@ -110,9 +120,17 @@ export async function deleteListing(id) {
   }
 }
 
-// Toutes les annonces du propriétaire, quel que soit leur statut
-// (contrairement au catalogue public qui masque suspendues/clôturées).
 export async function getMyListings() {
-  await delay(300);
-  return mockListings.filter((l) => l.ownerId === CURRENT_USER_ID);
+  if (USE_MOCKS) {
+    await delay(300);
+    return mockListings.filter((l) => l.ownerId === CURRENT_USER_ID);
+  }
+  try {
+    const { data } = await apiClient.get("/listings/mine");
+    return data;
+  } catch (err) {
+    throw new Error(
+      err.response?.data?.message || "Impossible de charger vos annonces."
+    );
+  }
 }

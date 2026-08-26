@@ -6,6 +6,7 @@ export const ROLE_LABEL = {
 // Normalise un rôle (string ou array) en tableau, pour un traitement uniforme.
 export function toRoleArray(role) {
   if (!role) return [];
+  if (role === "both") return ["importer", "exporter"];
   return Array.isArray(role) ? role : [role];
 }
 
