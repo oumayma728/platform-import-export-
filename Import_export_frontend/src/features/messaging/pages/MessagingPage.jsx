@@ -46,6 +46,90 @@ function formatTime(iso) {
   });
 }
 
+
+function resolveMediaUrl(url) {
+  if (!url) return null;
+
+  const value = String(url).trim();
+  if (!value) return null;
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("blob:") ||
+    value.startsWith("data:")
+  ) {
+    return value;
+  }
+
+  const backendBase =
+    import.meta.env.VITE_BACKEND_URL ||
+    "http://127.0.0.1:8000";
+
+  const cleanBase = backendBase.replace(/\/+$/, "");
+  const cleanPath = value.startsWith("/") ? value : `/${value}`;
+
+  return `${cleanBase}${cleanPath}`;
+}
+
+function LogoAvatar({
+  logoUrl,
+  name,
+  size = 28,
+  mine = false,
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [logoUrl]);
+
+  const resolved = resolveMediaUrl(logoUrl);
+  const canShowImage = Boolean(resolved) && !failed;
+
+  return (
+    <div
+      title={name}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        backgroundColor: mine ? "#B8720A" : "#c7d2fe",
+        color: mine ? "#fff" : "#3730a3",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 700,
+        fontSize: Math.max(11, Math.round(size * 0.33)),
+        flexShrink: 0,
+        overflow: "hidden",
+      }}
+    >
+      {canShowImage ? (
+        <img
+          src={resolved}
+          alt={`Logo ${name || "entreprise"}`}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+          onError={(event) => {
+            console.error(
+              "Impossible de charger le logo messagerie :",
+              event.currentTarget.src
+            );
+            setFailed(true);
+          }}
+        />
+      ) : (
+        initials(name || "?")
+      )}
+    </div>
+  );
+}
+
 import { isImageAttachment, getAttachmentUrl } from "../../../utils/attachments";
 
 export default function MessagingPage() {
@@ -137,6 +221,11 @@ export default function MessagingPage() {
             {filteredConversations.map((conv) => {
               const isActive = String(conv.id) === String(id);
               const lastMessage = conv.messages[conv.messages.length - 1];
+              const counterpartLogoUrl =
+                conv.counterpart?.logoUrl ||
+                conv.counterpart?.logo_url ||
+                null;
+
               return (
                 <button
                   key={conv.id}
@@ -160,23 +249,11 @@ export default function MessagingPage() {
                     if (!isActive) e.target.style.backgroundColor = "transparent";
                   }}
                 >
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      backgroundColor: "#c7d2fe",
-                      color: "#3730a3",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {initials(conv.counterpart.name)}
-                  </div>
+                  <LogoAvatar
+                    logoUrl={counterpartLogoUrl}
+                    name={conv.counterpart.name}
+                    size={40}
+                  />
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <p
                       style={{
@@ -267,7 +344,17 @@ export default function MessagingPage() {
 function ConversationThread({ conversation, onRefetch }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const myLogoUrl = user?.profile?.logoUrl || null;
+
+  const myLogoUrl =
+    user?.profile?.logoUrl ||
+    user?.logoUrl ||
+    user?.logo_url ||
+    null;
+
+  const counterpartLogoUrl =
+    conversation.counterpart?.logoUrl ||
+    conversation.counterpart?.logo_url ||
+    null;
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState(null);
   const [attachmentError, setAttachmentError] = useState(null);
@@ -501,33 +588,12 @@ function ConversationThread({ conversation, onRefetch }) {
                 maxWidth: "70%",
               }}
             >
-              <div
-                title={avatarName}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  backgroundColor: isMine ? "#B8720A" : "#c7d2fe",
-                  color: isMine ? "#fff" : "#3730a3",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 700,
-                  fontSize: 11,
-                  flexShrink: 0,
-                  overflow: "hidden",
-                }}
-              >
-                {isMine && myLogoUrl ? (
-                  <img
-                    src={myLogoUrl}
-                    alt=""
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  initials(avatarName)
-                )}
-              </div>
+              <LogoAvatar
+                logoUrl={isMine ? myLogoUrl : counterpartLogoUrl}
+                name={avatarName}
+                size={28}
+                mine={isMine}
+              />
 
               <div>
                 <div

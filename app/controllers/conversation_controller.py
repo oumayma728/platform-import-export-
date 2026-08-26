@@ -214,6 +214,19 @@ def conversation_dict(
             "role": counterpart_role,
             "email": (other_user.email if other_user else None),
             "phone": (other_user.telephone if other_user else None),
+
+            # Logo de l'entreprise / utilisateur pour la messagerie.
+            # On expose les deux conventions pour compatibilité frontend.
+            "logoUrl": (
+                other_user.logo_url
+                if other_user
+                else None
+            ),
+            "logo_url": (
+                other_user.logo_url
+                if other_user
+                else None
+            ),
         },
 
         "messages": [
