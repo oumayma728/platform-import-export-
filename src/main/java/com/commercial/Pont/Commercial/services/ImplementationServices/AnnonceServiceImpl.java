@@ -1,17 +1,21 @@
 package com.commercial.Pont.Commercial.services.ImplementationServices;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.AnnonceRequestDto;
+import com.commercial.Pont.Commercial.dtos.requestDtos.CreateMyAnnonceRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.AnnonceResponseDto;
 import com.commercial.Pont.Commercial.enums.AnnouncementStatus;
 import com.commercial.Pont.Commercial.enums.AnnouncementType;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.AnnonceMapperInterface;
 import com.commercial.Pont.Commercial.models.Annonce;
+import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.AnnonceRepository;
+import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.AnnonceServiceInterface;
 import com.commercial.Pont.Commercial.specifications.AnnonceSpecification;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +30,7 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
 
     private final AnnonceRepository annonceRepository;
     private final AnnonceMapperInterface annonceMapper;
-
+    private final UtilisateurRepository utilisateurRepository;
 
     // =========================
     // CREATE
@@ -50,6 +54,165 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
 
         return annonceMapper.entityToResponse(savedAnnonce);
     }
+
+
+
+
+
+
+    @Override
+    @Transactional
+    public AnnonceResponseDto createMyAnnonce(
+            CreateMyAnnonceRequestDto annonceRequestDto,
+            Authentication authentication
+    ) {
+
+        // =========================
+        // 1. Utilisateur connecté
+        // =========================
+
+        String email = authentication.getName();
+
+        Utilisateur utilisateur =
+                utilisateurRepository
+                        .findByEmail(email)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Utilisateur connecté non trouvé."
+                                )
+                        );
+
+
+        // =========================
+        // 2. Date actuelle
+        // =========================
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        AnnouncementStatus statut =
+                annonceRequestDto.getStatut() != null
+                        ? annonceRequestDto.getStatut()
+                        : AnnouncementStatus.ACTIVE;
+        // =========================
+        // 3. Créer l'annonce
+        // =========================
+
+        Annonce annonce =
+                Annonce.builder()
+                        .titre(
+                                annonceRequestDto.getTitre()
+                        )
+                        .certification(
+                                annonceRequestDto.getCertification()
+                        )
+                        .description(
+                                annonceRequestDto.getDescription()
+                        )
+                        .type(
+                                annonceRequestDto.getType()
+                        )
+                        .prix(
+                                annonceRequestDto.getPrix()
+                        )
+                        .devise(
+                                annonceRequestDto.getDevise()
+                        )
+                        .quantite(
+                                annonceRequestDto.getQuantite()
+                        )
+                        .uniteQuantite(
+                                annonceRequestDto.getUniteQuantite()
+                        )
+                        .dateLimite(
+                                annonceRequestDto.getDateLimite()
+                        )
+                        .statut(
+                                statut
+                        )
+                        .dureeLivraison(
+                                annonceRequestDto.getDureeLivraison()
+                        )
+                        .uniteDureeLivraison(
+                                annonceRequestDto.getUniteDureeLivraison()
+                        )
+                        .publishedAt(
+                                annonceRequestDto.getPublishedAt()
+                        )
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .utilisateur(utilisateur)
+                        .build();
+
+
+        // =========================
+        // 4. Sauvegarder
+        // =========================
+
+        Annonce savedAnnonce =
+                annonceRepository.save(annonce);
+
+
+        // =========================
+        // 5. Construire la réponse
+        // =========================
+
+        AnnonceResponseDto response =
+                AnnonceResponseDto.builder()
+                        .annonceId(
+                                savedAnnonce.getAnnonceId()
+                        )
+                        .titre(
+                                savedAnnonce.getTitre()
+                        )
+                        .certification(
+                                savedAnnonce.getCertification()
+                        )
+                        .description(
+                                savedAnnonce.getDescription()
+                        )
+                        .type(
+                                savedAnnonce.getType()
+                        )
+                        .prix(
+                                savedAnnonce.getPrix()
+                        )
+                        .devise(
+                                savedAnnonce.getDevise()
+                        )
+                        .quantite(
+                                savedAnnonce.getQuantite()
+                        )
+                        .uniteQuantite(
+                                savedAnnonce.getUniteQuantite()
+                        )
+                        .dateLimite(
+                                savedAnnonce.getDateLimite()
+                        )
+                        .statut(
+                                savedAnnonce.getStatut()
+                        )
+                        .dureeLivraison(
+                                savedAnnonce.getDureeLivraison()
+                        )
+                        .uniteDureeLivraison(
+                                savedAnnonce.getUniteDureeLivraison()
+                        )
+                        .createdAt(
+                                savedAnnonce.getCreatedAt()
+                        )
+                        .updatedAt(
+                                savedAnnonce.getUpdatedAt()
+                        )
+                        .publishedAt(
+                                savedAnnonce.getPublishedAt()
+                        )
+                        .build();
+
+
+        return response;
+    }
+
 
 
     // =========================

@@ -1,11 +1,13 @@
 package com.commercial.Pont.Commercial.controllers;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.AnnonceRequestDto;
+import com.commercial.Pont.Commercial.dtos.requestDtos.CreateMyAnnonceRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.AnnonceResponseDto;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.AnnonceServiceInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +33,27 @@ public class AnnonceController {
         AnnonceResponseDto response =
                 annonceService.create(
                         annonceRequestDto
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+
+
+
+
+    @PostMapping("/createMyAnnonce")
+    public ResponseEntity<AnnonceResponseDto> createMyAnnonce(
+            @RequestBody CreateMyAnnonceRequestDto annonceRequestDto,
+            Authentication authentication
+    ) {
+
+        AnnonceResponseDto response =
+                annonceService.createMyAnnonce(
+                        annonceRequestDto,
+                        authentication
                 );
 
         return ResponseEntity

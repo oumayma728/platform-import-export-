@@ -5,7 +5,11 @@ import com.commercial.Pont.Commercial.dtos.responseDtos.PaiementResponseDto;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.PaiementMapperInterface;
 import com.commercial.Pont.Commercial.models.Facturation;
 import com.commercial.Pont.Commercial.models.Paiement;
+import com.commercial.Pont.Commercial.models.PaymentUsage;
+import com.commercial.Pont.Commercial.models.Subscription;
 import com.commercial.Pont.Commercial.repositories.FacturationRepository;
+import com.commercial.Pont.Commercial.repositories.PaymentUsageRepository;
+import com.commercial.Pont.Commercial.repositories.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +21,8 @@ public class PaiementMapperImpl
         implements PaiementMapperInterface {
 
     private final FacturationRepository facturationRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final PaymentUsageRepository paymentUsageRepository;
 
 
     /**
@@ -38,23 +44,6 @@ public class PaiementMapperImpl
             return null;
         }
 
-
-        /*
-         * ========================================================
-         * Récupération de la Facturation
-         * ========================================================
-         */
-        Facturation facturation = null;
-
-        if (paiementRequestDto.getFacturationId() != null) {
-
-            facturation = facturationRepository
-                    .findById(
-                            paiementRequestDto
-                                    .getFacturationId()
-                    )
-                    .orElse(null);
-        }
 
 
         /*
@@ -96,9 +85,6 @@ public class PaiementMapperImpl
                         paiementRequestDto.getUpdatedAt()
                 )
 
-                // Relation avec Facturation
-                .facturation(facturation)
-
                 .build();
     }
 
@@ -123,20 +109,6 @@ public class PaiementMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Extraction de l'ID de la Facturation
-         * ========================================================
-         */
-        UUID facturationId = null;
-
-        if (paiement.getFacturation() != null) {
-
-            facturationId = paiement
-                    .getFacturation()
-                    .getFacturationId();
-        }
-
 
         /*
          * ========================================================
@@ -145,8 +117,6 @@ public class PaiementMapperImpl
          */
         return PaiementRequestDto.builder()
 
-                // ID de la relation
-                .facturationId(facturationId)
 
                 // Informations principales
                 .montant(
@@ -206,13 +176,22 @@ public class PaiementMapperImpl
          * Extraction de l'ID de la Facturation
          * ========================================================
          */
-        UUID facturationId = null;
+        UUID subscriptionId = null;
 
-        if (paiement.getFacturation() != null) {
+        if (paiement.getSubscription() != null) {
 
-            facturationId = paiement
-                    .getFacturation()
-                    .getFacturationId();
+            subscriptionId = paiement
+                    .getSubscription()
+                    .getSubscriptionId();
+        }
+
+        UUID paymentUsageId = null;
+
+        if (paiement.getPaymentUsage() != null) {
+
+            paymentUsageId = paiement
+                    .getPaymentUsage()
+                    .getPaymentUsageId();
         }
 
 
@@ -224,7 +203,8 @@ public class PaiementMapperImpl
         return PaiementResponseDto.builder()
 
                 // ID de la Facturation
-                .facturationId(facturationId)
+                .subscriptionId(subscriptionId)
+                .paymentUsageId(paymentUsageId)
 
                 // ID du Paiement
                 .paiementId(
@@ -289,14 +269,26 @@ public class PaiementMapperImpl
          * Récupération de la Facturation
          * ========================================================
          */
-        Facturation facturation = null;
+        Subscription subscription = null;
 
-        if (paiementResponseDto.getFacturationId() != null) {
+        if (paiementResponseDto.getSubscriptionId() != null) {
 
-            facturation = facturationRepository
+            subscription = subscriptionRepository
                     .findById(
                             paiementResponseDto
-                                    .getFacturationId()
+                                    .getSubscriptionId()
+                    )
+                    .orElse(null);
+        }
+
+        PaymentUsage paymentUsage = null;
+
+        if (paiementResponseDto.getPaymentUsageId() != null) {
+
+            paymentUsage = paymentUsageRepository
+                    .findById(
+                            paiementResponseDto
+                                    .getPaymentUsageId()
                     )
                     .orElse(null);
         }
@@ -348,7 +340,8 @@ public class PaiementMapperImpl
                 )
 
                 // Relation avec Facturation
-                .facturation(facturation)
+                .subscription(subscription)
+                .paymentUsage(paymentUsage)
 
                 .build();
     }

@@ -4,6 +4,7 @@ import com.commercial.Pont.Commercial.enums.FacturationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -15,15 +16,16 @@ import java.util.UUID;
 public class FacturationRequestDto {
 
     private UUID subscriptionId;
-    private UUID conversationId;
+    private UUID utilisateurId;
+    private UUID paymentUsageId;
+
 
     private String numeroFacture;
     private Integer tva;
     private FacturationStatus statut;
     private String methodePaiement;
-    private Double prixFacturation;
+    private BigDecimal prixFacturation;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private List<UUID> paiementIds;
 }

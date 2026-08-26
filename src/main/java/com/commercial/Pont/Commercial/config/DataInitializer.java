@@ -1,6 +1,8 @@
 package com.commercial.Pont.Commercial.config;
 
 import com.commercial.Pont.Commercial.enums.AuthProvider;
+import com.commercial.Pont.Commercial.enums.FacturationStatus;
+import com.commercial.Pont.Commercial.enums.FacturationType;
 import com.commercial.Pont.Commercial.enums.ValidationStatus;
 import com.commercial.Pont.Commercial.models.*;
 import com.commercial.Pont.Commercial.repositories.*;
@@ -10,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,7 +26,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final RoleUtilisateurRepository roleUtilisateurRepository;
     private final UtilisateurRepository utilisateurRepository;
-
+    private final FacturationRepository facturationRepository;
     private final PasswordEncoder passwordEncoder;
 
 
@@ -228,43 +231,58 @@ public class DataInitializer implements CommandLineRunner {
 
         Utilisateur utilisateur =
                 utilisateurRepository
-                        .findByEmail(
-                                "jabbourjamal27@gmail.com"
-                        )
+                        .findByEmail("jabbourjamal27@gmail.com")
                         .orElseGet(() -> {
 
                             String encodedPassword =
-                                    passwordEncoder.encode(
-                                            "jabbour"
+                                    passwordEncoder.encode("jabbour");
+
+                            Utilisateur nouvelUtilisateur =
+                                    utilisateurRepository.save(
+                                            Utilisateur.builder()
+                                                    .email("jabbourjamal27@gmail.com")
+                                                    .passwordHash(encodedPassword)
+                                                    .nom("Jabbour")
+                                                    .prenom("Jamal")
+                                                    .telephone("0607781703")
+                                                    .fonction("Développeur")
+                                                    .validationStatus(
+                                                            ValidationStatus.VALIDE
+                                                    )
+                                                    .nombreChatsUtilises(0)
+                                                    .maxMessagesPossible(50)
+                                                    .entreprise(entreprise)
+                                                    .createdAt(now)
+                                                    .updatedAt(now)
+                                                    .authProvider(
+                                                            AuthProvider.LOCAL
+                                                    )
+                                                    .build()
                                     );
 
-                            return utilisateurRepository.save(
-                                    Utilisateur.builder()
-                                            .email(
-                                                    "jabbourjamal27@gmail.com"
+                            // =========================================
+                            // FACTURATION INITIALE GRATUITE
+                            // =========================================
+
+                            Facturation facturationInitiale =
+                                    Facturation.builder()
+                                            .numeroFacture(
+                                                    "FACT-"+ nouvelUtilisateur.getNom() +"-"+ System.currentTimeMillis()
                                             )
-                                            .passwordHash(
-                                                    encodedPassword
-                                            )
-                                            .nom("Jabbour")
-                                            .prenom("Jamal")
-                                            .telephone("0607781703")
-                                            .fonction("Développeur")
-                                            .validationStatus(
-                                                    ValidationStatus.VALIDE
-                                            )
-                                            .nombreChatsUtilises(0)
-                                            .maxMessagesPossible(50)
-                                            .entreprise(entreprise)
+                                            .tva(20)
+                                            .statut(FacturationStatus.GRATUIT)
+                                            .type(FacturationType.INITIALISATION)
+                                            .methodePaiement("GRATUIT")
+                                            .prixFacturation(BigDecimal.ZERO)
                                             .createdAt(now)
                                             .updatedAt(now)
-                                            .authProvider(
-                                                    AuthProvider.LOCAL
-                                            )
-                                            .build()
-                            );
-                        });
+                                            .utilisateur(nouvelUtilisateur)
+                                            .build();
 
+                            facturationRepository.save(facturationInitiale);
+
+                            return nouvelUtilisateur;
+                        });
 
         // =====================================================
         // 6. ROLE UTILISATEUR

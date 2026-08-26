@@ -4,6 +4,7 @@ import com.commercial.Pont.Commercial.enums.PaiementStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -13,9 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PaiementRequestDto {
 
-    private UUID facturationId;
-
-    private Double montant;
+    private BigDecimal montant;
     private String devise;
     private String stripePaymentIntentId;
     private String stripeChargeId;

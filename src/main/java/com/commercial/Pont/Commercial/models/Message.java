@@ -27,8 +27,6 @@ public class Message {
 
     private LocalDateTime dateLecture;
 
-    private Integer prixMessage;
-
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

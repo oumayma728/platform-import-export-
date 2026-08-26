@@ -100,9 +100,6 @@ public class MessageMapperImpl
                 .dateLecture(
                         messageRequestDto.getDateLecture()
                 )
-                .prixMessage(
-                        messageRequestDto.getPrixMessage()
-                )
                 .createdAt(
                         messageRequestDto.getCreatedAt()
                 )
@@ -192,9 +189,6 @@ public class MessageMapperImpl
                 )
                 .dateLecture(
                         message.getDateLecture()
-                )
-                .prixMessage(
-                        message.getPrixMessage()
                 )
                 .createdAt(
                         message.getCreatedAt()
@@ -286,9 +280,6 @@ public class MessageMapperImpl
                 )
                 .dateLecture(
                         message.getDateLecture()
-                )
-                .prixMessage(
-                        message.getPrixMessage()
                 )
                 .createdAt(
                         message.getCreatedAt()
@@ -382,9 +373,6 @@ public class MessageMapperImpl
                 )
                 .dateLecture(
                         messageResponseDto.getDateLecture()
-                )
-                .prixMessage(
-                        messageResponseDto.getPrixMessage()
                 )
                 .createdAt(
                         messageResponseDto.getCreatedAt()

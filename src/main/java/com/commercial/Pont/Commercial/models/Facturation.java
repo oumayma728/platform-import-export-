@@ -1,6 +1,7 @@
 package com.commercial.Pont.Commercial.models;
 
 import com.commercial.Pont.Commercial.enums.FacturationStatus;
+import com.commercial.Pont.Commercial.enums.FacturationType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,9 +29,12 @@ public class Facturation {
     @Enumerated(EnumType.STRING)
     private FacturationStatus statut;
 
+    @Enumerated(EnumType.STRING)
+    private FacturationType type;
+
     private String methodePaiement;
 
-    private Double prixFacturation;
+    private BigDecimal prixFacturation;
 
 
     private LocalDateTime createdAt;
@@ -38,16 +42,18 @@ public class Facturation {
     private LocalDateTime updatedAt;
 
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "utilisateurId", nullable = false)
+    private Utilisateur utilisateur;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscriptionId")
     private Subscription subscription;
 
-
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conversationId")
-    private Conversation conversation;
+    @JoinColumn(name = "paymentUsageId", unique = true)
+    private PaymentUsage paymentUsage;
 
-    @OneToMany(mappedBy = "facturation")
-    private List<Paiement> paiements;
+
 
 }

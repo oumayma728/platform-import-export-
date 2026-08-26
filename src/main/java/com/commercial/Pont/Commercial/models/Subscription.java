@@ -20,17 +20,23 @@ public class Subscription {
     private UUID subscriptionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "utilisateurId")
+    @JoinColumn(name = "utilisateurId", nullable = false)
     private Utilisateur utilisateur;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "abonnementId")
+    @JoinColumn(name = "abonnementId", nullable = false)
     private Abonnement abonnement;
 
     private LocalDateTime dateDebut;
 
     private LocalDateTime dateFin;
 
+    private String stripePaymentIntentId;
+
     @OneToOne(mappedBy = "subscription", fetch = FetchType.LAZY)
     private Facturation facturation;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paiementId", nullable = false)
+    private Paiement paiement;
 }

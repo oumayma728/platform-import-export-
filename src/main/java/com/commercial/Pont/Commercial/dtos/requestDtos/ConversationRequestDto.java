@@ -1,6 +1,7 @@
 package com.commercial.Pont.Commercial.dtos.requestDtos;
 
 import com.commercial.Pont.Commercial.enums.ConversationStatus;
+import com.commercial.Pont.Commercial.models.Facturation;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,7 +18,7 @@ public class ConversationRequestDto {
     private UUID initiateurId;
     private UUID destinataireId;
     private UUID annonceId;
-    private UUID facturationId;
+
 
     private ConversationStatus statut;
     private LocalDateTime dateDernierMessage;

@@ -1,7 +1,9 @@
 package com.commercial.Pont.Commercial.services.ServiceInterfaces;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.AnnonceRequestDto;
+import com.commercial.Pont.Commercial.dtos.requestDtos.CreateMyAnnonceRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.AnnonceResponseDto;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.UUID;
@@ -9,6 +11,11 @@ import java.util.UUID;
 public interface AnnonceServiceInterface {
 
     AnnonceResponseDto create(AnnonceRequestDto annonceRequestDto);
+
+    AnnonceResponseDto createMyAnnonce(
+            CreateMyAnnonceRequestDto annonceRequestDto,
+            Authentication authentication
+    );
 
     AnnonceResponseDto update(
             UUID annonceId,

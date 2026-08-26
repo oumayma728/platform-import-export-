@@ -20,7 +20,7 @@ public class Paiement {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID paiementId;
 
-    private Double montant;
+    private BigDecimal montant;
 
     private String devise;
 
@@ -39,8 +39,11 @@ public class Paiement {
 
     private LocalDateTime updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "facturationId")
-    private Facturation facturation;
+
+    @OneToOne(mappedBy = "paiement", fetch = FetchType.LAZY)
+    private PaymentUsage paymentUsage;
+
+    @OneToOne(mappedBy = "paiement", fetch = FetchType.LAZY)
+    private Subscription subscription;
 
 }

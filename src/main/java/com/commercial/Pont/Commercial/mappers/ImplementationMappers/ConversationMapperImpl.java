@@ -102,21 +102,6 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Récupération de la Facturation
-         * ========================================================
-         */
-        Facturation facturation = null;
-
-        if (conversationRequestDto.getFacturationId() != null) {
-
-            facturation = facturationRepository
-                    .findById(conversationRequestDto.getFacturationId())
-                    .orElse(null);
-        }
-
-
-        /*
-         * ========================================================
          * Récupération des Messages
          * ========================================================
          */
@@ -169,8 +154,6 @@ public class ConversationMapperImpl
                 .initiateur(initiateur)
                 .destinataire(destinataire)
                 .annonce(annonce)
-                .facturation(facturation)
-
                 // Relations OneToMany
                 .messages(messages)
                 .documentConversations(documentConversations)
@@ -243,20 +226,6 @@ public class ConversationMapperImpl
 
         /*
          * ========================================================
-         * Extraction de l'ID de la Facturation
-         * ========================================================
-         */
-        UUID facturationId = null;
-
-        if (conversation.getFacturation() != null) {
-
-            facturationId = conversation.getFacturation()
-                    .getFacturationId();
-        }
-
-
-        /*
-         * ========================================================
          * Extraction des IDs des Messages
          * ========================================================
          */
@@ -303,7 +272,6 @@ public class ConversationMapperImpl
                 .initiateurId(initiateurId)
                 .destinataireId(destinataireId)
                 .annonceId(annonceId)
-                .facturationId(facturationId)
 
                 // Informations principales
                 .statut(conversation.getStatut())
@@ -383,19 +351,6 @@ public class ConversationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Extraction de l'ID de la Facturation
-         * ========================================================
-         */
-        UUID facturationId = null;
-
-        if (conversation.getFacturation() != null) {
-
-            facturationId = conversation.getFacturation()
-                    .getFacturationId();
-        }
-
 
         /*
          * ========================================================
@@ -445,7 +400,6 @@ public class ConversationMapperImpl
                 .initiateurId(initiateurId)
                 .destinataireId(destinataireId)
                 .annonceId(annonceId)
-                .facturationId(facturationId)
 
                 // ID de la Conversation
                 .conversationId(
@@ -548,22 +502,6 @@ public class ConversationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Récupération de la Facturation
-         * ========================================================
-         */
-        Facturation facturation = null;
-
-        if (conversationResponseDto.getFacturationId() != null) {
-
-            facturation = facturationRepository
-                    .findById(
-                            conversationResponseDto.getFacturationId()
-                    )
-                    .orElse(null);
-        }
-
 
         /*
          * ========================================================
@@ -641,8 +579,6 @@ public class ConversationMapperImpl
                 .initiateur(initiateur)
                 .destinataire(destinataire)
                 .annonce(annonce)
-                .facturation(facturation)
-
                 // Relations OneToMany
                 .messages(messages)
                 .documentConversations(

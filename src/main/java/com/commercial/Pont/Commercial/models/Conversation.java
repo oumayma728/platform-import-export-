@@ -47,9 +47,6 @@ public class Conversation {
     @JoinColumn(name = "annonceId")
     private Annonce annonce;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "facturationId")
-    private Facturation facturation;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DocumentConversation> documentConversations;

@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -22,7 +23,8 @@ public class AbonnementResponseDto {
     private String nom;
     private AbonnementType typeAbonnement;
     private Integer dureeEnMois;
-    private Double prixAbonnement;
+    private BigDecimal montant;
+    private String devise;
     private AbonnementStatus statut;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

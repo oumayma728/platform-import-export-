@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -15,10 +16,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PaiementResponseDto {
 
-    private UUID facturationId;
+    private UUID paymentUsageId;
+    private UUID subscriptionId;
 
     private UUID paiementId;
-    private Double montant;
+    private BigDecimal montant;
     private String devise;
     private String stripePaymentIntentId;
     private String stripeChargeId;

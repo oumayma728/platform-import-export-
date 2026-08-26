@@ -1,22 +1,48 @@
 package com.commercial.Pont.Commercial.controllers;
 
+import com.commercial.Pont.Commercial.dtos.requestDtos.CreateSubscriptionRequestDto;
 import com.commercial.Pont.Commercial.dtos.requestDtos.SubscriptionRequestDto;
+import com.commercial.Pont.Commercial.dtos.responseDtos.CreateSubscriptionResponseDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.SubscriptionResponseDto;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.SubscriptionServiceInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/subscriptions")
+@RequestMapping("/subscriptions")
 @RequiredArgsConstructor
 public class SubscriptionController {
 
     private final SubscriptionServiceInterface subscriptionService;
+
+
+
+    @PostMapping("/create-payment")
+    public ResponseEntity<CreateSubscriptionResponseDto>
+    createSubscriptionPayment(
+            @RequestBody
+            CreateSubscriptionRequestDto request,
+
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                subscriptionService
+                        .creerPaiementSubscription(
+                                request.getAbonnementId(),
+                                authentication
+                        )
+        );
+    }
+
+
+
 
     @PostMapping
     public ResponseEntity<SubscriptionResponseDto> create(

@@ -23,6 +23,7 @@ public class Utilisateur {
     private UUID utilisateurId;
 
 
+    private String stripeCustomerId;
     @Column(unique = true)
     private String email;
 
@@ -83,6 +84,12 @@ public class Utilisateur {
 
     @OneToMany(mappedBy = "utilisateur")
     private List<Notification> notifications;
+
+    @OneToMany(mappedBy = "utilisateur")
+    private List<PaymentUsage> paymentUsages;
+
+    @OneToMany(mappedBy = "utilisateur")
+    private List<Facturation> facturations;
 
     @OneToMany(mappedBy = "utilisateur")
     private Set<RoleUtilisateur> roles;

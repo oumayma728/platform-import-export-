@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -204,5 +205,21 @@ public class DocumentConversationController {
         return ResponseEntity
                 .noContent()
                 .build();
+    }
+
+
+
+    @PatchMapping("/{documentConversationId}/read")
+    public ResponseEntity<DocumentConversationResponseDto> markAsRead(
+            @PathVariable UUID documentConversationId,
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                documentConversationService.markAsRead(
+                        documentConversationId,
+                        authentication
+                )
+        );
     }
 }

@@ -19,7 +19,6 @@ public class MessageRequestDto {
     private Boolean estLu;
     private LocalDateTime dateEnvoi;
     private LocalDateTime dateLecture;
-    private Integer prixMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

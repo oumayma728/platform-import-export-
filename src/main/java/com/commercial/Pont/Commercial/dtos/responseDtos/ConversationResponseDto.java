@@ -19,7 +19,6 @@ public class ConversationResponseDto {
     private UUID initiateurId;
     private UUID destinataireId;
     private UUID annonceId;
-    private UUID facturationId;
 
     private UUID conversationId;
     private ConversationStatus statut;
@@ -27,6 +26,7 @@ public class ConversationResponseDto {
     private Integer nombreMessages;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
 
     private List<UUID> messagesIds;
     private List<UUID> documentConversationsIds;

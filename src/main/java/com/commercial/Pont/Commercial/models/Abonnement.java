@@ -6,6 +6,7 @@ import com.commercial.Pont.Commercial.enums.AbonnementType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +30,10 @@ public class Abonnement {
 
     private Integer dureeEnMois;
 
-    private Double prixAbonnement;
+    private BigDecimal montant;
+
+    @Column(nullable = false)
+    private String devise;
 
     @Enumerated(EnumType.STRING)
     private AbonnementStatus statut;

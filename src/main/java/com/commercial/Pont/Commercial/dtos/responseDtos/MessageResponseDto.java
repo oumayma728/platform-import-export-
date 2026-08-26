@@ -22,7 +22,6 @@ public class MessageResponseDto {
     private Boolean estLu = false;
     private LocalDateTime dateEnvoi;
     private LocalDateTime dateLecture;
-    private Integer prixMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

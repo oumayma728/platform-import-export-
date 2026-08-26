@@ -3,9 +3,7 @@ package com.commercial.Pont.Commercial.services.ImplementationServices;
 import com.commercial.Pont.Commercial.dtos.requestDtos.PaiementRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.PaiementResponseDto;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.PaiementMapperInterface;
-import com.commercial.Pont.Commercial.models.Facturation;
 import com.commercial.Pont.Commercial.models.Paiement;
-import com.commercial.Pont.Commercial.repositories.FacturationRepository;
 import com.commercial.Pont.Commercial.repositories.PaiementRepository;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.PaiementServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
@@ -26,7 +24,6 @@ public class PaiementServiceImpl implements PaiementServiceInterface {
 
     private final PaiementMapperInterface paiementMapper;
 
-    private final FacturationRepository facturationRepository;
 
 
     // =========================
@@ -42,34 +39,6 @@ public class PaiementServiceImpl implements PaiementServiceInterface {
                 paiementMapper.requestToEntity(
                         paiementRequestDto
                 );
-
-
-        // =========================
-        // Recherche de la facturation
-        // =========================
-
-        Facturation facturation =
-                facturationRepository.findById(
-                                paiementRequestDto
-                                        .getFacturationId()
-                        )
-                        .orElseThrow(() ->
-                                new EntityNotFoundException(
-                                        "Facturation non trouvée avec l'id : "
-                                                + paiementRequestDto
-                                                .getFacturationId()
-                                )
-                        );
-
-
-        // =========================
-        // Association
-        // =========================
-
-        paiement.setFacturation(
-                facturation
-        );
-
 
         // =========================
         // Gestion des dates
@@ -175,44 +144,6 @@ public class PaiementServiceImpl implements PaiementServiceInterface {
                         .getMessageErreur()
         );
 
-
-        // =========================
-        // Mise à jour de la facturation
-        // =========================
-
-        if (
-                paiementRequestDto.getFacturationId() != null
-                        &&
-                        (
-                                existingPaiement.getFacturation() == null
-                                        ||
-                                        !paiementRequestDto
-                                                .getFacturationId()
-                                                .equals(
-                                                        existingPaiement
-                                                                .getFacturation()
-                                                                .getFacturationId()
-                                                )
-                        )
-        ) {
-
-            Facturation facturation =
-                    facturationRepository.findById(
-                                    paiementRequestDto
-                                            .getFacturationId()
-                            )
-                            .orElseThrow(() ->
-                                    new EntityNotFoundException(
-                                            "Facturation non trouvée avec l'id : "
-                                                    + paiementRequestDto
-                                                    .getFacturationId()
-                                    )
-                            );
-
-            existingPaiement.setFacturation(
-                    facturation
-            );
-        }
 
 
         // =========================

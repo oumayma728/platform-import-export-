@@ -2,6 +2,7 @@ package com.commercial.Pont.Commercial.services.ServiceInterfaces;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.DocumentConversationRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.DocumentConversationResponseDto;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -42,5 +43,11 @@ public interface DocumentConversationServiceInterface {
     void deleteDocumentFromConversation(
             UUID conversationId,
             UUID documentConversationId
+    );
+
+
+    DocumentConversationResponseDto markAsRead(
+            UUID documentConversationId,
+            Authentication authentication
     );
 }

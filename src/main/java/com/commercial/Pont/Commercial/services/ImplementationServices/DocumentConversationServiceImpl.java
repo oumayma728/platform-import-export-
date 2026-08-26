@@ -15,6 +15,7 @@ import com.commercial.Pont.Commercial.services.FileStorageService;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.DocumentConversationServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -123,6 +124,12 @@ public class DocumentConversationServiceImpl
                 now
         );
 
+        documentConversation.setEstLu(
+                false
+        );
+        documentConversation.setDateLecture(
+                null
+        );
 
         DocumentConversation savedDocumentConversation =
                 documentConversationRepository.save(
@@ -539,6 +546,10 @@ public class DocumentConversationServiceImpl
 
                         .taille(taille)
 
+                        .estLu(false)
+
+                        .dateLecture(null)
+
                         .createdAt(now)
 
                         .updatedAt(now)
@@ -849,5 +860,133 @@ public class DocumentConversationServiceImpl
                 documentConversation
         );
 
+    }
+
+
+
+
+
+
+
+    @Override
+    public DocumentConversationResponseDto markAsRead(
+            UUID documentConversationId,
+            Authentication authentication
+    ) {
+
+        String email = authentication.getName();
+
+        Utilisateur utilisateur =
+                utilisateurRepository
+                        .findByEmail(email)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Utilisateur connecté non trouvé."
+                                )
+                        );
+
+        DocumentConversation document =
+                documentConversationRepository
+                        .findById(documentConversationId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Document non trouvé."
+                                )
+                        );
+
+        Conversation conversation =
+                document.getConversation();
+
+
+        // =========================
+        // Vérifier le participant
+        // =========================
+
+        boolean participant =
+                conversation.getInitiateur()
+                        .getUtilisateurId()
+                        .equals(
+                                utilisateur.getUtilisateurId()
+                        )
+                        ||
+                        conversation.getDestinataire()
+                                .getUtilisateurId()
+                                .equals(
+                                        utilisateur.getUtilisateurId()
+                                );
+
+        if (!participant) {
+
+            throw new AccessDeniedException(
+                    "Vous ne participez pas à cette conversation."
+            );
+        }
+
+
+        // =========================
+        // L'expéditeur ne peut pas
+        // marquer son propre document
+        // comme lu
+        // =========================
+
+        if (document.getExpediteur()
+                .getUtilisateurId()
+                .equals(
+                        utilisateur.getUtilisateurId()
+                )) {
+
+            throw new IllegalStateException(
+                    "Vous ne pouvez pas marquer votre propre document comme lu."
+            );
+        }
+
+
+        // =========================
+        // Lecture
+        // =========================
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+        document.setEstLu(true);
+
+        document.setDateLecture(now);
+
+        document.setUpdatedAt(now);
+
+
+        DocumentConversation savedDocument =
+                documentConversationRepository.save(
+                        document
+                );
+
+
+        DocumentConversationResponseDto response =
+                documentConversationMapper.entityToResponse(
+                        savedDocument
+                );
+
+
+        // =========================
+        // WebSocket
+        // =========================
+
+        ConversationEventDto event =
+                ConversationEventDto.builder()
+                        .type("DOCUMENT_READ")
+                        .conversationId(
+                                conversation.getConversationId()
+                        )
+                        .data(response)
+                        .build();
+
+        messagingTemplate.convertAndSend(
+                "/topic/conversations/"
+                        + conversation.getConversationId(),
+                event
+        );
+
+
+        return response;
     }
 }

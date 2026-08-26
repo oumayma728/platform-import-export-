@@ -51,9 +51,7 @@ public class AbonnementServiceImpl implements AbonnementServiceInterface {
         existingAbonnement.setDureeEnMois(
                 abonnementRequestDto.getDureeEnMois()
         );
-        existingAbonnement.setPrixAbonnement(
-                abonnementRequestDto.getPrixAbonnement()
-        );
+
         existingAbonnement.setStatut(
                 abonnementRequestDto.getStatut()
         );

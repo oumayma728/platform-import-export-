@@ -22,6 +22,8 @@ public class DocumentConversationResponseDto {
     private String cheminFichier;
     private String extension;
     private Long taille;
+    private Boolean estLu;
+    private LocalDateTime dateLecture;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

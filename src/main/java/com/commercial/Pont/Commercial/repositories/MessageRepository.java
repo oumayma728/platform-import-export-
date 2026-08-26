@@ -2,6 +2,7 @@ package com.commercial.Pont.Commercial.repositories;
 
 import com.commercial.Pont.Commercial.models.Conversation;
 import com.commercial.Pont.Commercial.models.Message;
+import com.commercial.Pont.Commercial.models.Utilisateur;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,5 +19,19 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
 
     List<Message>  findByConversationOrderByDateEnvoiAsc(
             Conversation conversation
+    );
+
+
+    List<Message> findByConversation_ConversationIdAndEstLuTrueOrderByDateEnvoiAsc(
+            UUID conversationId
+    );
+
+    List<Message> findByConversation_ConversationIdAndEstLuFalseOrderByDateEnvoiAsc(
+            UUID conversationId
+    );
+
+    List<Message>  findByConversation_ConversationIdAndEstLuFalseAndUtilisateurNotOrderByDateEnvoiAsc(
+            UUID conversationId,
+            Utilisateur utilisateur
     );
 }

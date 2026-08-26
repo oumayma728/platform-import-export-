@@ -18,6 +18,7 @@ public class SubscriptionResponseDto {
     private UUID utilisateurId;
     private UUID facturationId;
     private UUID abonnementId;
+    private UUID paiementId;
 
     private UUID subscriptionId;
     private LocalDateTime dateDebut;

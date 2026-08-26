@@ -27,6 +27,10 @@ public class DocumentConversation {
 
     private Long taille;
 
+    private Boolean estLu;
+
+    private LocalDateTime dateLecture;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

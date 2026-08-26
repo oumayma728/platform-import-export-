@@ -3,12 +3,10 @@ package com.commercial.Pont.Commercial.mappers.ImplementationMappers;
 import com.commercial.Pont.Commercial.dtos.requestDtos.SubscriptionRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.SubscriptionResponseDto;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.SubscriptionMapperInterface;
-import com.commercial.Pont.Commercial.models.Abonnement;
-import com.commercial.Pont.Commercial.models.Facturation;
-import com.commercial.Pont.Commercial.models.Subscription;
-import com.commercial.Pont.Commercial.models.Utilisateur;
+import com.commercial.Pont.Commercial.models.*;
 import com.commercial.Pont.Commercial.repositories.AbonnementRepository;
 import com.commercial.Pont.Commercial.repositories.FacturationRepository;
+import com.commercial.Pont.Commercial.repositories.PaiementRepository;
 import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -25,6 +23,10 @@ public class SubscriptionMapperImpl
     private final AbonnementRepository abonnementRepository;
 
     private final FacturationRepository facturationRepository;
+
+    private final PaiementRepository paiementRepository;
+
+
 
 
     /**
@@ -102,6 +104,18 @@ public class SubscriptionMapperImpl
                     .orElse(null);
         }
 
+        Paiement paiement = null;
+
+        if (subscriptionRequestDto.getPaiementId() != null) {
+
+            paiement = paiementRepository
+                    .findById(
+                            subscriptionRequestDto
+                                    .getPaiementId()
+                    )
+                    .orElse(null);
+        }
+
 
         /*
          * ========================================================
@@ -114,6 +128,7 @@ public class SubscriptionMapperImpl
                 .utilisateur(utilisateur)
                 .abonnement(abonnement)
                 .facturation(facturation)
+                .paiement(paiement)
 
                 // Informations principales
                 .dateDebut(
@@ -194,6 +209,14 @@ public class SubscriptionMapperImpl
                     .getFacturation()
                     .getFacturationId();
         }
+        UUID paiementId = null;
+
+        if (subscription.getPaiement() != null) {
+
+            paiementId = subscription
+                    .getPaiement()
+                    .getPaiementId();
+        }
 
 
         /*
@@ -207,7 +230,7 @@ public class SubscriptionMapperImpl
                 .utilisateurId(utilisateurId)
                 .abonnementId(abonnementId)
                 .facturationId(facturationId)
-
+                .paiementId(paiementId)
                 // Informations principales
                 .dateDebut(
                         subscription.getDateDebut()
@@ -286,6 +309,15 @@ public class SubscriptionMapperImpl
                     .getFacturationId();
         }
 
+        UUID paiementId = null;
+
+        if (subscription.getPaiement()!= null) {
+
+            paiementId = subscription
+                    .getPaiement()
+                    .getPaiementId();
+        }
+
 
         /*
          * ========================================================
@@ -298,6 +330,7 @@ public class SubscriptionMapperImpl
                 .utilisateurId(utilisateurId)
                 .abonnementId(abonnementId)
                 .facturationId(facturationId)
+                .paiementId(paiementId)
 
                 // ID de la Subscription
                 .subscriptionId(
@@ -390,6 +423,17 @@ public class SubscriptionMapperImpl
                     )
                     .orElse(null);
         }
+        Paiement paiement = null;
+
+        if (subscriptionResponseDto.getPaiementId() != null) {
+
+            paiement = paiementRepository
+                    .findById(
+                            subscriptionResponseDto
+                                    .getPaiementId()
+                    )
+                    .orElse(null);
+        }
 
 
         /*
@@ -409,7 +453,7 @@ public class SubscriptionMapperImpl
                 .utilisateur(utilisateur)
                 .abonnement(abonnement)
                 .facturation(facturation)
-
+                .paiement(paiement)
                 // Informations principales
                 .dateDebut(
                         subscriptionResponseDto

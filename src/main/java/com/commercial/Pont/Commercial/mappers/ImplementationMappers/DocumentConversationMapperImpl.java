@@ -282,6 +282,12 @@ public class DocumentConversationMapperImpl
                 .taille(
                         documentConversation.getTaille()
                 )
+                .estLu(
+                        documentConversation.getEstLu()
+                )
+                .dateLecture(
+                        documentConversation.getDateLecture()
+                )
                 .createdAt(
                         documentConversation.getCreatedAt()
                 )
@@ -379,6 +385,14 @@ public class DocumentConversationMapperImpl
                 .taille(
                         documentConversationResponseDto
                                 .getTaille()
+                )
+                .estLu(
+                        documentConversationResponseDto
+                                .getEstLu()
+                )
+                .dateLecture(
+                        documentConversationResponseDto
+                                .getDateLecture()
                 )
                 .createdAt(
                         documentConversationResponseDto

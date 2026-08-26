@@ -3,13 +3,8 @@ package com.commercial.Pont.Commercial.mappers.ImplementationMappers;
 import com.commercial.Pont.Commercial.dtos.requestDtos.FacturationRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.FacturationResponseDto;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.FacturationMapperInterface;
-import com.commercial.Pont.Commercial.models.Conversation;
-import com.commercial.Pont.Commercial.models.Facturation;
-import com.commercial.Pont.Commercial.models.Paiement;
-import com.commercial.Pont.Commercial.models.Subscription;
-import com.commercial.Pont.Commercial.repositories.ConversationRepository;
-import com.commercial.Pont.Commercial.repositories.PaiementRepository;
-import com.commercial.Pont.Commercial.repositories.SubscriptionRepository;
+import com.commercial.Pont.Commercial.models.*;
+import com.commercial.Pont.Commercial.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +23,12 @@ public class FacturationMapperImpl
     private final ConversationRepository conversationRepository;
 
     private final PaiementRepository paiementRepository;
+
+    private final UtilisateurRepository utilisateurRepository;
+
+    private final PaymentUsageRepository paymentUsageRepository;
+
+
 
 
     /**
@@ -70,42 +71,31 @@ public class FacturationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Récupération de la Conversation
-         * ========================================================
-         */
-        Conversation conversation = null;
 
-        if (facturationRequestDto.getConversationId() != null) {
+        Utilisateur utilisateur = null;
 
-            conversation = conversationRepository
+        if (facturationRequestDto.getUtilisateurId() != null) {
+
+            utilisateur = utilisateurRepository
                     .findById(
                             facturationRequestDto
-                                    .getConversationId()
+                                    .getUtilisateurId()
                     )
                     .orElse(null);
         }
 
 
-        /*
-         * ========================================================
-         * Récupération des Paiements
-         * ========================================================
-         */
-        List<Paiement> paiements =
-                Collections.emptyList();
+        PaymentUsage paymentUsage = null;
 
-        if (facturationRequestDto.getPaiementIds() != null
-                && !facturationRequestDto
-                .getPaiementIds()
-                .isEmpty()) {
+        if (facturationRequestDto.getPaymentUsageId() != null) {
 
-            paiements = paiementRepository.findAllById(
-                    facturationRequestDto.getPaiementIds()
-            );
+            paymentUsage = paymentUsageRepository
+                    .findById(
+                            facturationRequestDto
+                                    .getPaymentUsageId()
+                    )
+                    .orElse(null);
         }
-
 
         /*
          * ========================================================
@@ -121,6 +111,8 @@ public class FacturationMapperImpl
                 .tva(
                         facturationRequestDto.getTva()
                 )
+                .paymentUsage(paymentUsage)
+                .utilisateur(utilisateur)
                 .statut(
                         facturationRequestDto.getStatut()
                 )
@@ -139,10 +131,6 @@ public class FacturationMapperImpl
 
                 // Relations OneToOne
                 .subscription(subscription)
-                .conversation(conversation)
-
-                // Relation OneToMany
-                .paiements(paiements)
 
                 .build();
     }
@@ -185,37 +173,6 @@ public class FacturationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Extraction de l'ID de la Conversation
-         * ========================================================
-         */
-        UUID conversationId = null;
-
-        if (facturation.getConversation() != null) {
-
-            conversationId = facturation
-                    .getConversation()
-                    .getConversationId();
-        }
-
-
-        /*
-         * ========================================================
-         * Extraction des IDs des Paiements
-         * ========================================================
-         */
-        List<UUID> paiementIds =
-                Collections.emptyList();
-
-        if (facturation.getPaiements() != null) {
-
-            paiementIds = facturation
-                    .getPaiements()
-                    .stream()
-                    .map(Paiement::getPaiementId)
-                    .collect(Collectors.toList());
-        }
 
 
         /*
@@ -227,11 +184,14 @@ public class FacturationMapperImpl
 
                 // IDs des relations
                 .subscriptionId(subscriptionId)
-                .conversationId(conversationId)
 
                 // Informations principales
                 .numeroFacture(
                         facturation.getNumeroFacture()
+                )
+                .paymentUsageId(facturation.getPaymentUsage().getPaymentUsageId())
+                .utilisateurId(
+                        facturation.getUtilisateur().getUtilisateurId()
                 )
                 .tva(
                         facturation.getTva()
@@ -251,9 +211,6 @@ public class FacturationMapperImpl
                 .updatedAt(
                         facturation.getUpdatedAt()
                 )
-
-                // IDs des paiements
-                .paiementIds(paiementIds)
 
                 .build();
     }
@@ -296,37 +253,6 @@ public class FacturationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Extraction de l'ID de la Conversation
-         * ========================================================
-         */
-        UUID conversationId = null;
-
-        if (facturation.getConversation() != null) {
-
-            conversationId = facturation
-                    .getConversation()
-                    .getConversationId();
-        }
-
-
-        /*
-         * ========================================================
-         * Extraction des IDs des Paiements
-         * ========================================================
-         */
-        List<UUID> paiementIds =
-                Collections.emptyList();
-
-        if (facturation.getPaiements() != null) {
-
-            paiementIds = facturation
-                    .getPaiements()
-                    .stream()
-                    .map(Paiement::getPaiementId)
-                    .collect(Collectors.toList());
-        }
 
 
         /*
@@ -338,11 +264,16 @@ public class FacturationMapperImpl
 
                 // IDs des relations
                 .subscriptionId(subscriptionId)
-                .conversationId(conversationId)
 
                 // ID de la Facturation
                 .facturationId(
                         facturation.getFacturationId()
+                )
+                .utilisateurId(
+                        facturation.getUtilisateur().getUtilisateurId()
+                )
+                .paymentUsageId(
+                        facturation.getPaymentUsage().getPaymentUsageId()
                 )
 
                 // Informations principales
@@ -367,9 +298,6 @@ public class FacturationMapperImpl
                 .updatedAt(
                         facturation.getUpdatedAt()
                 )
-
-                // IDs des paiements
-                .paiementIds(paiementIds)
 
                 .build();
     }
@@ -415,41 +343,32 @@ public class FacturationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Récupération de la Conversation
-         * ========================================================
-         */
-        Conversation conversation = null;
+        Utilisateur utilisateur = null;
 
-        if (facturationResponseDto.getConversationId() != null) {
+        if (facturationResponseDto.getUtilisateurId() != null) {
 
-            conversation = conversationRepository
+            utilisateur = utilisateurRepository
                     .findById(
                             facturationResponseDto
-                                    .getConversationId()
+                                    .getUtilisateurId()
                     )
                     .orElse(null);
         }
 
 
-        /*
-         * ========================================================
-         * Récupération des Paiements
-         * ========================================================
-         */
-        List<Paiement> paiements =
-                Collections.emptyList();
+        PaymentUsage paymentUsage = null;
 
-        if (facturationResponseDto.getPaiementIds() != null
-                && !facturationResponseDto
-                .getPaiementIds()
-                .isEmpty()) {
+        if (facturationResponseDto.getPaymentUsageId() != null) {
 
-            paiements = paiementRepository.findAllById(
-                    facturationResponseDto.getPaiementIds()
-            );
+            paymentUsage = paymentUsageRepository
+                    .findById(
+                            facturationResponseDto
+                                    .getPaymentUsageId()
+                    )
+                    .orElse(null);
         }
+
+
 
 
         /*
@@ -469,6 +388,12 @@ public class FacturationMapperImpl
                 .numeroFacture(
                         facturationResponseDto
                                 .getNumeroFacture()
+                )
+                .utilisateur(
+                        utilisateur
+                )
+                .paymentUsage(
+                        paymentUsage
                 )
                 .tva(
                         facturationResponseDto.getTva()
@@ -493,10 +418,6 @@ public class FacturationMapperImpl
 
                 // Relations OneToOne
                 .subscription(subscription)
-                .conversation(conversation)
-
-                // Relation OneToMany
-                .paiements(paiements)
 
                 .build();
     }

@@ -1,11 +1,13 @@
 package com.commercial.Pont.Commercial.controllers;
 
+import com.commercial.Pont.Commercial.dtos.requestDtos.CreateMessageRequestDto;
 import com.commercial.Pont.Commercial.dtos.requestDtos.MessageRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.MessageResponseDto;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.MessageServiceInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +34,77 @@ public class MessageController {
                 .status(HttpStatus.CREATED)
                 .body(response);
     }
+
+
+    @PostMapping("/createMyMessage")
+    public ResponseEntity<MessageResponseDto> createMyMessage(
+            @RequestBody CreateMessageRequestDto messageRequestDto,
+            Authentication authentication
+    ) {
+
+        MessageResponseDto response =
+                messageService.createMyMessage(
+                        messageRequestDto,
+                        authentication
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+
+
+
+
+    @PatchMapping("/{messageId}/read")
+    public ResponseEntity<MessageResponseDto> markAsRead(
+            @PathVariable UUID messageId,
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                messageService.markAsRead(
+                        messageId,
+                        authentication
+                )
+        );
+    }
+
+
+
+
+
+    @GetMapping("/conversation/{conversationId}/read")
+    public ResponseEntity<List<MessageResponseDto>> getReadMessages(
+            @PathVariable UUID conversationId,
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                messageService.getReadMessages(
+                        conversationId,
+                        authentication
+                )
+        );
+    }
+
+
+
+    @GetMapping("/conversation/{conversationId}/unread")
+    public ResponseEntity<List<MessageResponseDto>> getUnreadMessages(
+            @PathVariable UUID conversationId,
+            Authentication authentication
+    ) {
+
+        return ResponseEntity.ok(
+                messageService.getUnreadMessages(
+                        conversationId,
+                        authentication
+                )
+        );
+    }
+
 
     @PutMapping("/updateMessage/{messageId}")
     public ResponseEntity<MessageResponseDto> update(

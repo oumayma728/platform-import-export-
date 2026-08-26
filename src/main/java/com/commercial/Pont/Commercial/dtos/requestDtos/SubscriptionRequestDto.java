@@ -16,6 +16,8 @@ public class SubscriptionRequestDto {
     private UUID utilisateurId;
     private UUID facturationId;
     private UUID abonnementId;
+    private UUID paiementId;
+
 
     private LocalDateTime dateDebut;
     private LocalDateTime dateFin;

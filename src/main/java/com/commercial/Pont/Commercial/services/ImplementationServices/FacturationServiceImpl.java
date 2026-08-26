@@ -2,21 +2,24 @@ package com.commercial.Pont.Commercial.services.ImplementationServices;
 
 import com.commercial.Pont.Commercial.dtos.requestDtos.FacturationRequestDto;
 import com.commercial.Pont.Commercial.dtos.responseDtos.FacturationResponseDto;
+import com.commercial.Pont.Commercial.enums.FacturationStatus;
+import com.commercial.Pont.Commercial.enums.FacturationType;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.FacturationMapperInterface;
-import com.commercial.Pont.Commercial.models.Conversation;
 import com.commercial.Pont.Commercial.models.Facturation;
 import com.commercial.Pont.Commercial.models.Subscription;
-import com.commercial.Pont.Commercial.repositories.ConversationRepository;
+import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.FacturationRepository;
 import com.commercial.Pont.Commercial.repositories.SubscriptionRepository;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.FacturationServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -31,7 +34,6 @@ public class FacturationServiceImpl
 
     private final SubscriptionRepository subscriptionRepository;
 
-    private final ConversationRepository conversationRepository;
 
 
     // =========================
@@ -73,29 +75,6 @@ public class FacturationServiceImpl
             );
         }
 
-
-        // =========================
-        // Recherche de la Conversation
-        // =========================
-
-        if (facturationRequestDto.getConversationId() != null) {
-
-            Conversation conversation =
-                    conversationRepository.findById(
-                                    facturationRequestDto
-                                            .getConversationId()
-                            )
-                            .orElseThrow(() ->
-                                    new EntityNotFoundException(
-                                            "Conversation non trouvée avec l'id : "
-                                                    + facturationRequestDto
-                                                    .getConversationId()
-                                    ));
-
-            facturation.setConversation(
-                    conversation
-            );
-        }
 
 
         // =========================
@@ -210,46 +189,6 @@ public class FacturationServiceImpl
             }
         }
 
-
-        // =========================
-        // Mise à jour de Conversation
-        // =========================
-
-        if (facturationRequestDto.getConversationId() != null) {
-
-            boolean conversationChanged =
-                    existingFacturation.getConversation() == null
-                            ||
-                            !facturationRequestDto
-                                    .getConversationId()
-                                    .equals(
-                                            existingFacturation
-                                                    .getConversation()
-                                                    .getConversationId()
-                                    );
-
-            if (conversationChanged) {
-
-                Conversation conversation =
-                        conversationRepository.findById(
-                                        facturationRequestDto
-                                                .getConversationId()
-                                )
-                                .orElseThrow(() ->
-                                        new EntityNotFoundException(
-                                                "Conversation non trouvée avec l'id : "
-                                                        + facturationRequestDto
-                                                        .getConversationId()
-                                        )
-                                );
-
-                existingFacturation.setConversation(
-                        conversation
-                );
-            }
-        }
-
-
         // =========================
         // Mise à jour automatique
         // =========================
@@ -339,5 +278,42 @@ public class FacturationServiceImpl
         facturationRepository.deleteById(
                 facturationId
         );
+    }
+
+
+
+
+
+
+
+
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void mettreFacturationLimiteAtteinte(
+            Utilisateur utilisateur
+    ) {
+
+        Optional<Facturation> optionalFacturation =
+                facturationRepository
+                        .findFirstByUtilisateurUtilisateurIdAndTypeNotOrderByCreatedAtDesc(
+                                utilisateur.getUtilisateurId(),
+                                FacturationType.ABONNEMENT
+                        );
+
+        if (optionalFacturation.isPresent()) {
+
+            Facturation facturation =
+                    optionalFacturation.get();
+
+            facturation.setStatut(
+                    FacturationStatus.LIMITE_ATTEINTE
+            );
+
+            facturation.setUpdatedAt(
+                    LocalDateTime.now()
+            );
+
+            facturationRepository.save(facturation);
+        }
     }
 }

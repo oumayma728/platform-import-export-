@@ -40,7 +40,6 @@ public class ConversationServiceImpl
     private final UtilisateurRepository utilisateurRepository;
 
     private final AnnonceRepository annonceRepository;
-    private final FacturationRepository facturationRepository;
     private final MessageRepository messageRepository;
     private final DocumentConversationRepository documentConversationRepository;
 
