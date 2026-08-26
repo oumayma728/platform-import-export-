@@ -1,6 +1,6 @@
 from datetime import date
-from app.models import Listing, ProfilEntreprise, DonneesLogistiques
-from app.scoring import (
+from app.matching.models import Listing, ProfilEntreprise, DonneesLogistiques
+from app.matching.scoring import (
     score_produit,
     score_prix_quantite,
     score_geo_logistique,

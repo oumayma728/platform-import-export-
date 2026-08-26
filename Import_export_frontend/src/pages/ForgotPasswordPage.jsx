@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+
 import { requestPasswordReset } from "../api/auth";
 
 export default function ForgotPasswordPage() {
@@ -13,16 +14,28 @@ export default function ForgotPasswordPage() {
   const [isSent, setIsSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+
   const navigate = useNavigate();
 
   async function onSubmit(data) {
     setSubmitError(null);
     setIsSubmitting(true);
+
     try {
       await requestPasswordReset(data.email);
+
       setIsSent(true);
     } catch (err) {
-      setSubmitError(err.message || "Une erreur est survenue. Réessayez plus tard.");
+      console.error(
+        "Erreur mot de passe oublié :",
+        err
+      );
+
+      setSubmitError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Une erreur est survenue. Réessayez plus tard."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -83,8 +96,8 @@ export default function ForgotPasswordPage() {
               lineHeight: 1.7,
             }}
           >
-            Saisissez votre adresse email afin
-            de recevoir un lien de réinitialisation.
+            Saisissez votre adresse email afin de recevoir
+            un lien de réinitialisation.
           </p>
         </div>
 
@@ -111,14 +124,20 @@ export default function ForgotPasswordPage() {
                 {...register("email", {
                   required: "Email requis",
                   pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: "Adresse email invalide",
+                    value:
+                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message:
+                      "Adresse email invalide",
                   },
                 })}
                 style={{
                   width: "100%",
                   padding: "14px",
-                  border: `1px solid ${errors.email ? "#C22D2D" : "#E4E2DC"}`,
+                  border: `1px solid ${
+                    errors.email
+                      ? "#C22D2D"
+                      : "#E4E2DC"
+                  }`,
                   borderRadius: "12px",
                   fontSize: "16px",
                   boxSizing: "border-box",
@@ -166,11 +185,19 @@ export default function ForgotPasswordPage() {
                 color: "#fff",
                 fontWeight: "700",
                 fontSize: "16px",
-                cursor: isSubmitting ? "default" : "pointer",
-                opacity: isSubmitting ? 0.7 : 1,
+                cursor:
+                  isSubmitting
+                    ? "default"
+                    : "pointer",
+                opacity:
+                  isSubmitting
+                    ? 0.7
+                    : 1,
               }}
             >
-              {isSubmitting ? "Envoi en cours..." : "📩 Envoyer le lien"}
+              {isSubmitting
+                ? "Envoi en cours..."
+                : "📩 Envoyer le lien"}
             </button>
           </form>
         ) : (
@@ -202,10 +229,20 @@ export default function ForgotPasswordPage() {
                 lineHeight: 1.7,
               }}
             >
-              Si un compte est associé à cette
-              adresse email, vous recevrez un
-              lien de réinitialisation dans
-              quelques instants.
+              Si un compte est associé à cette adresse
+              email, vous recevrez un lien de
+              réinitialisation dans quelques instants.
+            </p>
+
+            <p
+              style={{
+                color: "#9ca3af",
+                fontSize: "13px",
+                marginTop: "14px",
+              }}
+            >
+              Pensez également à vérifier votre dossier
+              spam ou courrier indésirable.
             </p>
           </div>
         )}
@@ -218,7 +255,9 @@ export default function ForgotPasswordPage() {
         >
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() =>
+              navigate("/auth/login")
+            }
             style={{
               border: "none",
               background: "transparent",
@@ -228,7 +267,7 @@ export default function ForgotPasswordPage() {
               fontSize: "15px",
             }}
           >
-            ← Retour
+            ← Retour à la connexion
           </button>
         </div>
       </div>

@@ -1,119 +1,410 @@
 import { useMemo, useState, useEffect } from "react";
 import { FaHeart, FaSearch } from "react-icons/fa";
-import { getFavorites } from "../api/favorites";import { useSearchParams } from "react-router-dom";
-import { useResourceList } from "../hooks/useResourceList";
+import { useSearchParams } from "react-router-dom";
+
+import { getFavorites } from "../api/favorites";
 import { getListings } from "../api/listings";
+import { getReferenceOptions } from "../api/referenceOptions";
+
+import { useResourceList } from "../hooks/useResourceList";
 import { useAuth } from "../context/AuthContext";
+
 import FilterBar from "../components/organisms/FilterBar";
 import ListingCard from "../components/organisms/ListingCard";
 import AsyncState from "../components/organisms/AsyncState";
 import Pagination from "../components/molecules/Pagination";
+
 import { colors } from "../styles/tokens";
 import { toRoleArray } from "../utils/roles";
 
-const COUNTRY_FIELD = {
-  name: "country",
-  placeholder: "Tous les pays",
-  options: [
-  { value: "Tunisie", label: "🇹🇳 Tunisie" },
-  { value: "France", label: "🇫🇷 France" },
-  { value: "Italie", label: "🇮🇹 Italie" },
-  { value: "Espagne", label: "🇪🇸 Espagne" },
-  { value: "Allemagne", label: "🇩🇪 Allemagne" },
-  { value: "Belgique", label: "🇧🇪 Belgique" },
-  { value: "Pays-Bas", label: "🇳🇱 Pays-Bas" },
-  { value: "Maroc", label: "🇲🇦 Maroc" },
-  { value: "Algérie", label: "🇩🇿 Algérie" },
-  { value: "Égypte", label: "🇪🇬 Égypte" },
-  { value: "Turquie", label: "🇹🇷 Turquie" },
-  { value: "Chine", label: "🇨🇳 Chine" },
-  { value: "Inde", label: "🇮🇳 Inde" },
-  { value: "États-Unis", label: "🇺🇸 États-Unis" },
-  { value: "Canada", label: "🇨🇦 Canada" },
-  ],
-};
 
-const CATEGORY_FIELD = {
-  name: "category",
-  placeholder: "Toutes les catégories",
-  options: [
-    { value: "Agroalimentaire", label: "Agroalimentaire" },
-    { value: "Énergie", label: "Énergie" },
-    { value: "Textile", label: "Textile" },
-    { value: "Électronique", label: "Électronique" },
-    { value: "Automobile", label: "Automobile" },
-    { value: "Cosmétique", label: "Cosmétique" },
-    { value: "Construction", label: "Construction" },
-    { value: "Machines industrielles", label: "Machines industrielles" },
-    { value: "Emballage & Logistique", label: "Emballage & Logistique" },
-  ],
-};
+/* =========================================================
+   FILTRE TYPE D'ANNONCE
+
+   Celui-ci reste statique car il s'agit de valeurs métier :
+   offer / demand
+========================================================= */
 
 const TYPE_FIELD = {
   name: "type",
   placeholder: "Tous types",
   options: [
-    { value: "offer", label: "Offres" },
-    { value: "demand", label: "Demandes" },
+    {
+      value: "offer",
+      label: "Offres",
+    },
+    {
+      value: "demand",
+      label: "Demandes",
+    },
   ],
 };
 
+
 export default function ListingsPage() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const [favoriteIds, setFavoriteIds] =
-useState([]);
-  const [showFavoritesOnly, setShowFavoritesOnly] =
-  useState(false);
-  const categoryFromUrl = searchParams.get("category") || undefined;
 
-  // Bornes du curseur de prix + liste des certifications disponibles,
-  // calculées une seule fois à partir du catalogue complet (pas filtré),
-  // pour que ça reste correct même quand une vraie API remplacera les mocks.
-  const [catalogStats, setCatalogStats] = useState({
-    minPrice: 0,
-    maxPrice: 1000,
-    certifications: [],
-  });
+  const [searchParams] = useSearchParams();
+
+
+  /* =========================================================
+     FAVORIS
+  ========================================================= */
+
+  const [favoriteIds, setFavoriteIds] = useState([]);
+
+  const [showFavoritesOnly, setShowFavoritesOnly] =
+    useState(false);
+
+
+  /* =========================================================
+     REFERENTIELS DYNAMIQUES
+
+     Ces valeurs viennent maintenant du backend :
+     GET /api/reference-options/category
+     GET /api/reference-options/country
+  ========================================================= */
+
+  const [categoryOptions, setCategoryOptions] =
+    useState([]);
+
+  const [countryOptions, setCountryOptions] =
+    useState([]);
+
+  const [referencesLoading, setReferencesLoading] =
+    useState(true);
+
+  const [referencesError, setReferencesError] =
+    useState(null);
+
+
+  /* =========================================================
+     CATÉGORIE FOURNIE DANS L'URL
+
+     Exemple :
+     /listings/catalog?category=Cosmétique
+  ========================================================= */
+
+  const categoryFromUrl =
+    searchParams.get("category") || undefined;
+
+
+  /* =========================================================
+     CHARGER LES REFERENTIELS DEPUIS POSTGRESQL
+  ========================================================= */
 
   useEffect(() => {
-    getListings().then((allListings) => {
-      const prices = allListings.map((l) => l.price).filter((p) => typeof p === "number");
-      const certifications = [
-        ...new Set(allListings.flatMap((l) => l.certifications || [])),
-      ].sort();
-      setCatalogStats({
-        minPrice: prices.length ? Math.floor(Math.min(...prices)) : 0,
-        maxPrice: prices.length ? Math.ceil(Math.max(...prices)) : 1000,
-        certifications,
-      });
-    });
+    let cancelled = false;
+
+    async function loadReferenceOptions() {
+      setReferencesLoading(true);
+      setReferencesError(null);
+
+      try {
+        const [
+          categories,
+          countries,
+        ] = await Promise.all([
+          getReferenceOptions("category"),
+          getReferenceOptions("country"),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+
+        /* -----------------------------------------------------
+           CATÉGORIES
+        ----------------------------------------------------- */
+
+        const mappedCategories = (
+          Array.isArray(categories)
+            ? categories
+            : []
+        ).map((item) => ({
+          value: item.value,
+          label:
+            item.label ||
+            item.value,
+        }));
+
+
+        /* -----------------------------------------------------
+           PAYS
+        ----------------------------------------------------- */
+
+        const mappedCountries = (
+          Array.isArray(countries)
+            ? countries
+            : []
+        ).map((item) => ({
+          value: item.value,
+          label:
+            item.label ||
+            item.value,
+        }));
+
+
+        setCategoryOptions(
+          mappedCategories
+        );
+
+        setCountryOptions(
+          mappedCountries
+        );
+      } catch (error) {
+        console.error(
+          "Erreur chargement des référentiels :",
+          error
+        );
+
+        if (!cancelled) {
+          setReferencesError(
+            "Impossible de charger les pays et catégories."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setReferencesLoading(false);
+        }
+      }
+    }
+
+    loadReferenceOptions();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Un importateur cherche des OFFRES (ce que proposent les exportateurs).
-  // Un exportateur cherche des DEMANDES (ce que veulent les importateurs).
-  // Le rôle est stocké sous forme de tableau (un utilisateur peut être les deux
-  // à la fois), donc on ne peut pas faire une comparaison stricte avec une chaîne.
-  // Si l'utilisateur a les deux rôles (ou aucun), on ne force rien : il voit tout.
-  const userRoles = toRoleArray(user?.role);
-  const isExporterOnly = userRoles.includes("exporter") && !userRoles.includes("importer");
-  const isImporterOnly = userRoles.includes("importer") && !userRoles.includes("exporter");
-  const forcedType = isExporterOnly ? "demand" : isImporterOnly ? "offer" : undefined;
+
+  /* =========================================================
+     CONSTRUCTION DYNAMIQUE DU CHAMP PAYS
+  ========================================================= */
+
+  const countryField = useMemo(
+    () => ({
+      name: "country",
+      placeholder: referencesLoading
+        ? "Chargement des pays..."
+        : "Tous les pays",
+
+      options: countryOptions,
+    }),
+    [
+      countryOptions,
+      referencesLoading,
+    ]
+  );
+
+
+  /* =========================================================
+     CONSTRUCTION DYNAMIQUE DU CHAMP CATEGORIE
+  ========================================================= */
+
+  const categoryField = useMemo(
+    () => ({
+      name: "category",
+      placeholder: referencesLoading
+        ? "Chargement des catégories..."
+        : "Toutes les catégories",
+
+      options: categoryOptions,
+    }),
+    [
+      categoryOptions,
+      referencesLoading,
+    ]
+  );
+
+
+  /* =========================================================
+     STATISTIQUES DU CATALOGUE
+
+     - prix min
+     - prix max
+     - certifications
+  ========================================================= */
+
+  const [catalogStats, setCatalogStats] =
+    useState({
+      minPrice: 0,
+      maxPrice: 1000,
+      certifications: [],
+    });
+
 
   useEffect(() => {
-  getFavorites().then((favorites) => {
-    setFavoriteIds(
-      favorites.map(
-        (fav) => fav.listingId
-      )
-    );
-  });
-}, []);
+    let cancelled = false;
+
+    async function loadCatalogStats() {
+      try {
+        const allListings =
+          await getListings();
+
+        if (cancelled) {
+          return;
+        }
+
+        const safeListings =
+          Array.isArray(allListings)
+            ? allListings
+            : [];
+
+
+        const prices = safeListings
+          .map(
+            (listing) =>
+              listing.price
+          )
+          .filter(
+            (price) =>
+              typeof price ===
+                "number" &&
+              Number.isFinite(price)
+          );
+
+
+        const certifications = [
+          ...new Set(
+            safeListings.flatMap(
+              (listing) =>
+                listing.certifications ||
+                []
+            )
+          ),
+        ].sort();
+
+
+        setCatalogStats({
+          minPrice:
+            prices.length
+              ? Math.floor(
+                  Math.min(...prices)
+                )
+              : 0,
+
+          maxPrice:
+            prices.length
+              ? Math.ceil(
+                  Math.max(...prices)
+                )
+              : 1000,
+
+          certifications,
+        });
+      } catch (error) {
+        console.error(
+          "Erreur chargement statistiques catalogue :",
+          error
+        );
+      }
+    }
+
+    loadCatalogStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+
+  /* =========================================================
+     ROLE UTILISATEUR
+
+     Importateur :
+     → recherche des offres
+
+     Exportateur :
+     → recherche des demandes
+  ========================================================= */
+
+  const userRoles =
+    toRoleArray(user?.role);
+
+  const isExporterOnly =
+    userRoles.includes("exporter") &&
+    !userRoles.includes("importer");
+
+  const isImporterOnly =
+    userRoles.includes("importer") &&
+    !userRoles.includes("exporter");
+
+
+  const forcedType =
+    isExporterOnly
+      ? "demand"
+      : isImporterOnly
+      ? "offer"
+      : undefined;
+
+
+  /* =========================================================
+     FAVORIS
+  ========================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFavorites() {
+      try {
+        const favorites =
+          await getFavorites();
+
+        if (cancelled) {
+          return;
+        }
+
+        setFavoriteIds(
+          (
+            Array.isArray(favorites)
+              ? favorites
+              : []
+          ).map(
+            (favorite) =>
+              favorite.listingId
+          )
+        );
+      } catch (error) {
+        console.error(
+          "Erreur chargement favoris :",
+          error
+        );
+      }
+    }
+
+    loadFavorites();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+
+  /* =========================================================
+     CHAMPS DU FILTER BAR
+
+     Pays et Catégorie utilisent maintenant
+     les valeurs récupérées depuis PostgreSQL.
+  ========================================================= */
 
   const fields = useMemo(() => {
-    const base = forcedType ? [COUNTRY_FIELD, CATEGORY_FIELD] : [TYPE_FIELD, COUNTRY_FIELD, CATEGORY_FIELD];
+    const baseFields =
+      forcedType
+        ? [
+            countryField,
+            categoryField,
+          ]
+        : [
+            TYPE_FIELD,
+            countryField,
+            categoryField,
+          ];
+
     return [
-      ...base,
+      ...baseFields,
+
       {
         name: "price",
         type: "price-range",
@@ -122,70 +413,234 @@ useState([]);
         max: catalogStats.maxPrice,
         unit: "$",
       },
+
       {
         name: "certifications",
         type: "certifications",
         label: "Certifications",
-        options: catalogStats.certifications,
+        options:
+          catalogStats.certifications,
       },
     ];
-  }, [forcedType, catalogStats]);
+  }, [
+    forcedType,
+    countryField,
+    categoryField,
+    catalogStats,
+  ]);
 
-  const { items: allItems, filters, setFilters, isLoading, error } = useResourceList(getListings, {
-    ...(forcedType ? { type: forcedType } : {}),
-    ...(categoryFromUrl ? { category: categoryFromUrl } : {}),
-  });
 
-  // --- Recherche textuelle ---
-  // Champ local + debounce pour éviter un appel GET à chaque frappe ;
-  // au bout de 300ms d'inactivité, on répercute la valeur dans `filters.q`,
-  // ce qui déclenche l'appel API GET /listings?q=... (via useResourceList).
-  const [searchInput, setSearchInput] = useState(filters.q || "");
+  /* =========================================================
+     ANNONCES
+
+     useResourceList transmet les filtres à getListings.
+
+     Exemple :
+     GET /api/listings?category=Bois
+  ========================================================= */
+
+  const {
+    items: allItems,
+    filters,
+    setFilters,
+    isLoading,
+    error,
+  } = useResourceList(
+    getListings,
+    {
+      ...(forcedType
+        ? {
+            type: forcedType,
+          }
+        : {}),
+
+      ...(categoryFromUrl
+        ? {
+            category:
+              categoryFromUrl,
+          }
+        : {}),
+    }
+  );
+
+
+  /* =========================================================
+     RECHERCHE TEXTUELLE
+
+     Debounce 300 ms
+  ========================================================= */
+
+  const [
+    searchInput,
+    setSearchInput,
+  ] = useState(
+    filters.q || ""
+  );
+
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, q: searchInput || undefined }));
-    }, 300);
+    const timeoutId =
+      setTimeout(() => {
+        setFilters(
+          (previous) => ({
+            ...previous,
 
-    return () => clearTimeout(timeoutId);
+            q:
+              searchInput.trim() ||
+              undefined,
+          })
+        );
+      }, 300);
+
+    return () =>
+      clearTimeout(
+        timeoutId
+      );
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  // On ne montre jamais ses propres annonces dans le catalogue : c'est un
-  // catalogue pour trouver des correspondances chez d'autres entreprises.
-  const items = user ? allItems.filter((listing) => listing.ownerId !== user.id) : allItems;
-const displayedItems =
-  showFavoritesOnly
-    ? items.filter((listing) =>
-        favoriteIds.includes(
-          listing.id
-        )
+
+  /* =========================================================
+     NE PAS AFFICHER SES PROPRES ANNONCES
+  ========================================================= */
+
+  const items = user
+    ? allItems.filter(
+        (listing) =>
+          String(
+            listing.ownerId
+          ) !==
+          String(user.id)
       )
-    : items;
+    : allItems;
 
-  // --- Tri ---
-  const [sortBy, setSortBy] = useState("relevance");
-  const sortedItems = useMemo(() => {
-    if (sortBy === "price-asc") {
-      return [...displayedItems].sort((a, b) => a.price - b.price);
-    }
-    if (sortBy === "price-desc") {
-      return [...displayedItems].sort((a, b) => b.price - a.price);
-    }
-    // "Pertinence" = ordre renvoyé par l'API, sans tri supplémentaire côté client
-    return displayedItems;
-  }, [displayedItems, sortBy]);
 
-  // --- Pagination ---
+  /* =========================================================
+     FAVORIS UNIQUEMENT
+  ========================================================= */
+
+  const displayedItems =
+    showFavoritesOnly
+      ? items.filter(
+          (listing) =>
+            favoriteIds.some(
+              (favoriteId) =>
+                String(
+                  favoriteId
+                ) ===
+                String(
+                  listing.id
+                )
+            )
+        )
+      : items;
+
+
+  /* =========================================================
+     TRI
+  ========================================================= */
+
+  const [
+    sortBy,
+    setSortBy,
+  ] = useState(
+    "relevance"
+  );
+
+
+  const sortedItems =
+    useMemo(() => {
+      if (
+        sortBy ===
+        "price-asc"
+      ) {
+        return [
+          ...displayedItems,
+        ].sort(
+          (a, b) =>
+            Number(a.price || 0) -
+            Number(b.price || 0)
+        );
+      }
+
+      if (
+        sortBy ===
+        "price-desc"
+      ) {
+        return [
+          ...displayedItems,
+        ].sort(
+          (a, b) =>
+            Number(b.price || 0) -
+            Number(a.price || 0)
+        );
+      }
+
+      /*
+       * Pertinence :
+       * on conserve l'ordre renvoyé
+       * par le backend.
+       */
+
+      return displayedItems;
+    }, [
+      displayedItems,
+      sortBy,
+    ]);
+
+
+  /* =========================================================
+     PAGINATION
+  ========================================================= */
+
   const PAGE_SIZE = 9;
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
-  const paginatedItems = sortedItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  // Revenir à la page 1 si les filtres, le tri, ou les favoris changent
+  const [
+    currentPage,
+    setCurrentPage,
+  ] = useState(1);
+
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        sortedItems.length /
+          PAGE_SIZE
+      )
+    );
+
+
+  const paginatedItems =
+    sortedItems.slice(
+      (
+        currentPage - 1
+      ) * PAGE_SIZE,
+
+      currentPage *
+        PAGE_SIZE
+    );
+
+
+  /*
+   * Retour automatique à la première page
+   * lorsque les filtres changent.
+   */
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, sortBy, showFavoritesOnly]);
+  }, [
+    filters,
+    sortBy,
+    showFavoritesOnly,
+  ]);
+
+
+  /* =========================================================
+     AFFICHAGE
+  ========================================================= */
+
   return (
     <div>
       <h1
@@ -197,161 +652,414 @@ const displayedItems =
       >
         Catalogue des annonces
       </h1>
+
+
+      {/* ===============================================
+          TYPE FORCÉ SELON LE RÔLE
+      =============================================== */}
+
       {forcedType && (
-        <p style={{ color: colors.textMuted, fontSize: 14, marginTop: 4, marginBottom: 16 }}>
-          Affichage des {forcedType === "offer" ? "offres" : "demandes"} correspondant à votre profil.
+        <p
+          style={{
+            color:
+              colors.textMuted,
+
+            fontSize: 14,
+
+            marginTop: 4,
+            marginBottom: 16,
+          }}
+        >
+          Affichage des{" "}
+          {forcedType === "offer"
+            ? "offres"
+            : "demandes"}{" "}
+          correspondant à votre profil.
         </p>
       )}
-<div
-  style={{
-    display: "flex",
-    gap: "12px",
-    marginBottom: "20px",
-  }}
->
-  <button
-    onClick={() =>
-      setShowFavoritesOnly(false)
-    }
-    style={{
-      border: "none",
-      borderRadius: "14px",
-      padding: "10px 18px",
-      cursor: "pointer",
-      fontWeight: 600,
-      background:
-        !showFavoritesOnly
-          ? "#B8720A"
-          : "#f1f5f9",
-      color:
-        !showFavoritesOnly
-          ? "#fff"
-          : "#475569",
-    }}
-  >
-    Toutes
-  </button>
 
-  <button
-    onClick={() =>
-      setShowFavoritesOnly(true)
-    }
-    style={{
-      border: "none",
-      borderRadius: "14px",
-      padding: "10px 18px",
-      cursor: "pointer",
-      fontWeight: 600,
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      background:
-        showFavoritesOnly
-          ? "#ef4444"
-          : "#fff1f2",
-      color:
-        showFavoritesOnly
-          ? "#fff"
-          : "#C22D2D",
-    }}
-  >
-    <FaHeart />
-    Favoris
-  </button>
-</div>
-      <div
-        style={{
-          position: "relative",
-          marginBottom: "20px",
-          maxWidth: "480px",
-        }}
-      >
-        <FaSearch
-          style={{
-            position: "absolute",
-            left: "14px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: colors.textMuted,
-            fontSize: "14px",
-          }}
-        />
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Rechercher un produit, une catégorie, un pays..."
-          style={{
-            width: "100%",
-            padding: "12px 16px 12px 40px",
-            borderRadius: "14px",
-            border: "1px solid #E4E2DC",
-            fontSize: "14px",
-            backgroundColor: "#fff",
-            boxSizing: "border-box",
-            outline: "none",
-          }}
-        />
-      </div>
 
-      <FilterBar fields={fields} filters={filters} onChange={setFilters} />
+      {/* ===============================================
+          ERREUR DE CHARGEMENT REFERENTIEL
+      =============================================== */}
+
+      {referencesError && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding:
+              "10px 14px",
+
+            borderRadius: 10,
+
+            background:
+              "#fff7ed",
+
+            color:
+              "#9a3412",
+
+            fontSize: 13,
+          }}
+        >
+          ⚠️ {referencesError}
+        </div>
+      )}
+
+
+      {/* ===============================================
+          TOUTES / FAVORIS
+      =============================================== */}
 
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "20px",
+        }}
+      >
+        <button
+          type="button"
+
+          onClick={() =>
+            setShowFavoritesOnly(
+              false
+            )
+          }
+
+          style={{
+            border: "none",
+            borderRadius:
+              "14px",
+
+            padding:
+              "10px 18px",
+
+            cursor:
+              "pointer",
+
+            fontWeight: 600,
+
+            background:
+              !showFavoritesOnly
+                ? "#B8720A"
+                : "#f1f5f9",
+
+            color:
+              !showFavoritesOnly
+                ? "#fff"
+                : "#475569",
+          }}
+        >
+          Toutes
+        </button>
+
+
+        <button
+          type="button"
+
+          onClick={() =>
+            setShowFavoritesOnly(
+              true
+            )
+          }
+
+          style={{
+            border: "none",
+            borderRadius:
+              "14px",
+
+            padding:
+              "10px 18px",
+
+            cursor:
+              "pointer",
+
+            fontWeight: 600,
+
+            display: "flex",
+            alignItems:
+              "center",
+
+            gap: "8px",
+
+            background:
+              showFavoritesOnly
+                ? "#ef4444"
+                : "#fff1f2",
+
+            color:
+              showFavoritesOnly
+                ? "#fff"
+                : "#C22D2D",
+          }}
+        >
+          <FaHeart />
+
+          Favoris
+        </button>
+      </div>
+
+
+      {/* ===============================================
+          RECHERCHE
+      =============================================== */}
+
+      <div
+        style={{
+          position:
+            "relative",
+
+          marginBottom:
+            "20px",
+
+          maxWidth:
+            "480px",
+        }}
+      >
+        <FaSearch
+          style={{
+            position:
+              "absolute",
+
+            left:
+              "14px",
+
+            top:
+              "50%",
+
+            transform:
+              "translateY(-50%)",
+
+            color:
+              colors.textMuted,
+
+            fontSize:
+              "14px",
+          }}
+        />
+
+        <input
+          type="text"
+
+          value={
+            searchInput
+          }
+
+          onChange={(event) =>
+            setSearchInput(
+              event.target.value
+            )
+          }
+
+          placeholder="Rechercher un produit, une catégorie, un pays..."
+
+          style={{
+            width:
+              "100%",
+
+            padding:
+              "12px 16px 12px 40px",
+
+            borderRadius:
+              "14px",
+
+            border:
+              "1px solid #E4E2DC",
+
+            fontSize:
+              "14px",
+
+            backgroundColor:
+              "#fff",
+
+            boxSizing:
+              "border-box",
+
+            outline:
+              "none",
+          }}
+        />
+      </div>
+
+
+      {/* ===============================================
+          FILTRES
+
+          Pays et catégories viennent maintenant
+          de reference_options en base.
+      =============================================== */}
+
+      <FilterBar
+        fields={fields}
+        filters={filters}
+        onChange={setFilters}
+      />
+
+
+      {/* ===============================================
+          NOMBRE ANNONCES + TRI
+      =============================================== */}
+
+      <div
+        style={{
+          display:
+            "flex",
+
+          justifyContent:
+            "space-between",
+
+          alignItems:
+            "center",
+
+          flexWrap:
+            "wrap",
+
           gap: 12,
+
           marginBottom: 16,
         }}
       >
-        <p style={{ margin: 0, fontSize: 14, color: colors.textMuted }}>
-          {sortedItems.length} annonce{sortedItems.length > 1 ? "s" : ""}
+        <p
+          style={{
+            margin: 0,
+
+            fontSize: 14,
+
+            color:
+              colors.textMuted,
+          }}
+        >
+          {sortedItems.length}{" "}
+          annonce
+          {sortedItems.length >
+          1
+            ? "s"
+            : ""}
         </p>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+
+        <label
+          style={{
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            gap: 8,
+
+            fontSize: 14,
+          }}
+        >
           Trier par
+
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+
+            onChange={(event) =>
+              setSortBy(
+                event.target.value
+              )
+            }
+
             style={{
-              padding: "8px 12px",
-              borderRadius: 8,
-              border: "1px solid #E4E2DC",
-              fontSize: 14,
-              backgroundColor: "#fff",
+              padding:
+                "8px 12px",
+
+              borderRadius:
+                8,
+
+              border:
+                "1px solid #E4E2DC",
+
+              fontSize:
+                14,
+
+              backgroundColor:
+                "#fff",
             }}
           >
-            <option value="relevance">Pertinence</option>
-            <option value="price-asc">Prix croissant</option>
-            <option value="price-desc">Prix décroissant</option>
+            <option
+              value="relevance"
+            >
+              Pertinence
+            </option>
+
+            <option
+              value="price-asc"
+            >
+              Prix croissant
+            </option>
+
+            <option
+              value="price-desc"
+            >
+              Prix décroissant
+            </option>
           </select>
         </label>
       </div>
 
+
+      {/* ===============================================
+          LISTE DES ANNONCES
+      =============================================== */}
+
       <AsyncState
-        isLoading={isLoading}
-        error={error}
-        isEmpty={sortedItems.length === 0}
+        isLoading={
+          isLoading
+        }
+
+        error={
+          error
+        }
+
+        isEmpty={
+          sortedItems.length ===
+          0
+        }
+
         emptyLabel="Aucune annonce ne correspond à ces filtres."
       >
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "repeat(auto-fill, minmax(280px, 1fr))",
+
             gap: 20,
           }}
         >
-          {paginatedItems.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
+          {paginatedItems.map(
+            (listing) => (
+              <ListingCard
+                key={
+                  listing.id
+                }
+
+                listing={
+                  listing
+                }
+              />
+            )
+          )}
         </div>
 
+
         <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          currentPage={
+            currentPage
+          }
+
+          totalPages={
+            totalPages
+          }
+
+          onPageChange={
+            setCurrentPage
+          }
         />
       </AsyncState>
     </div>

@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Elements } from "@stripe/react-stripe-js";
 import { Plus } from "lucide-react";
 import AsyncState from "../../../components/organisms/AsyncState";
 import SectionCard from "../../../components/molecules/SectionCard";
-import FormField from "../../../components/molecules/FormField";
-import Select from "../../../components/atoms/Select";
 import Button from "../../../components/atoms/Button";
 import BillingSubNav from "../components/BillingSubNav";
 import PaymentMethodCard from "../components/PaymentMethodCard";
@@ -13,33 +10,20 @@ import AddCardForm from "../components/AddCardForm";
 import { stripePromise } from "../stripe/stripeClient";
 import {
   getPaymentMethods,
-  addPaymentMethod,
   removePaymentMethod,
   setDefaultPaymentMethod,
 } from "../api/billing";
 import { colors, spacing, typography } from "../../../styles/tokens";
-
-const TYPE_OPTIONS = [
-  { value: "card", label: "Carte bancaire" },
-  { value: "paypal", label: "PayPal" },
-];
 
 export default function PaymentMethodsPage() {
   const [methods, setMethods] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [type, setType] = useState("card");
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm();
 
   function load() {
     setIsLoading(true);
+    setError(null);
     getPaymentMethods()
       .then(setMethods)
       .catch((err) => setError(err.message || "Erreur lors du chargement"))
@@ -48,40 +32,43 @@ export default function PaymentMethodsPage() {
 
   useEffect(load, []);
 
-  // Branche PayPal : formulaire react-hook-form classique, un seul champ.
-  async function onSubmit(data) {
-    await addPaymentMethod({ type: "paypal", email: data.email });
-    reset();
+  async function handleCardAdded() {
     setShowForm(false);
-    load();
-  }
-
-  // Branche carte : le paiement est déjà tokenisé par Stripe dans
-  // AddCardForm (numéro/expiration/CVC réels), on reçoit ici les infos
-  // publiques (marque, 4 derniers chiffres, expiration) prêtes à stocker.
-  async function handleCardAdded(cardMethod) {
-    await addPaymentMethod(cardMethod);
-    setShowForm(false);
-    load();
+    await load();
   }
 
   async function handleSetDefault(id) {
-    await setDefaultPaymentMethod(id);
-    load();
+    try {
+      await setDefaultPaymentMethod(id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function handleRemove(id) {
-    await removePaymentMethod(id);
-    load();
+    try {
+      await removePaymentMethod(id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
     <div>
-      <h1 style={{ fontFamily: typography.display, fontSize: typography.fontSizeXl, fontWeight: 800, marginBottom: spacing.xs }}>
+      <h1
+        style={{
+          fontFamily: typography.display,
+          fontSize: typography.fontSizeXl,
+          fontWeight: 800,
+          marginBottom: spacing.xs,
+        }}
+      >
         Moyens de paiement
       </h1>
       <p style={{ color: colors.textMuted, marginBottom: spacing.lg }}>
-        Gérez les cartes et comptes enregistrés pour vos renouvellements automatiques.
+        Gérez les cartes enregistrées de façon sécurisée avec Stripe.
       </p>
 
       <BillingSubNav />
@@ -90,7 +77,7 @@ export default function PaymentMethodsPage() {
         isLoading={isLoading}
         error={error}
         isEmpty={methods.length === 0 && !showForm}
-        emptyLabel="Aucun moyen de paiement enregistré."
+        emptyLabel="Aucune carte enregistrée."
       >
         <div style={{ display: "flex", flexDirection: "column", gap: spacing.sm }}>
           {methods.map((method) => (
@@ -108,45 +95,22 @@ export default function PaymentMethodsPage() {
         <div style={{ marginTop: spacing.lg }}>
           <Button onClick={() => setShowForm(true)}>
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Plus size={16} /> Ajouter un moyen de paiement
+              <Plus size={16} /> Ajouter une carte
             </span>
           </Button>
         </div>
       )}
 
       {showForm && (
-        <SectionCard title="Nouveau moyen de paiement">
-          <div style={{ marginBottom: spacing.md }}>
-            <Select
-              value={type}
-              onChange={setType}
-              options={TYPE_OPTIONS}
-              placeholder="Type de moyen de paiement"
-            />
-          </div>
-
-          {type === "card" ? (
+        <SectionCard title="Nouvelle carte bancaire">
+          {!stripePromise ? (
+            <p style={{ color: colors.danger }}>
+              Stripe n'est pas configuré. Définissez VITE_STRIPE_PUBLISHABLE_KEY dans le fichier .env.local.
+            </p>
+          ) : (
             <Elements stripe={stripePromise}>
               <AddCardForm onSuccess={handleCardAdded} onCancel={() => setShowForm(false)} />
             </Elements>
-          ) : (
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <FormField
-                label="Email PayPal"
-                name="email"
-                type="email"
-                register={register}
-                rules={{ required: "Email requis" }}
-                error={errors.email}
-              />
-
-              <div style={{ display: "flex", gap: spacing.sm, marginTop: spacing.md }}>
-                <Button type="submit">Enregistrer</Button>
-                <Button variant="secondary" onClick={() => setShowForm(false)}>
-                  Annuler
-                </Button>
-              </div>
-            </form>
           )}
         </SectionCard>
       )}

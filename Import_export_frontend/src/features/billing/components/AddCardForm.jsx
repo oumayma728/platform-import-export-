@@ -8,6 +8,7 @@ import {
 } from "@stripe/react-stripe-js";
 import Button from "../../../components/atoms/Button";
 import { colors, radius, spacing, typography } from "../../../styles/tokens";
+import { createSetupIntent } from "../api/billing";
 
 // Mêmes propriétés visuelles que le champ Input.jsx habituel, recopiées ici
 // car Stripe Elements n'accepte que des propriétés CSS simples dans `style`
@@ -88,30 +89,33 @@ export default function AddCardForm({ onSuccess, onCancel }) {
     setIsSubmitting(true);
     setError(null);
 
-    // Tokenisation Stripe réelle (numéro + expiration MM/AA + CVC, saisis via
-    // les 3 champs Elements ci-dessous) : c'est Stripe qui gère le format
-    // "MM / AA" de la date d'expiration, plus besoin de champ texte libre.
-    const { paymentMethod, error: stripeError } = await stripe.createPaymentMethod({
-      type: "card",
-      card: elements.getElement(CardNumberElement),
-      billing_details: { name: holder },
-    });
-
-    if (stripeError) {
-      setError(stripeError.message);
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      const { brand, last4, exp_month, exp_year } = paymentMethod.card;
-      await onSuccess({
-        type: "card",
-        brand: brand.charAt(0).toUpperCase() + brand.slice(1),
-        last4,
-        expiry: `${String(exp_month).padStart(2, "0")}/${String(exp_year).slice(-2)}`,
-        holder,
-      });
+      // 1) Le backend crée un SetupIntent lié au Customer Stripe.
+      const { clientSecret } = await createSetupIntent();
+      if (!clientSecret) {
+        throw new Error("Stripe n'a pas renvoyé de secret de configuration.");
+      }
+
+      // 2) Numéro, expiration et CVC sont envoyés directement à Stripe par
+      // Stripe Elements. Notre backend ne reçoit jamais ces données sensibles.
+      const { setupIntent, error: stripeError } = await stripe.confirmCardSetup(
+        clientSecret,
+        {
+          payment_method: {
+            card: elements.getElement(CardNumberElement),
+            billing_details: { name: holder.trim() },
+          },
+        }
+      );
+
+      if (stripeError) {
+        throw new Error(stripeError.message);
+      }
+      if (!setupIntent || setupIntent.status !== "succeeded") {
+        throw new Error("La carte n'a pas pu être enregistrée.");
+      }
+
+      await onSuccess({ id: setupIntent.payment_method });
     } catch (err) {
       setError(err.message || "Le moyen de paiement n'a pas pu être enregistré.");
     } finally {

@@ -9,7 +9,7 @@ import {
   getConversationById,
   sendMessage,
   updateConversationStatus,
-  CURRENT_USER_ID,
+  markConversationRead,
 } from "../api/messages";
 import { checkPaywallStatus } from "../../billing/api/billing";
 import {
@@ -18,6 +18,13 @@ import {
 } from "../../../components/molecules/FileDropzone";
 import StatusBadge from "../../../components/molecules/StatusBadge";
 import AsyncState from "../../../components/organisms/AsyncState";
+import {
+  getMyNotifications,
+  markNotificationRead,
+  sendEmailNotification,
+  sendSmsNotification,
+  retryFailedNotifications,
+} from "../../../api/notifications";
 
 const STATUS_FLOW = ["suggested", "in_contact", "negotiating", "concluded"];
 
@@ -46,11 +53,24 @@ export default function MessagingPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { items: conversations, isLoading, error, refetch } = useResourceList(getConversations);
+  const [messageFilter, setMessageFilter] = useState("all");
+  const { user } = useAuth();
 
   const sorted = [...conversations].sort(
     (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
   );
-  const selected = sorted.find((c) => c.id === id) || null;
+  const selected = sorted.find((c) => String(c.id) === String(id)) || null;
+  const activeConversationCount = sorted.filter(
+    (conversation) => Array.isArray(conversation.messages) && conversation.messages.length > 0
+  ).length;
+  const totalUnread = sorted.reduce((sum, conv) => sum + Number(conv.unreadCount || 0), 0);
+  const filteredConversations = sorted.filter((conv) => {
+    if (messageFilter === "unread") return Number(conv.unreadCount || 0) > 0;
+    if (messageFilter === "read") return Number(conv.unreadCount || 0) === 0 && (conv.messages?.length || 0) > 0;
+    return true;
+  });
+  const rawRole = Array.isArray(user?.role) ? user.role.join(",") : String(user?.role || "");
+  const isAdmin = rawRole.toUpperCase().includes("ADMIN");
 
   // Sur mobile : une seule vue à la fois (liste OU conversation), comme
   // Messenger — la liste n'est même pas montée dans le DOM une fois une
@@ -76,20 +96,46 @@ export default function MessagingPage() {
           <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#14161C", margin: 0 }}>
             Conversations
           </h2>
-          <p style={{ fontSize: "12px", color: "#6b7280", margin: "4px 0 0 0" }}>
-            {sorted.length} conversation{sorted.length > 1 ? "s" : ""}
+          <p style={{ fontSize: "12px", color: totalUnread > 0 ? "#C22D2D" : "#6b7280", margin: "4px 0 8px 0", fontWeight: totalUnread > 0 ? 700 : 400 }}>
+            {activeConversationCount} conversation{activeConversationCount > 1 ? "s" : ""} active{activeConversationCount > 1 ? "s" : ""}
+            {totalUnread > 0 ? ` · ${totalUnread} non lu${totalUnread > 1 ? "s" : ""}` : ""}
           </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[
+              ["all", "Tous"],
+              ["unread", `Non lus${totalUnread ? ` (${totalUnread})` : ""}`],
+              ["read", "Lus"],
+            ].map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setMessageFilter(value)} style={{
+                border: "1px solid #E4E2DC", borderRadius: 999, padding: "5px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                background: messageFilter === value ? (value === "unread" ? "#C22D2D" : "#B8720A") : "#fff",
+                color: messageFilter === value ? "#fff" : "#6b7280",
+              }}>
+                {label}
+              </button>
+            ))}
+            {isAdmin && (
+              <button type="button" onClick={async () => {
+                try {
+                  const result = await retryFailedNotifications();
+                  alert(`Relance terminée : ${result.reussies || 0} réussie(s).`);
+                } catch (e) { alert(e?.response?.data?.detail || e.message || "Relance impossible"); }
+              }} style={{ border: "1px solid #E4E2DC", borderRadius: 999, padding: "5px 9px", fontSize: 11, cursor: "pointer", background: "#fff" }}>
+                Relancer notifications
+              </button>
+            )}
+          </div>
         </div>
 
         <AsyncState
           isLoading={isLoading}
           error={error}
-          isEmpty={sorted.length === 0}
+          isEmpty={filteredConversations.length === 0}
           emptyLabel="Aucune conversation pour l'instant."
         >
           <div style={{ flex: 1, overflowY: "auto" }}>
-            {sorted.map((conv) => {
-              const isActive = conv.id === id;
+            {filteredConversations.map((conv) => {
+              const isActive = String(conv.id) === String(id);
               const lastMessage = conv.messages[conv.messages.length - 1];
               return (
                 <button
@@ -103,7 +149,7 @@ export default function MessagingPage() {
                     padding: "12px 12px",
                     border: "none",
                     backgroundColor: isActive ? "#FBF0DC" : "transparent",
-                    borderLeft: isActive ? "4px solid #B8720A" : "4px solid transparent",
+                    borderLeft: Number(conv.unreadCount || 0) > 0 ? "4px solid #C22D2D" : (isActive ? "4px solid #B8720A" : "4px solid transparent"),
                     cursor: "pointer",
                     transition: "background-color 0.2s ease",
                   }}
@@ -144,6 +190,11 @@ export default function MessagingPage() {
                       }}
                     >
                       {conv.counterpart.name}
+                      {Number(conv.unreadCount || 0) > 0 && (
+                        <span style={{ marginLeft: 6, color: "#C22D2D", fontWeight: 800 }}>
+                          ({conv.unreadCount})
+                        </span>
+                      )}
                     </p>
                     <p
                       style={{
@@ -225,18 +276,55 @@ function ConversationThread({ conversation, onRefetch }) {
   const [usage, setUsage] = useState(null);
   const [isUnlimited, setIsUnlimited] = useState(true);
   const [sendError, setSendError] = useState(null);
+  const [notifyByEmail, setNotifyByEmail] = useState(false);
+  const [notifyBySms, setNotifyBySms] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     refreshPaywallStatus();
+    let cancelled = false;
+    async function syncReadState() {
+      try {
+        await markConversationRead(conversation.id);
+        const notifications = await getMyNotifications({ unreadOnly: true });
+        const related = notifications.filter(
+          (n) => String(n.sujet || "") === `MESSAGE_CONVERSATION:${conversation.id}`
+        );
+        await Promise.all(related.map((n) => markNotificationRead(n.id)));
+        if (!cancelled) {
+          await onRefetch();
+          window.dispatchEvent(new Event("messaging:unread-changed"));
+        }
+      } catch (e) {
+        console.error("Impossible de synchroniser l'état lu", e);
+      }
+    }
+    syncReadState();
+    return () => { cancelled = true; };
   }, [conversation.id]);
 
-  function refreshPaywallStatus() {
-    checkPaywallStatus().then(({ isBlocked, usage, isUnlimited }) => {
-      setIsBlocked(isBlocked);
-      setUsage(usage);
-      setIsUnlimited(isUnlimited);
-    });
+  async function refreshPaywallStatus() {
+    try {
+      const result = await checkPaywallStatus();
+      const currentUsage = result?.usage || null;
+      const unlimited = Boolean(result?.isUnlimited);
+      setUsage(currentUsage);
+      setIsUnlimited(unlimited);
+
+      if (unlimited) {
+        setIsBlocked(false);
+        return;
+      }
+
+      const used = currentUsage?.messagesUsed ?? currentUsage?.messages_utilises ?? currentUsage?.usedChats ?? 0;
+      const max = currentUsage?.messagesLimit ?? currentUsage?.messages_gratuits ?? currentUsage?.maxChats ?? 50;
+      const remaining = currentUsage?.messagesRemaining ?? currentUsage?.messages_restants ?? Math.max(max - used, 0);
+      const reached = currentUsage?.limitReached === true || currentUsage?.limit_reached === true || remaining <= 0;
+      setIsBlocked(reached);
+      if (reached) setSendError("Vous avez atteint la limite de 50 messages gratuits.");
+    } catch (error) {
+      console.error("Erreur lors du chargement du quota", error);
+    }
   }
 
   async function handleSend(e) {
@@ -246,14 +334,34 @@ function ConversationThread({ conversation, onRefetch }) {
     setSendError(null);
     try {
       await sendMessage(conversation.id, text.trim(), attachment);
+      const notificationText = text.trim() || (attachment ? `Nouveau document : ${attachment.name}` : "Nouveau message");
+      const notificationTasks = [];
+      if (notifyByEmail && conversation.counterpart?.email) {
+        notificationTasks.push(sendEmailNotification({
+          to: conversation.counterpart.email,
+          subject: `Nouveau message Indeed² - ${conversation.listingProduct || "conversation"}`,
+          body: `<p>Vous avez reçu un nouveau message sur Indeed².</p><p>${notificationText}</p>`,
+        }));
+      }
+      if (notifyBySms && conversation.counterpart?.phone) {
+        notificationTasks.push(sendSmsNotification({
+          to: conversation.counterpart.phone,
+          message: `Indeed² : ${notificationText}`.slice(0, 500),
+        }));
+      }
+      if (notificationTasks.length) {
+        Promise.allSettled(notificationTasks).then((results) => {
+          results.filter((r) => r.status === "rejected").forEach((r) => console.error("Notification externe échouée", r.reason));
+        });
+      }
       setText("");
       setAttachment(null);
       setAttachmentError(null);
       await onRefetch();
+      window.dispatchEvent(new Event("messaging:unread-changed"));
       refreshPaywallStatus();
     } catch (err) {
       setSendError(err.message);
-      setIsBlocked(true);
     } finally {
       setIsSending(false);
     }
@@ -379,7 +487,7 @@ function ConversationThread({ conversation, onRefetch }) {
           </p>
         )}
         {conversation.messages.map((msg) => {
-          const isMine = msg.senderId === CURRENT_USER_ID;
+          const isMine = String(msg.senderId) === String(user?.id);
           const avatarName = isMine ? "Moi" : conversation.counterpart.name;
           return (
             <div
@@ -564,42 +672,29 @@ function ConversationThread({ conversation, onRefetch }) {
         </div>
       ) : (
       <>
-        {!isUnlimited && usage && (
-          <div
-            style={{
-              padding: "8px 20px",
-              borderTop: "1px solid #f1f5f9",
-              backgroundColor: usage.maxChats - usage.usedChats <= 10 ? "#fffbeb" : "#F6F5F2",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: usage.maxChats - usage.usedChats <= 10 ? "#92400e" : "#6b7280",
-              }}
-            >
-              {usage.maxChats - usage.usedChats <= 10 ? "⚠️ " : "💬 "}
-              {Math.max(0, usage.maxChats - usage.usedChats)} message
-              {Math.max(0, usage.maxChats - usage.usedChats) > 1 ? "s" : ""} gratuit
-              {Math.max(0, usage.maxChats - usage.usedChats) > 1 ? "s" : ""} restant
-              {Math.max(0, usage.maxChats - usage.usedChats) > 1 ? "s" : ""} ce mois-ci
-            </span>
-            {usage.maxChats - usage.usedChats <= 10 && (
-              <Link
-                to="/billing/plans"
-                style={{ fontSize: 12, fontWeight: 700, color: "#B8720A" }}
-              >
-                Voir les offres →
-              </Link>
-            )}
-          </div>
-        )}
+        {!isUnlimited && usage && (() => {
+          const used = usage?.messagesUsed ?? usage?.messages_utilises ?? usage?.usedChats ?? 0;
+          const max = usage?.messagesLimit ?? usage?.messages_gratuits ?? usage?.maxChats ?? 50;
+          const remaining = usage?.messagesRemaining ?? usage?.messages_restants ?? Math.max(max - used, 0);
+          if (remaining <= 0) return null;
+          return (
+            <div style={{
+              padding: "8px 20px", borderTop: "1px solid #f1f5f9",
+              backgroundColor: remaining <= 10 ? "#fffbeb" : "#F6F5F2",
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap",
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: remaining <= 10 ? "#92400e" : "#6b7280" }}>
+                {remaining <= 10 ? "⚠️ " : "💬 "}
+                {remaining} {remaining === 1 ? "message gratuit restant" : "messages gratuits restants"}
+              </span>
+              {remaining <= 10 && (
+                <Link to="/billing/plans" style={{ fontSize: 12, fontWeight: 700, color: "#B8720A" }}>
+                  Voir les offres →
+                </Link>
+              )}
+            </div>
+          );
+        })()}
       <form
         onSubmit={handleSend}
         style={{
@@ -610,6 +705,16 @@ function ConversationThread({ conversation, onRefetch }) {
           gap: 8,
         }}
       >
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: "#6b7280" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input type="checkbox" checked={notifyByEmail} disabled={!conversation.counterpart?.email} onChange={(e) => setNotifyByEmail(e.target.checked)} />
+            Notifier par e-mail{!conversation.counterpart?.email ? " (indisponible)" : ""}
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input type="checkbox" checked={notifyBySms} disabled={!conversation.counterpart?.phone} onChange={(e) => setNotifyBySms(e.target.checked)} />
+            Notifier par SMS{!conversation.counterpart?.phone ? " (indisponible)" : ""}
+          </label>
+        </div>
         {attachmentError && (
           <p style={{ color: "#C22D2D", fontSize: 12, margin: 0 }}>⚠️ {attachmentError}</p>
         )}

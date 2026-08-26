@@ -1,73 +1,311 @@
-# Indeed² — Import/Export Matching
+# Import Export Platform — version intégrée
 
-Plateforme qui met en relation des exportateurs et des importateurs.
+Plateforme web import/export avec frontend React/Vite et backend FastAPI/PostgreSQL. Cette version regroupe les corrections d’intégration réalisées sur l’authentification, les annonces, les référentiels dynamiques, le matching, la messagerie, les notifications et la facturation.
 
-## Lancer le projet
+## Fonctionnalités principales
 
-```bash
+### Authentification et profil
+
+- Inscription et connexion réelles via FastAPI/PostgreSQL.
+- JWT + refresh token.
+- Profil entreprise synchronisé avec la base.
+- Upload du logo entreprise.
+- Changement du mot de passe pour un utilisateur connecté.
+- Mot de passe oublié avec token temporaire et page de réinitialisation.
+- Envoi des emails de réinitialisation via SMTP (Brevo recommandé).
+
+### Annonces et référentiels
+
+- Création, modification, consultation et filtrage des annonces.
+- Référentiels stockés en base dans `reference_options` :
+  - catégories ;
+  - pays ;
+  - devises ;
+  - unités ;
+  - Incoterms.
+- Une valeur absente peut être ajoutée depuis le formulaire puis réutilisée après rechargement.
+- Les filtres Catégorie/Pays et la section « Explorer par secteur » utilisent les référentiels backend au lieu de listes figées.
+
+### Matching IA — règle métier par rôle
+
+Le matching applique désormais le besoin métier automatiquement côté backend :
+
+- **Exportateur** : ses offres sont comparées uniquement aux **demandes** d’autres utilisateurs.
+- **Importateur** : ses demandes sont comparées uniquement aux **offres** d’autres utilisateurs.
+- **Importateur & Exportateur** : chaque annonce est comparée au type opposé.
+
+La sécurité de cette règle est côté backend (`GET /api/matching-results`) ; le frontend ne peut donc pas contourner le sens du matching par un simple filtre local.
+
+### Messagerie
+
+- Conversations réelles en base.
+- Une conversation vide ne consomme aucun message gratuit.
+- Plan gratuit : 50 messages envoyés, puis blocage avec message explicite de limite atteinte.
+- Paiement à l’usage : logique distincte par conversation.
+- Premium : messagerie illimitée.
+- Messages lus/non lus persistés en base.
+- Badge global `Messagerie (N)` lorsqu’il existe des messages non lus.
+- Indicateur rouge dans la navigation lorsqu’il y a des non-lus.
+- Compteur de non-lus par conversation.
+- Filtres : **Tous / Non lus / Lus**.
+- Ouvrir une conversation marque uniquement les messages reçus comme lus.
+
+### Notifications
+
+Routes raccordées :
+
+- `GET /api/notifications/me`
+- `PATCH /api/notifications/{notification_id}/read`
+- `POST /api/notifications/email`
+- `POST /api/notifications/sms`
+- `POST /api/notifications/retry-failed`
+
+La messagerie utilise les notifications IN_APP pour synchroniser l’état lu/non lu. Les notifications email et SMS restent dépendantes de la configuration des fournisseurs externes.
+
+### Facturation
+
+- Offre gratuite : 50 messages.
+- Paiement à l’usage : 0,50 € par conversation selon la logique métier du module.
+- Premium : abonnement Stripe.
+- Stripe Elements / SetupIntent pour l’enregistrement sécurisé des cartes.
+- Moyens de paiement, abonnement et factures via le backend Stripe.
+
+## Stack technique
+
+### Backend
+
+- Python
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- Alembic
+- JWT / Passlib / bcrypt
+- Stripe
+- SMTP Brevo
+- Twilio (SMS, optionnel)
+- APScheduler
+
+### Frontend
+
+- React
+- Vite
+- React Router
+- Axios
+- React Hook Form
+- Stripe.js / React Stripe.js
+- Lucide React / React Icons
+
+## Arborescence simplifiée
+
+```text
+.
+├── app/
+│   ├── config/
+│   ├── controllers/
+│   ├── matching/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── schemas/
+│   └── services/
+├── migrations/
+├── tests/
+├── Import_export_frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── features/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   └── utils/
+│   └── package.json
+├── main.py
+├── requirements.txt
+├── alembic.ini
+└── .env.example
+```
+
+## Prérequis
+
+- Python installé et accessible avec `python`.
+- PostgreSQL installé et démarré.
+- Node.js + npm.
+
+Un environnement virtuel Python est recommandé, mais il n’est pas obligatoire. Aucun script `.bat` n’est nécessaire pour lancer le projet.
+
+## Configuration backend
+
+Créer `.env` à partir de `.env.example` :
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Puis renseigner au minimum :
+
+```env
+DATABASE_URL=postgresql://postgres:mot_de_passe@localhost:5432/import_export_db
+JWT_SECRET=une-cle-secrete-longue-et-aleatoire
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440
+
+FRONTEND_URL=http://localhost:5173
+
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=votre-login-smtp-brevo
+SMTP_PASSWORD=votre-cle-smtp-brevo
+SMTP_FROM=votre-expediteur-verifie
+
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PREMIUM_PRICE_ID=
+SUBSCRIPTION_PRICE=29
+
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+```
+
+Ne jamais versionner `.env`, les clés Stripe secrètes, les clés SMTP ou les tokens Twilio.
+
+## Installation backend
+
+Depuis la racine du projet :
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Optionnel — environnement virtuel :
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+## Lancement backend
+
+```powershell
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Au démarrage, le projet exécute son initialisation de base et les migrations prévues par `database_startup`.
+
+Documentation Swagger :
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Configuration frontend
+
+Dans `Import_export_frontend`, créer `.env.local` à partir de `.env.example` :
+
+```powershell
+cd Import_export_frontend
+Copy-Item .env.example .env.local
+```
+
+Configuration minimale :
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+La clé Stripe du frontend est la clé **publique** (`pk_...`), jamais la clé secrète (`sk_...`).
+
+## Installation et lancement frontend
+
+```powershell
+cd Import_export_frontend
 npm install
 npm run dev
 ```
 
-L'app fonctionne toute seule, sans backend : les données (annonces, comptes, messages...) sont simulées dans le dossier `mocks/`. Pour brancher un vrai backend plus tard, il suffit de changer `USE_MOCKS` en `false` dans `src/api/client.js`.
+Vite affichera l’adresse locale à ouvrir dans le navigateur (généralement `http://localhost:5173`).
 
-## Les grandes parties du projet
+## Tests
 
-### 🔐 Authentification
+Backend :
 
-Fichiers : `context/AuthContext.jsx`, `pages/LoginPage.jsx`, `pages/RegisterPage.jsx`
+```powershell
+pytest
+```
 
-- `AuthContext` garde en mémoire qui est connecté et gère la connexion/inscription/déconnexion.
-- Après connexion, un token est enregistré (`utils/tokenStorage.js`) — soit de façon durable (case "se souvenir de moi" cochée), soit juste pour la session.
-- `ProtectedRoute` bloque l'accès à certaines pages (profil, messagerie, mes annonces...) si personne n'est connecté, et renvoie vers `/auth/login`.
+Frontend :
 
-### 📦 Annonces (Listings)
+```powershell
+cd Import_export_frontend
+npm test
+```
 
-Fichiers : `pages/ListingsPage.jsx`, `ListingDetailPage.jsx`, `ListingCreatePage.jsx`, `MyListingsPage.jsx`
+Build frontend :
 
-- Publier, modifier, consulter et lister les annonces d'import/export.
-- `MyListingsPage` regroupe uniquement les annonces du compte connecté.
-- `ListingsShowcasePage` (`/listings`) est la vitrine publique, visible sans être connecté.
+```powershell
+npm run build
+```
 
-### 🤝 Matching
+## Matching : exemples attendus
 
-Fichier : `pages/MatchingPage.jsx`
+### Compte Exportateur
 
-- Propose des correspondances entre les annonces de l'utilisateur et celles des autres, avec un score de pertinence.
-- Réservé aux utilisateurs connectés.
+```text
+Mes annonces utilisées pour le matching : OFFRES
+Partenaires proposés : DEMANDES
+```
 
-### 💬 Messagerie
+### Compte Importateur
 
-Fichiers : `features/messaging/`
+```text
+Mes annonces utilisées pour le matching : DEMANDES
+Partenaires proposés : OFFRES
+```
 
-- Permet d'échanger des messages entre un exportateur et un importateur intéressés par une même annonce.
-- `MessagingPage` = les vraies conversations (connecté uniquement). `MessagesPage` (route `/Vmessages`) = un aperçu visible par les visiteurs, pour donner envie de créer un compte.
-- Chaque message envoyé consomme un crédit du plan de facturation — la messagerie est donc reliée au module Facturation (voir plus bas) : au-delà d'un certain nombre de messages en plan gratuit, l'envoi est bloqué tant qu'on n'a pas upgradé son plan.
+### Double rôle
 
-### ⭐ Favoris
+```text
+Mes OFFRES  -> DEMANDES partenaires
+Mes DEMANDES -> OFFRES partenaires
+```
 
-Fichiers : `pages/FavoritesPage.jsx`, `api/favorites.js`
+## Messagerie : comportement attendu
 
-- Permet de sauvegarder des annonces intéressantes pour les retrouver facilement.
+```text
+Conversation créée / ouverte sans message -> quota inchangé
+1er message envoyé -> 49 messages gratuits restants
+2e message envoyé -> 48
+...
+50e message envoyé -> limite atteinte
+```
 
-### 👤 Profil
+Les messages reçus non lus alimentent le badge `Messagerie (N)`. L’ouverture de la conversation met à jour les messages et notifications correspondants en lecture.
 
-Fichiers : `pages/ProfilePage.jsx`, `ProfileCompletionPage.jsx`, `ProfileStatusPage.jsx`, `OnboardingListingPage.jsx`
+## Sécurité
 
-- Après inscription, l'utilisateur complète son profil (entreprise, secteur, certifications...).
-- Le profil passe ensuite par un statut : en attente → validé/refusé (`ProfileStatusPage`), avant de pouvoir publier des annonces.
+- Les mots de passe sont hashés avec bcrypt et ne sont pas récupérables en clair.
+- Les erreurs de connexion ne doivent pas provoquer une redirection/réinitialisation du formulaire de login.
+- Les numéros de carte/CVC ne sont pas stockés par l’application.
+- Les secrets restent côté backend dans `.env`.
+- Le mot de passe oublié renvoie une réponse générique afin de ne pas révéler si un compte existe.
 
-### 💳 Facturation & paiement (Stripe)
+## Notes fournisseurs externes
 
-Fichiers : `features/billing/`
+- **Brevo SMTP** : le compte SMTP doit être activé pour que l’envoi réel fonctionne.
+- **Twilio** : nécessaire uniquement pour l’envoi SMS réel.
+- **Stripe** : utiliser les clés de test pour le développement.
 
-- Trois plans (gratuit / payants), visibles sur `PlansPage`.
-- `BillingPage` regroupe l'abonnement en cours, l'usage (messages envoyés) et les factures.
-- Le paiement d'une carte se fait avec **Stripe** : le champ où l'on tape son numéro de carte est directement fourni par Stripe (pas par nous), donc le numéro de carte ne passe jamais par notre code — on ne récupère qu'un jeton une fois la carte validée.
-- Pour tester un paiement, utiliser une carte de test Stripe : `4242 4242 4242 4242` (n'importe quelle date future, n'importe quel CVC à 3 chiffres) → paiement accepté. `4000 0000 0000 0002` → carte refusée exprès, pour tester ce cas.
-- Comme tout tourne en mocks, aucun vrai débit n'a lieu : Stripe valide juste que la carte est correcte, puis le plan est activé localement.
 
-## Performance
 
-Le site a été audité avec Lighthouse et optimisé (score Performance : 55 → 94), principalement en ne chargeant chaque page (et notamment Stripe) qu'au moment où elle est vraiment visitée.
-> Pour un audit Lighthouse fiable, toujours tester sur `npm run build` + `npm run preview` (port 4173), jamais sur `npm run dev` (port 5173).
+### Persistance du type de compte (Importateur / Exportateur)
+
+La modification dans **Profil > Compte professionnel** est persistée via `PUT /api/auth/profile`.
+Le backend synchronise `users.type_compte` et la colonne historique `users.role`. La sélection multi-rôle
+(`EXPORTATEUR,IMPORTATEUR`) est donc conservée après actualisation et est utilisée par le Matching.
+
+Si une ancienne base existe déjà, le démarrage applique automatiquement les migrations Alembic, notamment
+l'élargissement de `users.type_compte` à 50 caractères.

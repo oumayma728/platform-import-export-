@@ -29,10 +29,55 @@ function filterMock(data, { country, category, type, price, certifications, q } 
     );
 }
 
+/**
+ * Normalise les filtres du frontend (price: {min, max}, certifications: [])
+ * au format attendu par le backend (min_price, max_price, certification).
+ */
+function normalizeFiltersForBackend(frontendFilters = {}) {
+  const backendParams = {};
+
+  for (const [key, value] of Object.entries(frontendFilters)) {
+    // Skip undefined, null, empty string, empty array, empty object
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    
+    // price: {min, max} → min_price, max_price
+    if (key === "price" && typeof value === "object") {
+      if (value.min !== undefined && value.min !== null) backendParams.min_price = value.min;
+      if (value.max !== undefined && value.max !== null) backendParams.max_price = value.max;
+    }
+    // certifications: [] → certification (use first)
+    else if (key === "certifications" && Array.isArray(value) && value.length > 0) {
+      backendParams.certification = value[0];
+    }
+    // Pass through all other filters as-is (type, country, category, q, etc.)
+    else if (key !== "price" && key !== "certifications") {
+      backendParams[key] = value;
+    }
+  }
+
+  return backendParams;
+}
+
 const listingsApi = createResourceApi("listings", mockListings, { filterMock });
 
-// Alias explicite pour un code appelant plus lisible dans les pages
-export const getListings = listingsApi.getAll;
+/**
+ * Wrapper pour getListings qui normalise les filtres frontend avant
+ * d'appeler l'API réelle, ou de les passer au mock.
+ */
+export async function getListings(frontendFilters = {}) {
+  if (USE_MOCKS) {
+    // En mode mock, on utilise le filterMock qui comprend la structure frontend
+    await delay();
+    return filterMock(mockListings, frontendFilters);
+  }
+  
+  // En mode réel, on normalise les filtres pour le backend
+  const backendParams = normalizeFiltersForBackend(frontendFilters);
+  const { data } = await apiClient.get("/listings", { params: backendParams });
+  return data;
+}
+
 
 /**
  * GET /listings/:id — récupère le détail d'une annonce.
@@ -66,23 +111,40 @@ export async function getListingById(id) {
 }
 
 export async function createListing(payload) {
-  const created = await listingsApi.create({
-    ...payload,
-    ownerId: CURRENT_USER_ID,
-    status: "active",
-  });
-  // Garde les mocks en mémoire synchronisés pour que "Mes annonces" et
-  // le catalogue reflètent immédiatement la nouvelle annonce.
-  mockListings.push(created);
-  return created;
+  if (USE_MOCKS) {
+    const created = await listingsApi.create({
+      ...payload,
+      ownerId: CURRENT_USER_ID,
+      status: "active",
+    });
+    mockListings.push(created);
+    return created;
+  }
+
+  const { data } = await apiClient.post("/listings", payload);
+  return data;
 }
 
 export async function updateListing(id, payload) {
-  await delay(300);
-  const index = mockListings.findIndex((l) => l.id === id);
-  if (index === -1) throw new Error("Annonce introuvable");
-  mockListings[index] = { ...mockListings[index], ...payload };
-  return mockListings[index];
+  if (USE_MOCKS) {
+    await delay(300);
+    const index = mockListings.findIndex((l) => l.id === id);
+    if (index === -1) throw new Error("Annonce introuvable");
+    mockListings[index] = { ...mockListings[index], ...payload };
+    return mockListings[index];
+  }
+
+  try {
+    const { data } = await apiClient.put(`/listings/${id}`, payload);
+    return data;
+  } catch (err) {
+    if (err.response?.status === 404) {
+      throw new Error("Annonce introuvable");
+    }
+    throw new Error(
+      err.response?.data?.detail || err.response?.data?.message || "Impossible de modifier cette annonce pour le moment."
+    );
+  }
 }
 
 /**
@@ -113,6 +175,11 @@ export async function deleteListing(id) {
 // Toutes les annonces du propriétaire, quel que soit leur statut
 // (contrairement au catalogue public qui masque suspendues/clôturées).
 export async function getMyListings() {
-  await delay(300);
-  return mockListings.filter((l) => l.ownerId === CURRENT_USER_ID);
+  if (USE_MOCKS) {
+    await delay(300);
+    return mockListings.filter((l) => l.ownerId === CURRENT_USER_ID);
+  }
+
+  const { data } = await apiClient.get("/listings/mine");
+  return data || [];
 }

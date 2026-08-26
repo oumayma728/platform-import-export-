@@ -1,10 +1,10 @@
 import axios from "axios";
 import { getToken, clearToken } from "../utils/tokenStorage";
 
-export const USE_MOCKS = true;
+export const USE_MOCKS = false;
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -22,10 +22,10 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      clearToken();
-      window.location.href = "/auth/login";
-    }
+    // if (error.response?.status === 401) {
+    //   clearToken();
+    //   window.location.href = "/auth/login";
+    // }
     return Promise.reject(error);
   }
 );

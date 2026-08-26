@@ -1,0 +1,1 @@
+{"openapi":"3.1.0","info":{"title":"Import Export Platform API","description":"API complète de la plateforme mondiale import/export — 3LM Solutions","version":"1.0.0"},"paths":{"/":{"get":{"summary":"Root","operationId":"root__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}}}}}}

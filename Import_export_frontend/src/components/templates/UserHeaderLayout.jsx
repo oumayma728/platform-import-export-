@@ -4,6 +4,8 @@ import { Menu, X } from "lucide-react";
 import { colors, spacing, typography } from "../../styles/tokens";
 import { useAuth } from "../../context/AuthContext";
 import { FaHeart } from "react-icons/fa";
+import { getConversations } from "../../features/messaging/api/messages";
+import { getMyNotifications } from "../../api/notifications";
 
 const NAV_ITEMS = [
   { to: "/listings/catalog", label: "Annonces" },
@@ -20,16 +22,55 @@ const FULL_BLEED_PATHS = ["/messages"];
 const ONBOARDING_PATHS = ["/profile/complete", "/profile/status"];
 
 export default function UserHeaderLayout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
   const isFullBleed = FULL_BLEED_PATHS.some((path) => location.pathname.startsWith(path));
   const isOnboarding = ONBOARDING_PATHS.some((path) => location.pathname.startsWith(path));
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // Referme le menu mobile automatiquement dès qu'on navigue vers une nouvelle page
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadMessages(0);
+      return undefined;
+    }
+
+    let cancelled = false;
+    async function refreshUnread() {
+      try {
+        const [conversations, notifications] = await Promise.all([
+          getConversations(),
+          getMyNotifications({ unreadOnly: true }),
+        ]);
+        if (cancelled) return;
+        const fromMessages = (Array.isArray(conversations) ? conversations : [])
+          .reduce((sum, conv) => sum + Number(conv.unreadCount || 0), 0);
+        const fromNotifications = (Array.isArray(notifications) ? notifications : [])
+          .filter((n) => String(n.sujet || "").startsWith("MESSAGE_CONVERSATION:"))
+          .length;
+        // Les messages sont la source principale ; le max évite un clignotement
+        // pendant la synchronisation message/notification.
+        setUnreadMessages(Math.max(fromMessages, fromNotifications));
+      } catch (e) {
+        console.error("Erreur compteur messages non lus", e);
+      }
+    }
+
+    refreshUnread();
+    const intervalId = window.setInterval(refreshUnread, 15000);
+    const onChanged = () => refreshUnread();
+    window.addEventListener("messaging:unread-changed", onChanged);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("messaging:unread-changed", onChanged);
+    };
+  }, [user, location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -84,20 +125,24 @@ export default function UserHeaderLayout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  style={({ isActive }) => ({
+                  style={({ isActive }) => {
+                    const hasUnread = item.to === "/messages" && unreadMessages > 0;
+                    return ({
                     textDecoration: "none",
-                    color: isActive ? colors.primary : colors.textMuted,
+                    color: hasUnread ? "#C22D2D" : (isActive ? colors.primary : colors.textMuted),
                     fontSize: typography.fontSizeSm,
                     fontWeight: isActive ? 700 : 500,
                     padding: `${spacing.sm}px ${spacing.md}px`,
                     borderRadius: "6px",
                     backgroundColor: isActive ? colors.primarySoft : "transparent",
+                    borderTop: item.to === "/messages" && unreadMessages > 0 ? "3px solid #C22D2D" : "3px solid transparent",
                     transition: "all 0.2s",
                     cursor: "pointer",
                     whiteSpace: "nowrap",
-                  })}
+                  });
+                  }}
                 >
-                  {item.label}
+                  {item.label}{item.to === "/messages" && unreadMessages > 0 ? ` (${unreadMessages})` : ""}
                 </NavLink>
               ))}
             </nav>
@@ -165,17 +210,21 @@ export default function UserHeaderLayout() {
               <NavLink
                 key={item.to}
                 to={item.to}
-                style={({ isActive }) => ({
+                style={({ isActive }) => {
+                  const hasUnread = item.to === "/messages" && unreadMessages > 0;
+                  return ({
                   textDecoration: "none",
-                  color: isActive ? colors.primary : colors.textMuted,
+                  color: hasUnread ? "#C22D2D" : (isActive ? colors.primary : colors.textMuted),
                   fontSize: typography.fontSizeBase,
                   fontWeight: isActive ? 700 : 500,
                   padding: `${spacing.md}px`,
                   borderRadius: "8px",
                   backgroundColor: isActive ? colors.primarySoft : "transparent",
-                })}
+                  borderLeft: hasUnread ? "4px solid #C22D2D" : "4px solid transparent",
+                });
+                }}
               >
-                {item.label}
+                {item.label}{item.to === "/messages" && unreadMessages > 0 ? ` (${unreadMessages})` : ""}
               </NavLink>
             ))}
             <button

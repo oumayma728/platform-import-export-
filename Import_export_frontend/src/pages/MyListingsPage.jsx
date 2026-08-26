@@ -3,6 +3,7 @@ import FilterBar from "../components/organisms/FilterBar";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useResourceList } from "../hooks/useResourceList";
 import { getMyListings, updateListing, deleteListing } from "../api/listings";
+import { getReferenceOptions } from "../api/referenceOptions";
 import AsyncState from "../components/organisms/AsyncState";
 import StatusBadge from "../components/molecules/StatusBadge";
 import {
@@ -31,46 +32,54 @@ const STATUS_FIELD = {
   ],
 };
 
-const COUNTRY_FIELD = {
-  name: "country",
-  placeholder: "Tous les pays",
-  options: [
-  { value: "Tunisie", label: "🇹🇳 Tunisie" },
-  { value: "France", label: "🇫🇷 France" },
-  { value: "Italie", label: "🇮🇹 Italie" },
-  { value: "Espagne", label: "🇪🇸 Espagne" },
-  { value: "Allemagne", label: "🇩🇪 Allemagne" },
-  { value: "Belgique", label: "🇧🇪 Belgique" },
-  { value: "Pays-Bas", label: "🇳🇱 Pays-Bas" },
-  { value: "Maroc", label: "🇲🇦 Maroc" },
-  { value: "Algérie", label: "🇩🇿 Algérie" },
-  { value: "Égypte", label: "🇪🇬 Égypte" },
-  { value: "Turquie", label: "🇹🇷 Turquie" },
-  { value: "Chine", label: "🇨🇳 Chine" },
-  { value: "Inde", label: "🇮🇳 Inde" },
-  { value: "États-Unis", label: "🇺🇸 États-Unis" },
-  { value: "Canada", label: "🇨🇦 Canada" },
-  ],
-};
-
-const CATEGORY_FIELD = {
-  name: "category",
-  placeholder: "Toutes les catégories",
-  options: [
-    { value: "Agroalimentaire", label: "Agroalimentaire" },
-    { value: "Énergie", label: "Énergie" },
-    { value: "Textile", label: "Textile" },
-    { value: "Électronique", label: "Électronique" },
-    { value: "Automobile", label: "Automobile" },
-    { value: "Cosmétique", label: "Cosmétique" },
-    { value: "Construction", label: "Construction" },
-    { value: "Machines industrielles", label: "Machines industrielles" },
-    { value: "Emballage & Logistique", label: "Emballage & Logistique" },
-  ],
-};
 export default function MyListingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Référentiels dynamiques chargés depuis le backend / PostgreSQL.
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadReferenceFilters() {
+      try {
+        const [countries, categories] = await Promise.all([
+          getReferenceOptions("country"),
+          getReferenceOptions("category"),
+        ]);
+
+        if (cancelled) return;
+
+        setCountryOptions(
+          (Array.isArray(countries) ? countries : [])
+            .filter((item) => item?.value)
+            .map((item) => ({
+              value: item.value,
+              label: item.label || item.value,
+            }))
+        );
+
+        setCategoryOptions(
+          (Array.isArray(categories) ? categories : [])
+            .filter((item) => item?.value)
+            .map((item) => ({
+              value: item.value,
+              label: item.label || item.value,
+            }))
+        );
+      } catch (error) {
+        console.error("Erreur chargement des filtres dynamiques :", error);
+      }
+    }
+
+    loadReferenceFilters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [successMessage, setSuccessMessage] = useState(
     location.state?.successMessage || null
@@ -218,10 +227,18 @@ const filterFields = useMemo(
   () => [
     TYPE_FIELD,
     STATUS_FIELD,
-    COUNTRY_FIELD,
-    CATEGORY_FIELD,
+    {
+      name: "country",
+      placeholder: "Tous les pays",
+      options: countryOptions,
+    },
+    {
+      name: "category",
+      placeholder: "Toutes les catégories",
+      options: categoryOptions,
+    },
   ],
-  []
+  [countryOptions, categoryOptions]
 );
 
 const filteredItems = items.filter(

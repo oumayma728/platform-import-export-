@@ -1,4 +1,5 @@
 import { createResourceApi } from "../../../api/createResourceApi";
+import apiClient, { USE_MOCKS } from "../../../api/client";
 import { delay } from "../../../utils/delay";
 import {
   mockInvoices,
@@ -8,43 +9,53 @@ import {
   mockPlans,
 } from "../mocks/billing.mock";
 
-// Ressource générique "factures" — réutilise le même client CRUD mocké/réel
-// que les autres modules (annonces, conversations...).
 const invoicesApi = createResourceApi("invoices", mockInvoices);
 
 export const getInvoices = invoicesApi.getAll;
 export const getInvoiceById = invoicesApi.getById;
 
-// L'abonnement et les moyens de paiement ne rentrent pas dans le CRUD
-// générique (un seul abonnement actif, opérations dédiées type "annuler",
-// "changer de plan", "définir par défaut"), donc fonctions spécifiques ici —
-// même schéma que sendMessage/updateConversationStatus dans api/messages.js.
+function normalizeStatus(data = {}) {
+  const usedMessages = Number(
+    data.usedMessages ?? data.messages_used ?? data.messages_utilises ?? data.usedChats ?? data.chats_utilises ?? 0
+  );
+  const maxMessages = Number(
+    data.maxMessages ?? data.messages_limit ?? data.messages_gratuits ?? data.maxChats ?? data.chats_gratuits ?? 50
+  );
+  const status = String(data.status ?? data.statut ?? "GRATUIT");
+  const isPremium = Boolean(data.isPremium ?? data.is_premium ?? status === "ABONNE");
+  const isPayPerUse = status === "PAIEMENT_USAGE";
 
-/**
- * Simule ce que ferait un job de facturation récurrent côté backend
- * (Stripe webhook + cron), qu'on n'a pas ici puisque tout est mocké : fait
- * "avancer" l'abonnement jusqu'à aujourd'hui dès qu'on lit son état.
- *
- * Règle : tant que la date de renouvellement n'est pas dépassée, rien ne
- * bouge (le cycle payé est en cours, les messages envoyés sous Premium ne
- * doivent jamais consommer le quota Gratuit — voir incrementUsage). Une
- * fois la date de renouvellement dépassée :
- *  - si l'utilisateur a résilié (cancelAtPeriodEnd) → retour automatique
- *    au plan Gratuit ;
- *  - sinon → l'abonnement se renouvelle simplement pour un nouveau mois.
- *
- * IMPORTANT — quota Gratuit à vie : contrairement à un abonnement payant
- * (qui se renouvelle chaque mois), les 50 messages gratuits ne sont
- * accordés qu'une seule fois pour la durée de vie du compte. On ne remet
- * donc JAMAIS mockUsage.usedChats à zéro ici, même lors d'un retour au
- * plan Gratuit après résiliation d'un abonnement payant : une fois les 50
- * messages consommés, ils ne se rechargent plus, quel que soit le nombre
- * de mois écoulés.
- */
-function resolveBillingCycle() {
+  return {
+    usedMessages,
+    maxMessages,
+    // Aliases temporaires pour les composants existants.
+    usedChats: usedMessages,
+    maxChats: maxMessages,
+    remaining: Math.max(0, maxMessages - usedMessages),
+    status,
+    isPremium,
+    isPayPerUse,
+    isUnlimited: isPremium || isPayPerUse,
+    isBlocked: !isPremium && !isPayPerUse && usedMessages >= maxMessages,
+    usageSpending: Number(data.usageSpending ?? data.depense_usage ?? 0),
+    recommendationSubscription: Boolean(
+      data.recommendationSubscription ?? data.recommendation_abonnement
+    ),
+    stripeCustomerId: data.stripeCustomerId ?? data.stripe_customer_id ?? null,
+    stripeSubscriptionId:
+      data.stripeSubscriptionId ?? data.stripe_subscription_id ?? null,
+  };
+}
+
+async function getRealBillingStatus() {
+  const { data } = await apiClient.get("/billing/status");
+  return normalizeStatus(data);
+}
+
+function resolveMockBillingCycle() {
   const today = new Date();
   const renewal = new Date(mockSubscription.renewalDate);
-  if (today < renewal) return; // cycle en cours, rien à résoudre
+  if (today < renewal) return;
 
   if (mockSubscription.cancelAtPeriodEnd) {
     const freePlan = mockPlans.find((p) => p.id === "free");
@@ -56,130 +67,246 @@ function resolveBillingCycle() {
 
   mockSubscription.status = "active";
   mockSubscription.startedAt = mockSubscription.renewalDate;
-  mockSubscription.renewalDate = addOneMonth(mockSubscription.renewalDate);
-}
-
-function addOneMonth(isoDate) {
-  const d = new Date(isoDate);
+  const d = new Date(mockSubscription.renewalDate);
   d.setMonth(d.getMonth() + 1);
-  return d.toISOString().slice(0, 10);
+  mockSubscription.renewalDate = d.toISOString().slice(0, 10);
 }
 
 export async function getUsage() {
-  await delay(150);
-  resolveBillingCycle();
-  return mockUsage;
-}
-
-// Consomme un crédit de message — appelé à chaque envoi de message réussi.
-// Ne fait rien si l'utilisateur a un abonnement actif illimité (Premium).
-export async function incrementUsage() {
-  await delay(100);
-  resolveBillingCycle();
-  if (mockSubscription.planId !== "premium" || mockSubscription.status !== "active") {
-    mockUsage.usedChats += 1;
+  if (USE_MOCKS) {
+    await delay(150);
+    resolveMockBillingCycle();
+    return mockUsage;
   }
-  return mockUsage;
-}
 
-// Un seul point de vérité pour savoir si l'envoi de messages doit être
-// bloqué : plan gratuit + crédits épuisés + pas d'abonnement payant actif.
-export async function checkPaywallStatus() {
-  await delay(100);
-  resolveBillingCycle();
-  const hasUnlimitedPlan = mockSubscription.planId === "premium" && mockSubscription.status === "active";
-  const isPayPerUse = mockSubscription.planId === "pay-per-use";
-  const isBlocked = !hasUnlimitedPlan && !isPayPerUse && mockUsage.usedChats >= mockUsage.maxChats;
+  const status = await getRealBillingStatus();
   return {
-    isBlocked,
-    usage: mockUsage,
-    // Pratique pour l'affichage d'un compteur en amont (ex: dans le fil de
-    // discussion) sans avoir à réimplémenter la logique de plan illimité.
-    isUnlimited: hasUnlimitedPlan || isPayPerUse,
-    remaining: Math.max(0, mockUsage.maxChats - mockUsage.usedChats),
+    usedChats: status.usedChats,
+    maxChats: status.maxChats,
   };
 }
 
-// Notification intelligente : si le coût cumulé du paiement à l'usage
-// dépasse le prix de l'abonnement Premium, on le signale à l'utilisateur.
+// En mode API réelle, le backend est l'unique source de vérité du quota.
+// Le backend incrémente messages_utilises pour CHAQUE message/document réel du plan gratuit.
+// On ne ré-incrémente donc jamais le compteur côté frontend.
+export async function incrementUsage() {
+  if (USE_MOCKS) {
+    await delay(100);
+    resolveMockBillingCycle();
+    if (mockSubscription.planId !== "premium" || mockSubscription.status !== "active") {
+      mockUsage.usedChats += 1;
+    }
+    return mockUsage;
+  }
+
+  return getUsage();
+}
+
+export async function checkPaywallStatus() {
+  if (USE_MOCKS) {
+    await delay(100);
+    resolveMockBillingCycle();
+    const hasUnlimitedPlan =
+      mockSubscription.planId === "premium" && mockSubscription.status === "active";
+    const isPayPerUse = mockSubscription.planId === "pay-per-use";
+    const isBlocked =
+      !hasUnlimitedPlan && !isPayPerUse && mockUsage.usedChats >= mockUsage.maxChats;
+
+    return {
+      isBlocked,
+      usage: mockUsage,
+      isUnlimited: hasUnlimitedPlan || isPayPerUse,
+      remaining: Math.max(0, mockUsage.maxChats - mockUsage.usedChats),
+    };
+  }
+
+  const status = await getRealBillingStatus();
+  return {
+    isBlocked: status.isBlocked,
+    usage: {
+      usedChats: status.usedChats,
+      maxChats: status.maxChats,
+    },
+    isUnlimited: status.isUnlimited,
+    remaining: status.remaining,
+  };
+}
+
 export async function getSmartRecommendation() {
-  await delay(100);
-  const payPerUsePlan = mockPlans.find((p) => p.id === "pay-per-use");
+  if (USE_MOCKS) {
+    await delay(100);
+    const payPerUsePlan = mockPlans.find((p) => p.id === "pay-per-use");
+    const premiumPlan = mockPlans.find((p) => p.id === "premium");
+    if (!payPerUsePlan || !premiumPlan) return null;
+
+    const estimatedPayPerUseCost = mockUsage.usedChats * payPerUsePlan.priceValue;
+    const isPremiumCheaper = estimatedPayPerUseCost > premiumPlan.priceValue;
+    const isRelevant =
+      mockSubscription.planId !== "premium" || mockSubscription.status !== "active";
+
+    if (!isPremiumCheaper || !isRelevant) return null;
+
+    return {
+      estimatedPayPerUseCost,
+      premiumPrice: premiumPlan.priceValue,
+      savings: estimatedPayPerUseCost - premiumPlan.priceValue,
+      messageCount: mockUsage.usedChats,
+    };
+  }
+
+  const status = await getRealBillingStatus();
+  if (!status.recommendationSubscription || status.isPremium) return null;
+
   const premiumPlan = mockPlans.find((p) => p.id === "premium");
-  if (!payPerUsePlan || !premiumPlan) return null;
-
-  const estimatedPayPerUseCost = mockUsage.usedChats * payPerUsePlan.priceValue;
-  const isPremiumCheaper = estimatedPayPerUseCost > premiumPlan.priceValue;
-  const isRelevant = mockSubscription.planId !== "premium" || mockSubscription.status !== "active";
-
-  if (!isPremiumCheaper || !isRelevant) return null;
+  const premiumPrice = premiumPlan?.priceValue ?? 29;
 
   return {
-    estimatedPayPerUseCost,
-    premiumPrice: premiumPlan.priceValue,
-    savings: estimatedPayPerUseCost - premiumPlan.priceValue,
-    messageCount: mockUsage.usedChats,
+    estimatedPayPerUseCost: status.usageSpending,
+    premiumPrice,
+    savings: Math.max(0, status.usageSpending - premiumPrice),
+    messageCount: status.usedChats,
   };
 }
 
 export async function getSubscription() {
-  await delay(250);
-  resolveBillingCycle();
-  return mockSubscription;
+  if (USE_MOCKS) {
+    await delay(250);
+    resolveMockBillingCycle();
+    return mockSubscription;
+  }
+
+  const status = await getRealBillingStatus();
+
+  let planId = "free";
+  let planTitle = "Gratuit";
+  let price = "0 €";
+
+  if (status.isPremium) {
+    planId = "premium";
+    planTitle = "Premium";
+    price = "29 € / mois";
+  } else if (status.isPayPerUse) {
+    planId = "pay-per-use";
+    planTitle = "Paiement à l'usage";
+    price = "Selon utilisation";
+  }
+
+  return {
+    planId,
+    planTitle,
+    price,
+    status: status.status,
+    cancelAtPeriodEnd: false,
+    renewalDate: null,
+    stripeCustomerId: status.stripeCustomerId,
+    stripeSubscriptionId: status.stripeSubscriptionId,
+  };
 }
 
 export async function cancelSubscription() {
-  await delay(400);
-  mockSubscription.cancelAtPeriodEnd = true;
-  return mockSubscription;
+  if (USE_MOCKS) {
+    await delay(400);
+    mockSubscription.cancelAtPeriodEnd = true;
+    return mockSubscription;
+  }
+  throw new Error("La résiliation automatique n'est pas encore exposée par le backend.");
 }
 
 export async function reactivateSubscription() {
-  await delay(300);
-  mockSubscription.cancelAtPeriodEnd = false;
-  return mockSubscription;
+  if (USE_MOCKS) {
+    await delay(300);
+    mockSubscription.cancelAtPeriodEnd = false;
+    return mockSubscription;
+  }
+  throw new Error("La réactivation automatique n'est pas encore exposée par le backend.");
 }
 
 export async function changePlan(planId) {
-  await delay(400);
-  const plan = mockPlans.find((p) => p.id === planId);
-  if (!plan) throw new Error("Offre introuvable");
-  mockSubscription.planId = plan.id;
-  mockSubscription.planTitle = plan.title;
-  mockSubscription.price = plan.price;
-  mockSubscription.status = "active";
-
-  if (!mockSubscription.usedPlanIds.includes(plan.id)) {
-    mockSubscription.usedPlanIds.push(plan.id);
+  if (USE_MOCKS) {
+    await delay(400);
+    const plan = mockPlans.find((p) => p.id === planId);
+    if (!plan) throw new Error("Offre introuvable");
+    mockSubscription.planId = plan.id;
+    mockSubscription.planTitle = plan.title;
+    mockSubscription.price = plan.price;
+    mockSubscription.status = "active";
+    if (!mockSubscription.usedPlanIds.includes(plan.id)) {
+      mockSubscription.usedPlanIds.push(plan.id);
+    }
+    return mockSubscription;
   }
-  return mockSubscription;
+  return getSubscription();
+}
+
+// Moyens de paiement Stripe réels. Les numéros de carte/CVC ne transitent
+// jamais par notre API : Stripe Elements les envoie directement à Stripe.
+export async function createSetupIntent() {
+  if (USE_MOCKS) {
+    await delay(150);
+    return { clientSecret: "mock_setup_secret" };
+  }
+  try {
+    const { data } = await apiClient.post("/billing/setup-intent");
+    return { clientSecret: data.clientSecret ?? data.client_secret };
+  } catch (err) {
+    throw new Error(err.response?.data?.detail || "Impossible de préparer l'enregistrement de la carte.");
+  }
 }
 
 export async function getPaymentMethods() {
-  await delay(250);
-  return mockPaymentMethods;
+  if (USE_MOCKS) {
+    await delay(250);
+    return mockPaymentMethods;
+  }
+  try {
+    const { data } = await apiClient.get("/billing/payment-methods");
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    throw new Error(err.response?.data?.detail || "Impossible de charger les moyens de paiement.");
+  }
 }
 
+// En mode réel, l'attachement est effectué automatiquement par le SetupIntent
+// Stripe confirmé depuis AddCardForm. Cette fonction est gardée pour les mocks.
 export async function addPaymentMethod(method) {
-  await delay(400);
-  const newMethod = { ...method, id: `pm-${Date.now()}`, isDefault: false };
-  mockPaymentMethods.push(newMethod);
-  return newMethod;
+  if (USE_MOCKS) {
+    await delay(400);
+    const newMethod = { ...method, id: `pm-${Date.now()}`, isDefault: false };
+    mockPaymentMethods.push(newMethod);
+    return newMethod;
+  }
+  return method;
 }
 
 export async function removePaymentMethod(id) {
-  await delay(300);
-  const index = mockPaymentMethods.findIndex((m) => m.id === id);
-  if (index === -1) throw new Error("Moyen de paiement introuvable");
-  mockPaymentMethods.splice(index, 1);
-  return { success: true };
+  if (USE_MOCKS) {
+    await delay(300);
+    const index = mockPaymentMethods.findIndex((m) => m.id === id);
+    if (index === -1) throw new Error("Moyen de paiement introuvable");
+    mockPaymentMethods.splice(index, 1);
+    return { success: true };
+  }
+  try {
+    const { data } = await apiClient.delete(`/billing/payment-methods/${id}`);
+    return data;
+  } catch (err) {
+    throw new Error(err.response?.data?.detail || "Impossible de supprimer ce moyen de paiement.");
+  }
 }
 
 export async function setDefaultPaymentMethod(id) {
-  await delay(300);
-  mockPaymentMethods.forEach((m) => {
-    m.isDefault = m.id === id;
-  });
-  mockSubscription.defaultPaymentMethodId = id;
-  return mockPaymentMethods;
+  if (USE_MOCKS) {
+    await delay(300);
+    mockPaymentMethods.forEach((m) => {
+      m.isDefault = m.id === id;
+    });
+    mockSubscription.defaultPaymentMethodId = id;
+    return mockPaymentMethods;
+  }
+  try {
+    const { data } = await apiClient.post(`/billing/payment-methods/${id}/default`);
+    return data;
+  } catch (err) {
+    throw new Error(err.response?.data?.detail || "Impossible de définir ce moyen de paiement par défaut.");
+  }
 }

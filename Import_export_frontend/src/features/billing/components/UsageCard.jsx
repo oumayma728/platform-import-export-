@@ -2,16 +2,18 @@ import Card from "../../../components/molecules/Card";
 import { colors, spacing, typography, radius } from "../../../styles/tokens";
 
 export default function UsageCard({ usage }) {
-  const percentage = Math.min(100, (usage.usedChats / usage.maxChats) * 100);
+  const used = Number(usage?.usedMessages ?? usage?.usedChats ?? 0);
+  const max = Number(usage?.maxMessages ?? usage?.maxChats ?? 50);
+  const percentage = Math.min(100, (used / max) * 100);
 
   return (
     <Card>
       <h3 style={{ fontFamily: typography.display, fontSize: typography.fontSizeMd, margin: 0 }}>
-        📨 Messages gratuits
+        💬 Messages gratuits
       </h3>
 
       <h2 style={{ fontSize: typography.fontSizeXl, margin: `${spacing.sm}px 0 0` }}>
-        {usage.usedChats} / {usage.maxChats}
+        {used} / {max}
       </h2>
 
       <p style={{ color: colors.textMuted, margin: `4px 0 ${spacing.md}px` }}>
