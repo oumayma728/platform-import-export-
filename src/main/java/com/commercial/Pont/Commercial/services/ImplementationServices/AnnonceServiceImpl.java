@@ -11,6 +11,7 @@ import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.AnnonceRepository;
 import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.AnnonceServiceInterface;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.CurrencyConversionServiceInterface;
 import com.commercial.Pont.Commercial.specifications.AnnonceSpecification;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +33,8 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
     private final AnnonceRepository annonceRepository;
     private final AnnonceMapperInterface annonceMapper;
     private final UtilisateurRepository utilisateurRepository;
+    private final CurrencyConversionServiceInterface currencyConversionService;
+
 
     // =========================
     // CREATE
@@ -440,7 +444,8 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
             String categorie,
             Double prixMin,
             Double prixMax,
-            String certification
+            String certification,
+            String devise
     ) {
 
         Specification<Annonce> specification =
@@ -463,7 +468,31 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
 
         return annonceRepository.findAll(specification)
                 .stream()
-                .map(annonceMapper::entityToResponse)
+                .map(annonce -> {
+
+                    AnnonceResponseDto response =
+                            annonceMapper.entityToResponse(annonce);
+
+                    // Pas de devise demandée
+                    if (devise == null || devise.isBlank()) {
+                        return response;
+                    }
+
+                    // Conversion
+                    BigDecimal prixConverti =
+                            currencyConversionService.convertir(
+                                    annonce.getPrix(),
+                                    annonce.getDevise(),
+                                    devise
+                            );
+
+                    response.setPrixConverti(prixConverti);
+                    response.setDeviseConversion(
+                            devise.toUpperCase()
+                    );
+
+                    return response;
+                })
                 .toList();
     }
 

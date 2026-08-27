@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import jdk.jshell.execution.Util;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -32,7 +33,7 @@ public class Annonce {
     @Enumerated(EnumType.STRING)
     private AnnouncementType type;
 
-    private Double prix;
+    private BigDecimal prix;
 
     private String devise;
 

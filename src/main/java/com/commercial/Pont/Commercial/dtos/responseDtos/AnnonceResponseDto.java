@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -28,8 +29,13 @@ public class AnnonceResponseDto {
     private String certification;
     private String description;
     private AnnouncementType type;
-    private Double prix;
+
+    private BigDecimal prix;
     private String devise;
+
+    private BigDecimal prixConverti;
+    private String deviseConversion;
+
     private Double quantite;
     private String uniteQuantite;
     private LocalDateTime dateLimite;

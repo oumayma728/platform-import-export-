@@ -189,6 +189,9 @@ public class AnnonceController {
             Double prixMax,
 
             @RequestParam(required = false)
+            String devise,
+
+            @RequestParam(required = false)
             String certification
 
     ) {
@@ -200,7 +203,8 @@ public class AnnonceController {
                         categorie,
                         prixMin,
                         prixMax,
-                        certification
+                        certification,
+                        devise
                 )
 
         );

@@ -5,6 +5,7 @@ import com.commercial.Pont.Commercial.enums.AnnouncementType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -25,7 +26,7 @@ public class AnnonceRequestDto {
     private String certification;
     private String description;
     private AnnouncementType type;
-    private Double prix;
+    private BigDecimal prix;
     private String devise;
     private Double quantite;
     private String uniteQuantite;

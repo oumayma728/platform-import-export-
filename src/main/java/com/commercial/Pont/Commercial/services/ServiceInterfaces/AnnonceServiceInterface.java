@@ -43,7 +43,8 @@ public interface AnnonceServiceInterface {
             String categorie,
             Double prixMin,
             Double prixMax,
-            String certification
+            String certification,
+            String devise
     );
 
 
