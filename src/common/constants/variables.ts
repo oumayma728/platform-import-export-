@@ -15,4 +15,12 @@ export const OPEN_ROUTE_SERVICE_API = 'https://api.openrouteservice.org';
 export const LOGISTICS_BASE_COST_USD = 50; // Fixed handling / baseline fee in USD
 export const LOGISTICS_COST_PER_KM_USD = 0.45; // Cost per km in USD
 export const LOGISTICS_KM_PER_DAY = 600; // Average km covered per transit day
-export const LOGISTICS_BASE_DAYS = 2; // Baseline customs clearance and processing days
+export const LOGISTICS_BASE_DAYS = 2; // Baseline customs clearance and processing days
+
+/** Notifications constants */
+export const EMAIL_PROVIDER = 'EMAIL_PROVIDER';
+export const SMS_PROVIDER = 'SMS_PROVIDER';
+
+export const EMAIL_QUEUE_NAME = 'notifications-email';
+export const SMS_QUEUE_NAME = 'notifications-sms';
+

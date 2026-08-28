@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { BillingRepository } from '../billing.repo';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UsersRepository } from '../../users/users.repository';
+import { NotificationsService } from '../../integrations/notifications/notifications.service';
 import {
   BillingStatus,
   SubscriptionStatus,
@@ -19,6 +21,8 @@ export class StripeWebhookService {
     private readonly stripeService: StripeService,
     private readonly billingRepo: BillingRepository,
     private readonly prismaService: PrismaService,
+    private readonly usersRepository: UsersRepository,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -351,6 +355,26 @@ export class StripeWebhookService {
     this.logger.log(
       `Recorded invoice.paid ($${amountPaid}) and activated BillingAccount ${billingAccount.id}`,
     );
+
+    // Send confirmation email asynchronously (outside of DB lock)
+    const user = await this.usersRepository.findById(billingAccount.userId);
+    if (user) {
+      this.notificationsService
+        .sendPaymentConfirmationNotification(
+          {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+          {
+            amount: amountPaid,
+            currency: invoice.currency?.toUpperCase() ?? 'USD',
+            type: 'Abonnement',
+            invoiceId: invoice.id,
+          },
+        )
+        .catch(() => {});
+    }
   }
 
   /**
@@ -649,6 +673,26 @@ export class StripeWebhookService {
       },
       tx,
     );
+
+    // Send payment confirmation email asynchronously
+    const user = await this.usersRepository.findById(billingAccount.userId);
+    if (user) {
+      this.notificationsService
+        .sendPaymentConfirmationNotification(
+          {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+          {
+            amount: paymentIntent.amount_received / 100,
+            currency: paymentIntent.currency?.toUpperCase() ?? 'USD',
+            type: 'Conversation à l\'usage',
+            paymentIntentId: paymentIntent.id,
+          },
+        )
+        .catch(() => {});
+    }
   }
 
   private mapStripeStatusToPrisma(

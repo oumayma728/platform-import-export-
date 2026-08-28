@@ -80,6 +80,18 @@ enum ConversationAccessSource {
   ABONNEMENT
 }
 
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  RETRYING
+}
+
 // ============================================================
 // PROFILES & AUTHENTICATION
 // ============================================================
@@ -96,10 +108,11 @@ model User {
   companyId String?  @map("company_id")
   company   Company? @relation(fields: [companyId], references: [id])
 
-  refreshTokens  RefreshToken[]
-  messages       Message[]
-  auditLogs      AuditLog[]
-  billingAccount BillingAccount?
+  refreshTokens    RefreshToken[]
+  messages         Message[]
+  auditLogs        AuditLog[]
+  billingAccount   BillingAccount?
+  notificationLogs NotificationLog[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -374,4 +387,33 @@ model AuditLog {
 
   @@index([userId])
   @@map("audit_logs")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model NotificationLog {
+  id           String              @id @default(uuid())
+  userId       String?             @map("user_id")
+  user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channel      NotificationChannel
+  recipient    String
+  subject      String?
+  content      String              @db.Text
+  provider     String
+  status       NotificationStatus  @default(PENDING)
+  attempts     Int                 @default(0)
+  errorMessage String?             @map("error_message") @db.Text
+  sentAt       DateTime?           @map("sent_at")
+  lastAttemptAt DateTime?          @map("last_attempt_at")
+  metadata     Json?
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notification_logs")
 }

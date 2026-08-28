@@ -115,4 +115,11 @@ export class UsersRepository {
 
     return user?.companyId ?? null;
   }
+
+  async findByCompanyId(companyId: string) {
+    return this.prisma.user.findMany({
+      where: { companyId },
+      select: userPublicSelect,
+    });
+  }
 }

@@ -11,6 +11,7 @@ import { ListingsModule } from '../listings/listings.module';
 import { UsersModule } from '../users/users.module';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { BillingModule } from '../billing/billing.module';
+import { NotificationsModule } from '../integrations/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BillingModule } from '../billing/billing.module';
     UsersModule,
     SupabaseModule,
     BillingModule,
+    NotificationsModule,
   ],
   controllers: [MessagingController],
   providers: [MessagingGateway, MessagingService, MessagingRepository, WsJwtGuard],

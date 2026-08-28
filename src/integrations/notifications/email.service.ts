@@ -1,22 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
-  BirdClient,
-  type EmailMessage,
-  type EmailSendParams,
-} from '@messagebird/sdk';
+  NotificationsService,
+  type SendEmailOptions,
+} from './notifications.service';
 
 @Injectable()
 export class EmailService {
-  private readonly bird: BirdClient;
+  constructor(private readonly notificationsService: NotificationsService) {}
 
-  constructor(private readonly configService: ConfigService) {
-    this.bird = new BirdClient({
-      apiKey: this.configService.getOrThrow<string>('EMAIL_SERVICE_API_KEY'),
-    });
-  }
-
-  send(params: EmailSendParams): Promise<EmailMessage> {
-    return this.bird.email.send(params);
+  send(to: string, subject: string, body: string, options?: SendEmailOptions) {
+    return this.notificationsService.send_email(to, subject, body, options);
   }
 }

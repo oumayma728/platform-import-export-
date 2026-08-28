@@ -19,6 +19,7 @@ import { UsersRepository } from '../users/users.repository';
 import { StorageService } from '../supabase/storage.service';
 import { BillingRepository } from '../billing/billing.repo';
 import { BillingService } from '../billing/billing.service';
+import { NotificationsService } from '../integrations/notifications/notifications.service';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -28,6 +29,7 @@ describe('MessagingService', () => {
   let storageService: jest.Mocked<StorageService>;
   let billingRepository: jest.Mocked<BillingRepository>;
   let billingService: jest.Mocked<BillingService>;
+  let notificationsService: jest.Mocked<NotificationsService>;
 
   const mockUserId = 'user-123';
   const mockCompanyId = 'company-123';
@@ -63,6 +65,8 @@ describe('MessagingService', () => {
           provide: UsersRepository,
           useValue: {
             getUserCompanyId: jest.fn(),
+            findById: jest.fn(),
+            findByCompanyId: jest.fn().mockResolvedValue([]),
           },
         },
         {
@@ -84,6 +88,19 @@ describe('MessagingService', () => {
             startConversationCheckout: jest.fn(),
           },
         },
+        {
+          provide: NotificationsService,
+          useValue: {
+            send_email: jest.fn().mockResolvedValue({ id: 'log-1' }),
+            send_sms: jest.fn().mockResolvedValue({ id: 'log-sms-1' }),
+            sendWelcomeNotification: jest.fn().mockResolvedValue(undefined),
+            sendNewMessageNotification: jest.fn().mockResolvedValue(undefined),
+            sendPaymentConfirmationNotification: jest.fn().mockResolvedValue(undefined),
+            sendMatchingSuggestionNotification: jest.fn().mockResolvedValue(undefined),
+            sendFreeQuotaExceededNotification: jest.fn().mockResolvedValue(undefined),
+            sendCompanyValidationNotification: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -94,6 +111,7 @@ describe('MessagingService', () => {
     storageService = module.get(StorageService);
     billingRepository = module.get(BillingRepository);
     billingService = module.get(BillingService);
+    notificationsService = module.get(NotificationsService);
 
     billingRepository.ensureBillingAccount.mockResolvedValue({
       id: 'ba-123',

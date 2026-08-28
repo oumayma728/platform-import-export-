@@ -4,16 +4,21 @@ import { ValidationStatus } from '@prisma/client';
 
 import { AdminRepository } from './admin.repository';
 import { AdminService } from './admin.service';
+import { NotificationsService } from '../integrations/notifications/notifications.service';
 
 describe('AdminService', () => {
   let service: AdminService;
   let repository: Record<keyof AdminRepository, jest.Mock>;
+  let notificationsService: { sendCompanyValidationNotification: jest.Mock };
 
   beforeEach(async () => {
     repository = {
       findCompanies: jest.fn(),
       findCompanyById: jest.fn(),
       updateCompanyStatus: jest.fn(),
+    };
+    notificationsService = {
+      sendCompanyValidationNotification: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -22,6 +27,10 @@ describe('AdminService', () => {
         {
           provide: AdminRepository,
           useValue: repository,
+        },
+        {
+          provide: NotificationsService,
+          useValue: notificationsService,
         },
       ],
     }).compile();

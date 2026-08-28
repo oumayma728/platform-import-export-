@@ -17,6 +17,7 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload';
 import { Tokens } from './interfaces/tokens.interface';
 import { RefreshTokensService } from './refresh-tokens.service';
+import { NotificationsService } from '../integrations/notifications/notifications.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly usersRepository: UsersRepository,
     private readonly refreshTokensService: RefreshTokensService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<Tokens> {
@@ -41,6 +43,18 @@ export class AuthService {
       phone: registerDto.phone,
       passwordHash,
     });
+
+    // Send welcome notification (email + SMS) asynchronously via BullMQ
+    await this.notificationsService
+      .sendWelcomeNotification({
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        name: user.name,
+      })
+      .catch(() => {
+        // Non-blocking fallback if queue is unavailable
+      });
 
     return this.generateTokens(user.id, user.name, user.role);
   }

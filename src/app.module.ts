@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 
 import { AppController } from './app.controller';
@@ -19,12 +19,24 @@ import { BillingModule } from './billing/billing.module';
 import { CurrencyModule } from './integrations/currency/currency.module';
 import { LogisticsModule } from './integrations/logistics/logistics.module';
 import { NotificationsModule } from './integrations/notifications/notifications.module';
+import { Module } from '@nestjs/common';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env', 'src/.env'],
       isGlobal: true,
+    }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST', 'localhost'),
+          port: Number(configService.get<string | number>('REDIS_PORT')) || 6379,
+          password: configService.get<string>('REDIS_PASSWORD') || undefined,
+        },
+      }),
     }),
     AuthModule,
     UsersModule,

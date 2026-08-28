@@ -8,6 +8,7 @@ import { PrismaExceptionFilter } from './prisma/prisma-exception.filter';
 import { ConfigService } from '@nestjs/config';
 
 // TODO : return tihs file to be simple (delete this func) and requestedPort, port variables, availablePort
+// todo : Add rate limiting on test endpoints
 async function findAvailablePort(
   startPort: number,
   maxTries = 20,

@@ -3,6 +3,8 @@ import { StripeWebhookService } from './stripe-webhook.service';
 import { StripeService } from './stripe.service';
 import { BillingRepository } from '../billing.repo';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UsersRepository } from '../../users/users.repository';
+import { NotificationsService } from '../../integrations/notifications/notifications.service';
 import {
   BillingStatus,
   SubscriptionStatus,
@@ -15,6 +17,8 @@ describe('StripeWebhookService', () => {
   let stripeService: jest.Mocked<StripeService>;
   let billingRepo: jest.Mocked<BillingRepository>;
   let prismaService: jest.Mocked<PrismaService>;
+  let usersRepository: jest.Mocked<UsersRepository>;
+  let notificationsService: jest.Mocked<NotificationsService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -52,12 +56,26 @@ describe('StripeWebhookService', () => {
             $transaction: jest.fn(async (cb) => cb({})),
           },
         },
+        {
+          provide: UsersRepository,
+          useValue: {
+            findById: jest.fn().mockResolvedValue({ id: 'user-1', email: 'test@example.com', name: 'User' }),
+          },
+        },
+        {
+          provide: NotificationsService,
+          useValue: {
+            sendPaymentConfirmationNotification: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<StripeWebhookService>(StripeWebhookService);
     stripeService = module.get(StripeService);
     billingRepo = module.get(BillingRepository);
+    usersRepository = module.get(UsersRepository);
+    notificationsService = module.get(NotificationsService);
     prismaService = module.get(PrismaService);
   });
 

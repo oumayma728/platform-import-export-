@@ -1,28 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { BirdClient } from '@messagebird/sdk';
 import { EmailService } from './email.service';
-
-jest.mock('@messagebird/sdk', () => ({
-  BirdClient: jest.fn(),
-}));
+import { NotificationsService } from './notifications.service';
 
 describe('EmailService', () => {
   let service: EmailService;
-  const send = jest.fn();
+  let notificationsService: { send_email: jest.Mock };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
-    (BirdClient as jest.Mock).mockImplementation(() => ({
-      email: { send },
-    }));
+    notificationsService = { send_email: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EmailService,
         {
-          provide: ConfigService,
-          useValue: { getOrThrow: jest.fn().mockReturnValue('bk_test_key') },
+          provide: NotificationsService,
+          useValue: notificationsService,
         },
       ],
     }).compile();
@@ -34,17 +26,17 @@ describe('EmailService', () => {
     expect(service).toBeDefined();
   });
 
-  it('sends an email through Bird', async () => {
-    const message = { id: 'message-id', status: 'accepted' };
-    send.mockResolvedValue(message);
-    const params = {
-      from: { email: 'onboarding@messagebird.dev', name: 'Bird' },
-      to: ['recipient@example.com'],
-      subject: 'Hello World',
-      html: '<p>Hello</p>',
-    };
+  it('delegates send to notificationsService.send_email', async () => {
+    notificationsService.send_email.mockResolvedValue({ id: 'log-1' });
 
-    await expect(service.send(params)).resolves.toEqual(message);
-    expect(send).toHaveBeenCalledWith(params);
+    const result = await service.send('to@test.com', 'Subject', 'Body');
+
+    expect(notificationsService.send_email).toHaveBeenCalledWith(
+      'to@test.com',
+      'Subject',
+      'Body',
+      undefined,
+    );
+    expect(result).toEqual({ id: 'log-1' });
   });
 });

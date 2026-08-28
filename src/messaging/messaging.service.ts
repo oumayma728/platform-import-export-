@@ -22,6 +22,7 @@ import { MessagingRepository } from './messaging.repository';
 import { StorageService } from '../supabase/storage.service';
 import { BillingRepository } from '../billing/billing.repo';
 import { BillingService } from '../billing/billing.service';
+import { NotificationsService } from '../integrations/notifications/notifications.service';
 import type { UploadedFileLike } from '../common/types/uploaded-file.type';
 
 @Injectable()
@@ -33,6 +34,7 @@ export class MessagingService {
     private readonly storageService: StorageService,
     private readonly billingRepository: BillingRepository,
     private readonly billingService: BillingService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async getUserCompanyId(userId: string): Promise<string> {
@@ -137,7 +139,35 @@ export class MessagingService {
     });
 
     if (result.kind === 'quota_exhausted') {
+      // Notify user that free quota is exhausted
+      const user = await this.usersRepository.findById(userId);
+      if (user) {
+        await this.notificationsService
+          .sendFreeQuotaExceededNotification({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          })
+          .catch(() => {});
+      }
       throw this.paymentRequiredException(result.freeChatsUsed);
+    }
+
+    // Notify listing owner about matching suggestion
+    const listing = await this.listingsRepository.findOne(context.listingId);
+    if (listing) {
+      const listingOwnerUsers = await this.usersRepository.findByCompanyId(
+        listing.companyId,
+      );
+      for (const owner of listingOwnerUsers) {
+        await this.notificationsService
+          .sendMatchingSuggestionNotification(
+            { id: owner.id, email: owner.email, name: owner.name },
+            listing.title,
+            result.conversation.id,
+          )
+          .catch(() => {});
+      }
     }
 
     return result.conversation;
@@ -246,12 +276,60 @@ export class MessagingService {
     }
 
     // Message creation, conversation status update, and free chats increment are done atomically in one transaction
-    return this.messagingRepository.createMessageAndStartContact({
+    const message = await this.messagingRepository.createMessageAndStartContact({
       conversationId: dto.conversationId,
       senderId: userId,
       content: dto.content,
       attachmentUrl: attachmentUrl ?? null,
     });
+
+    // Notify conversation participants about the new message (non-blocking)
+    this.notifyNewMessageRecipients(userId, dto.conversationId, dto.content)
+      .catch(() => {});
+
+    return message;
+  }
+
+  private async notifyNewMessageRecipients(
+    senderId: string,
+    conversationId: string,
+    messageContent: string,
+  ) {
+    const conversation =
+      await this.messagingRepository.findAuthorizedConversationDetails(
+        conversationId,
+        (await this.getUserCompanyId(senderId)),
+      );
+    if (!conversation) return;
+
+    const sender = await this.usersRepository.findById(senderId);
+    if (!sender) return;
+
+    // Find users in the OTHER company (the one that is not the sender's company)
+    const senderCompanyId = await this.usersRepository.getUserCompanyId(senderId);
+    const recipientCompanyId =
+      conversation.exporterCompanyId === senderCompanyId
+        ? conversation.importerCompanyId
+        : conversation.exporterCompanyId;
+
+    const recipientUsers =
+      await this.usersRepository.findByCompanyId(recipientCompanyId);
+
+    for (const recipient of recipientUsers) {
+      await this.notificationsService
+        .sendNewMessageNotification(
+          {
+            id: recipient.id,
+            email: recipient.email,
+            phone: recipient.phone,
+            name: recipient.name,
+          },
+          sender.name,
+          conversationId,
+          messageContent,
+        )
+        .catch(() => {});
+    }
   }
 
   async updateConversationStatus(
