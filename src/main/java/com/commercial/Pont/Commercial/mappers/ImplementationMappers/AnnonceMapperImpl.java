@@ -72,14 +72,6 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
         }
 
 
-        Location locationDestination = null;
-
-        if (annonceRequestDto.getLocationDestinationId() != null) {
-            locationDestination = locationRepository
-                    .findById(annonceRequestDto.getLocationDestinationId())
-                    .orElse(null);
-        }
-
 
         List<Conversation> conversations = Collections.emptyList();
 
@@ -138,7 +130,6 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
                 .categorie(categorie)
                 .utilisateur(utilisateur)
                 .locationOrigine(locationOrigine)
-                .locationDestination(locationDestination)
                 .conversations(conversations)
                 .documentAnnonces(documentAnnonces)
                 .annonces(annoncesIncoterm)
@@ -180,12 +171,6 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
         }
 
 
-        UUID locationDestinationId = null;
-
-        if (annonce.getLocationDestination() != null) {
-            locationDestinationId = annonce.getLocationDestination()
-                    .getLocationId();
-        }
 
 
         List<UUID> conversationIds = Collections.emptyList();
@@ -227,7 +212,6 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
                 .categorieId(categorieId)
                 .utilisateurId(utilisateurId)
                 .locationOrigineId(locationOrigineId)
-                .locationDestinationId(locationDestinationId)
 
                 // Informations Annonce
                 .titre(annonce.getTitre())
@@ -289,12 +273,7 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
                     .getLocationId();
         }
 
-        UUID locationDestinationId = null;
 
-        if (annonce.getLocationDestination() != null) {
-            locationDestinationId = annonce.getLocationDestination()
-                    .getLocationId();
-        }
 
 
         List<UUID> conversationIds = Collections.emptyList();
@@ -336,7 +315,6 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
                 .categorieId(categorieId)
                 .utilisateurId(utilisateurId)
                 .locationOrigineId(locationOrigineId)
-                .locationDestinationId(locationDestinationId)
 
                 // ID de l'annonce
                 .annonceId(annonce.getAnnonceId())
@@ -405,13 +383,7 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
         }
 
 
-        Location locationDestination = null;
 
-        if (annonceResponseDto.getLocationDestinationId() != null) {
-            locationDestination = locationRepository
-                    .findById(annonceResponseDto.getLocationDestinationId())
-                    .orElse(null);
-        }
 
 
         List<Conversation> conversations = Collections.emptyList();
@@ -495,7 +467,6 @@ public class AnnonceMapperImpl implements AnnonceMapperInterface {
                 .categorie(categorie)
                 .utilisateur(utilisateur)
                 .locationOrigine(locationOrigine)
-                .locationDestination(locationDestination)
                 .conversations(conversations)
                 .documentAnnonces(documentAnnonces)
                 .annonces(annoncesIncoterm)

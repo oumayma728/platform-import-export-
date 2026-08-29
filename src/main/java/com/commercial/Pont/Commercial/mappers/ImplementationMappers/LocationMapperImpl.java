@@ -36,7 +36,6 @@ public class LocationMapperImpl
      * Location
      *
      * annoncesOriginesIds     → List<Annonce>
-     * annoncesDestinationsIds → List<Annonce>
      * entreprisesIds          → List<Entreprise>
      */
     @Override
@@ -67,23 +66,7 @@ public class LocationMapperImpl
         }
 
 
-        /*
-         * ========================================================
-         * Récupération des annonces de destination
-         * ========================================================
-         */
-        List<Annonce> annoncesDestinations =
-                Collections.emptyList();
 
-        if (locationRequestDto.getAnnoncesDestinationsIds() != null
-                && !locationRequestDto
-                .getAnnoncesDestinationsIds()
-                .isEmpty()) {
-
-            annoncesDestinations = annonceRepository.findAllById(
-                    locationRequestDto.getAnnoncesDestinationsIds()
-            );
-        }
 
 
         /*
@@ -131,7 +114,6 @@ public class LocationMapperImpl
 
                 // Relations
                 .annoncesOrigines(annoncesOrigines)
-                .annoncesDestinations(annoncesDestinations)
                 .entreprises(entreprises)
 
                 .build();
@@ -148,7 +130,6 @@ public class LocationMapperImpl
      * LocationRequestDto
      *
      * annoncesOrigines     → annoncesOriginesIds
-     * annoncesDestinations → annoncesDestinationsIds
      * entreprises          → entreprisesIds
      */
     @Override
@@ -176,26 +157,6 @@ public class LocationMapperImpl
                     .map(Annonce::getAnnonceId)
                     .collect(Collectors.toList());
         }
-
-
-        /*
-         * ========================================================
-         * Extraction des IDs des annonces de destination
-         * ========================================================
-         */
-        List<UUID> annoncesDestinationsIds =
-                Collections.emptyList();
-
-        if (location.getAnnoncesDestinations() != null) {
-
-            annoncesDestinationsIds = location
-                    .getAnnoncesDestinations()
-                    .stream()
-                    .map(Annonce::getAnnonceId)
-                    .collect(Collectors.toList());
-        }
-
-
         /*
          * ========================================================
          * Extraction des IDs des entreprises
@@ -242,9 +203,6 @@ public class LocationMapperImpl
                 .annoncesOriginesIds(
                         annoncesOriginesIds
                 )
-                .annoncesDestinationsIds(
-                        annoncesDestinationsIds
-                )
                 .entreprisesIds(
                         entreprisesIds
                 )
@@ -263,7 +221,6 @@ public class LocationMapperImpl
      * LocationResponseDto
      *
      * annoncesOrigines     → annoncesOriginesIds
-     * annoncesDestinations → annoncesDestinationsIds
      * entreprises          → entreprisesIds
      */
     @Override
@@ -292,23 +249,6 @@ public class LocationMapperImpl
                     .collect(Collectors.toList());
         }
 
-
-        /*
-         * ========================================================
-         * Extraction des IDs des annonces de destination
-         * ========================================================
-         */
-        List<UUID> annoncesDestinationsIds =
-                Collections.emptyList();
-
-        if (location.getAnnoncesDestinations() != null) {
-
-            annoncesDestinationsIds = location
-                    .getAnnoncesDestinations()
-                    .stream()
-                    .map(Annonce::getAnnonceId)
-                    .collect(Collectors.toList());
-        }
 
 
         /*
@@ -362,9 +302,7 @@ public class LocationMapperImpl
                 .annoncesOriginesIds(
                         annoncesOriginesIds
                 )
-                .annoncesDestinationsIds(
-                        annoncesDestinationsIds
-                )
+
                 .entreprisesIds(
                         entreprisesIds
                 )
@@ -383,7 +321,6 @@ public class LocationMapperImpl
      * Location
      *
      * annoncesOriginesIds     → List<Annonce>
-     * annoncesDestinationsIds → List<Annonce>
      * entreprisesIds          → List<Entreprise>
      */
     @Override
@@ -414,25 +351,6 @@ public class LocationMapperImpl
             );
         }
 
-
-        /*
-         * ========================================================
-         * Récupération des annonces de destination
-         * ========================================================
-         */
-        List<Annonce> annoncesDestinations =
-                Collections.emptyList();
-
-        if (locationResponseDto.getAnnoncesDestinationsIds() != null
-                && !locationResponseDto
-                .getAnnoncesDestinationsIds()
-                .isEmpty()) {
-
-            annoncesDestinations = annonceRepository.findAllById(
-                    locationResponseDto
-                            .getAnnoncesDestinationsIds()
-            );
-        }
 
 
         /*
@@ -486,7 +404,6 @@ public class LocationMapperImpl
 
                 // Relations
                 .annoncesOrigines(annoncesOrigines)
-                .annoncesDestinations(annoncesDestinations)
                 .entreprises(entreprises)
 
                 .build();

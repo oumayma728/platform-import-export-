@@ -22,7 +22,6 @@ public class AnnonceResponseDto {
     private UUID categorieId;
     private UUID utilisateurId;
     private UUID locationOrigineId;
-    private UUID locationDestinationId;
 
     private UUID annonceId;
     private String titre;

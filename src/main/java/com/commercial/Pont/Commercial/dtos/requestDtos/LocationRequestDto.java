@@ -19,6 +19,5 @@ public class LocationRequestDto {
     private String region;
 
     private List<UUID> annoncesOriginesIds;
-    private List<UUID> annoncesDestinationsIds;
     private List<UUID> entreprisesIds;
 }

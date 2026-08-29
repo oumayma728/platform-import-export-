@@ -75,9 +75,6 @@ public class Annonce {
     @JoinColumn(name = "locationOrigineId")
     private Location locationOrigine;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "locationDestinationId")
-    private Location locationDestination;
 
 
     @OneToMany(mappedBy = "annonce")

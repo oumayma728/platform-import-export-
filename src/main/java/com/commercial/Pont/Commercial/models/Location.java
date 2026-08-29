@@ -32,8 +32,6 @@ public class Location {
     @OneToMany(mappedBy = "locationOrigine", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Annonce> annoncesOrigines;
 
-    @OneToMany(mappedBy = "locationDestination", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Annonce> annoncesDestinations;
 
     @OneToMany(mappedBy = "location", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Entreprise> entreprises;

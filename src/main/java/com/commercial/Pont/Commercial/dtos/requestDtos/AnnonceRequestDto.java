@@ -20,7 +20,7 @@ public class AnnonceRequestDto {
     private UUID categorieId;
     private UUID utilisateurId;
     private UUID locationOrigineId;
-    private UUID locationDestinationId;
+
 
     private String titre;
     private String certification;

@@ -21,7 +21,7 @@ public class CreateMyAnnonceRequestDto {
 
     private UUID categorieId;
     private UUID locationOrigineId;
-    private UUID locationDestinationId;
+
 
     private String titre;
     private String certification;
