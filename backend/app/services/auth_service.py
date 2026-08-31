@@ -28,7 +28,24 @@ def register_user(db: Session, user_in: UserCreate):
     )
     db.add(new_company)
     db.commit()
+    db.refresh(new_company)
+    
+    from app.models.models import Billing, UserQuota
+    new_billing = Billing(company_id=new_company.id)
+    new_quota = UserQuota(company_id=new_company.id)
+    db.add(new_billing)
+    db.add(new_quota)
+    db.commit()
+    
     db.refresh(new_user)
+    
+    # Notification: Welcome Email
+    from app.services.notification_service import notification_service
+    notification_service.send_email(
+        db, new_user.id, new_user.email,
+        "Bienvenue sur Indeed2 !",
+        f"Bonjour {new_company.company_name}, merci de vous être inscrit sur notre plateforme B2B."
+    )
     
     access_token = create_access_token(subject=new_user.id)
     refresh_token = create_refresh_token(subject=new_user.id)

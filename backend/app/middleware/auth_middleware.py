@@ -23,6 +23,18 @@ def get_current_user(db: Session = Depends(get_db), token: HTTPAuthorizationCred
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
 
+def get_current_user_optional(db: Session = Depends(get_db), token: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token.credentials, settings.SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        if user_id:
+            return db.query(User).filter(User.id == user_id).first()
+    except (jwt.PyJWTError, ValidationError):
+        pass
+    return None
+
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     from app.models.models import Role
     if current_user.role != Role.ADMIN:

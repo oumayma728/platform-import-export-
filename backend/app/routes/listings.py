@@ -35,11 +35,13 @@ def search_listings(
     prixMin: Optional[float] = Query(None, description="Prix minimum"),
     prixMax: Optional[float] = Query(None, description="Prix maximum"),
     certification: Optional[str] = Query(None, description="Filtrer par certification exigée/proposée"),
+    currency: Optional[str] = Query(None, description="Devise cible pour la conversion des prix (ex: USD)"),
     skip: int = Query(0, description="Pagination: nombre d'éléments à passer"),
     limit: int = Query(20, description="Pagination: nombre d'éléments à retourner"),
-    db: Session = Depends(auth_middleware.get_db)
+    db: Session = Depends(auth_middleware.get_db),
+    current_user: Optional[User] = Depends(auth_middleware.get_current_user_optional)
 ):
-    return listing_service.search_listings(db, pays, categorie, prixMin, prixMax, certification, skip, limit)
+    return listing_service.search_listings(db, pays, categorie, prixMin, prixMax, certification, currency, skip, limit, current_user)
 
 
 @router.get(
@@ -61,8 +63,12 @@ def get_my_listings(
     summary="Obtenir un listing par son ID",
     description="Renvoie les détails complets d'un listing."
 )
-def get_listing(id: str, db: Session = Depends(auth_middleware.get_db)):
-    return listing_service.get_listing(db, id)
+def get_listing(
+    id: str, 
+    db: Session = Depends(auth_middleware.get_db),
+    current_user: Optional[User] = Depends(auth_middleware.get_current_user_optional)
+):
+    return listing_service.get_listing(db, id, current_user)
 
 
 @router.put(
