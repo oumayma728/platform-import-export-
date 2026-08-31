@@ -35,10 +35,22 @@ def create_listing(db: Session, listing_in: ListingCreate, current_user: User) -
     db.refresh(new_listing)
     return new_listing
 
-def get_listing(db: Session, id: str) -> Listing:
+def get_listing(db: Session, id: str, current_user: Optional[User] = None) -> Listing:
     listing = db.query(Listing).filter(Listing.id == id).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing introuvable")
+        
+    if current_user and current_user.company:
+        from app.utils.country_utils import get_country_info
+        info = get_country_info(current_user.company.pays)
+        if info and info.get("currency"):
+            currency = info["currency"]
+            base_currency = "EUR"
+            from app.services.currency_service import currency_service
+            if listing.prix:
+                listing.converted_price = currency_service.convert(listing.prix, base_currency, currency)
+                listing.converted_currency = currency
+                
     return listing
 
 def update_listing(db: Session, id: str, listing_in: ListingUpdate, current_user: User) -> Listing:
@@ -101,9 +113,13 @@ def search_listings(
     prixMin: Optional[float] = None,
     prixMax: Optional[float] = None,
     certification: Optional[str] = None,
+    currency: Optional[str] = None,
     skip: int = 0,
-    limit: int = 20
+    limit: int = 20,
+    current_user: Optional[User] = None
 ) -> List[Listing]:
+    from app.services.currency_service import currency_service
+    
     query = db.query(Listing).filter(Listing.statut == StatutListing.ACTIVE)
     if pays:
         query = query.filter(Listing.pays.ilike(f"%{pays}%"))
@@ -116,9 +132,39 @@ def search_listings(
     if prixMax is not None:
         query = query.filter(Listing.prix <= prixMax)
         
-    return query.order_by(Listing.date_creation.desc()).offset(skip).limit(limit).all()
+    results = query.order_by(Listing.date_creation.desc()).offset(skip).limit(limit).all()
+    
+    if not currency and current_user and current_user.company:
+        from app.utils.country_utils import get_country_info
+        info = get_country_info(current_user.company.pays)
+        if info and info.get("currency"):
+            currency = info["currency"]
+            
+    if currency:
+        currency = currency.upper()
+        base_currency = "EUR" 
+        for listing in results:
+            if listing.prix:
+                listing.converted_price = currency_service.convert(listing.prix, base_currency, currency)
+                listing.converted_currency = currency
+                
+    return results
 
 def get_my_listings(db: Session, current_user: User) -> List[Listing]:
     if not current_user.company:
         return []
-    return db.query(Listing).filter(Listing.company_id == current_user.company.id).order_by(Listing.date_creation.desc()).all()
+        
+    results = db.query(Listing).filter(Listing.company_id == current_user.company.id).order_by(Listing.date_creation.desc()).all()
+    
+    from app.utils.country_utils import get_country_info
+    info = get_country_info(current_user.company.pays)
+    if info and info.get("currency"):
+        currency = info["currency"]
+        base_currency = "EUR"
+        from app.services.currency_service import currency_service
+        for listing in results:
+            if listing.prix:
+                listing.converted_price = currency_service.convert(listing.prix, base_currency, currency)
+                listing.converted_currency = currency
+                
+    return results

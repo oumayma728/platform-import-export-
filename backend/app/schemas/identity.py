@@ -14,9 +14,6 @@ class CompanyOut(CompanyCreate):
     id: str
     user_id: str
     statut_validation: StatutValidation
-    chats_gratuits_restants: int
-    statut_facturation: StatutFacturation
-    depense_cumulee_usage: float
     date_creation: datetime
 
     class Config:

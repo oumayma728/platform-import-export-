@@ -27,3 +27,9 @@ def create_refresh_token(subject: str | Any, expires_delta: Optional[timedelta] 
     to_encode = {"exp": expire, "sub": str(subject), "type": "refresh"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
+
+def verify_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        raise ValueError("Invalid token")

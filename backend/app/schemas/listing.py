@@ -51,6 +51,8 @@ class ListingOut(ListingBase):
     statut: StatutListing
     date_creation: datetime
     date_maj: Optional[datetime] = None
+    converted_price: Optional[float] = None
+    converted_currency: Optional[str] = None
 
     class Config:
         from_attributes = True

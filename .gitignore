@@ -1,0 +1,29 @@
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Fichiers compilés Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Variables d'environnement (Sécurité)
+.env
+.env.local
+
+# Fichiers de base de données SQLite (si utilisé en local pour tester)
+*.sqlite3
+
+# Outils de développement
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dossiers Mac/Windows
+.DS_Store
+Thumbs.db
+
+# Coverage
+backend/.coverage
