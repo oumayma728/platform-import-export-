@@ -15,7 +15,7 @@ import {
 } from '../../common/dto/api-error-response.dto';
 import { ConvertCurrencyDto } from './dto/convert-currency.dto';
 import { CurrencyService } from './currency.service';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from '@prisma/client/runtime/index-browser';
 
 @ApiTags('Currency')
 @ApiBearerAuth()
@@ -54,7 +54,6 @@ export class CurrencyController {
     description: 'Access token is missing or invalid.',
     type: UnauthorizedErrorResponseDto,
   })
-  @Public()
   convert(@Query() query: ConvertCurrencyDto) {
     return this.currencyService.convert(query.amount, query.from, query.to);
   }

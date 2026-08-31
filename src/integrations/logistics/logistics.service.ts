@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -12,12 +17,6 @@ import {
   LOGISTICS_KM_PER_DAY,
   LOGISTICS_BASE_DAYS,
 } from '../../common/constants/variables';
-
-/** TTL for cached logistics route calculations (24 hours in milliseconds) */
-const LOGISTICS_CACHE_TTL = 24 * 60 * 60 * 1000;
-
-/** TTL for cached country geocoding coordinates (7 days in milliseconds) */
-const GEO_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export interface LogisticsEstimateResult {
   origin_country: string;
@@ -92,7 +91,8 @@ export class LogisticsService {
     const cacheKey = `logistics:${originKey}:${destinationKey}`;
 
     // Check Redis cache
-    const cached = await this.cacheManager.get<LogisticsEstimateResult>(cacheKey);
+    const cached =
+      await this.cacheManager.get<LogisticsEstimateResult>(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for ${cacheKey}`);
       return cached;
@@ -147,7 +147,8 @@ export class LogisticsService {
     // Cost formula: Fixed baseline handling fee + rate per km
     const estimatedCostUsd =
       Math.round(
-        (LOGISTICS_BASE_COST_USD + distanceKm * LOGISTICS_COST_PER_KM_USD) * 100,
+        (LOGISTICS_BASE_COST_USD + distanceKm * LOGISTICS_COST_PER_KM_USD) *
+          100,
       ) / 100;
 
     const result: LogisticsEstimateResult = {
@@ -158,8 +159,8 @@ export class LogisticsService {
       estimated_days: estimatedDays,
     };
 
-    // Store in Redis cache
-    await this.cacheManager.set(cacheKey, result, LOGISTICS_CACHE_TTL);
+    // Store in Redis cache using module-level default TTL
+    await this.cacheManager.set(cacheKey, result);
     this.logger.log(
       `Cached logistics route ${origin} -> ${destination}: ${distanceKm}km, $${estimatedCostUsd}, ${estimatedDays} days`,
     );
@@ -209,7 +210,7 @@ export class LogisticsService {
         );
       }
 
-      await this.cacheManager.set(cacheKey, coordinates, GEO_CACHE_TTL);
+      await this.cacheManager.set(cacheKey, coordinates);
       return coordinates;
     } catch (error: any) {
       if (error instanceof BadRequestException) {

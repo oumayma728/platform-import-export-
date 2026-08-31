@@ -12,9 +12,6 @@ import { firstValueFrom } from 'rxjs';
 
 import { CURRENCY_CONVERTER_API } from '../../common/constants/variables';
 
-/** TTL for cached exchange rates (1 hour in milliseconds) */
-const RATE_CACHE_TTL = 60 * 60 * 1000;
-
 export interface ConversionResult {
   amount: number;
   from: string;
@@ -137,8 +134,8 @@ export class CurrencyService {
 
       const result = { rate, date };
 
-      // Store in Redis cache with 1 hour TTL
-      await this.cacheManager.set(cacheKey, result, RATE_CACHE_TTL);
+      // Store in Redis cache using module-level default TTL
+      await this.cacheManager.set(cacheKey, result);
       this.logger.log(
         `Cached rate ${fromUpper}->${toUpper} = ${rate} (date: ${date})`,
       );

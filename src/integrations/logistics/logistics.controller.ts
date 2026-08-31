@@ -15,6 +15,7 @@ import {
 } from '../../common/dto/api-error-response.dto';
 import { EstimateLogisticsDto } from './dto/estimate-logistics.dto';
 import { LogisticsService } from './logistics.service';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @ApiTags('Logistics')
 @ApiBearerAuth()
@@ -63,6 +64,7 @@ export class LogisticsController {
     description: 'Access token is missing or invalid.',
     type: UnauthorizedErrorResponseDto,
   })
+  @Public()
   estimate(@Query() query: EstimateLogisticsDto) {
     return this.logisticsService.calculate_route(query.from, query.to);
   }
