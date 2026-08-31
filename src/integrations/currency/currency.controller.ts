@@ -15,6 +15,7 @@ import {
 } from '../../common/dto/api-error-response.dto';
 import { ConvertCurrencyDto } from './dto/convert-currency.dto';
 import { CurrencyService } from './currency.service';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @ApiTags('Currency')
 @ApiBearerAuth()
@@ -26,7 +27,7 @@ export class CurrencyController {
   @ApiOperation({
     summary: 'Convert a currency amount',
     description:
-      'Converts an amount from one currency to another using live exchange rates from Frankfurter API. Rates are cached in Redis for 1 hour.',
+      'Converts an amount from one currency to another using live exchange rates from ExchangeRate-API. Rates are cached in Redis for 1 hour.',
   })
   @ApiQuery({ name: 'amount', required: true, type: Number, example: 100 })
   @ApiQuery({ name: 'from', required: true, type: String, example: 'EUR' })
@@ -53,6 +54,7 @@ export class CurrencyController {
     description: 'Access token is missing or invalid.',
     type: UnauthorizedErrorResponseDto,
   })
+  @Public()
   convert(@Query() query: ConvertCurrencyDto) {
     return this.currencyService.convert(query.amount, query.from, query.to);
   }
