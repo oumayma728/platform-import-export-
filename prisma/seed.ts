@@ -51,8 +51,8 @@ const PLANS = [
 ] as const;
 
 const ADMIN = {
-  email: 'admin@platform.com',
-  password: '12345678',
+  email: requireEnv('SEED_ADMIN_EMAIL'),
+  password: requireEnv('SEED_ADMIN_PASSWORD'),
   name: 'Admin',
   phone: '+21300000000',
 };

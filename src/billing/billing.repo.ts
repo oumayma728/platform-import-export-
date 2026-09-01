@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  BillingInterval,
   BillingStatus,
   ConversationAccessSource,
   ConversationStatus,
@@ -21,6 +22,17 @@ export class BillingRepository {
     const client = tx ?? this.prisma;
     return client.subscriptionPlan.findFirst({
       where: { id, isActive: true },
+    });
+  }
+
+  async findActiveSubscriptionPlanByInterval(
+    interval: BillingInterval,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = tx ?? this.prisma;
+    return client.subscriptionPlan.findFirst({
+      where: { interval, isActive: true },
+      orderBy: { price: 'asc' },
     });
   }
 

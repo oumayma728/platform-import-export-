@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
 import { BadRequestException } from '@nestjs/common';
+import { BillingInterval } from '@prisma/client';
 
 describe('BillingController', () => {
   let controller: BillingController;
@@ -15,6 +16,7 @@ describe('BillingController', () => {
           provide: BillingService,
           useValue: {
             startSubscriptionCheckout: jest.fn(),
+            getBillingRecommendation: jest.fn(),
             handleStripeWebhook: jest.fn(),
             cancelSubscription: jest.fn(),
           },
@@ -30,23 +32,56 @@ describe('BillingController', () => {
     expect(controller).toBeDefined();
   });
 
+  describe('getBillingRecommendation', () => {
+    it('should return the backend recommendation for the requested interval', async () => {
+      const response = {
+        recommended: true,
+        cumulativePaygSpending: 32,
+        subscriptionPrice: 29,
+        subscriptionInterval: BillingInterval.MENSUEL,
+        currency: 'USD',
+      };
+      billingService.getBillingRecommendation.mockResolvedValue(response);
+
+      const result = await controller.getBillingRecommendation(
+        { id: 'user-1' } as any,
+        BillingInterval.MENSUEL,
+      );
+
+      expect(result).toEqual(response);
+      expect(billingService.getBillingRecommendation).toHaveBeenCalledWith(
+        'user-1',
+        BillingInterval.MENSUEL,
+      );
+    });
+  });
+
   describe('createCheckoutSession', () => {
     it('should call billingService.startSubscriptionCheckout', async () => {
-      const mockResponse = { sessionId: 'cs_123', checkoutUrl: 'https://checkout.stripe.com/pay/cs_123' };
+      const mockResponse = {
+        sessionId: 'cs_123',
+        checkoutUrl: 'https://checkout.stripe.com/pay/cs_123',
+      };
       billingService.startSubscriptionCheckout.mockResolvedValue(mockResponse);
 
-      const result = await controller.createCheckoutSession({ id: 'user-1' } as any, 'plan-1');
+      const result = await controller.createCheckoutSession(
+        { id: 'user-1' } as any,
+        'plan-1',
+      );
       expect(result).toEqual(mockResponse);
-      expect(billingService.startSubscriptionCheckout).toHaveBeenCalledWith('user-1', 'plan-1');
+      expect(billingService.startSubscriptionCheckout).toHaveBeenCalledWith(
+        'user-1',
+        'plan-1',
+      );
     });
   });
 
   describe('handleStripeWebhook', () => {
     it('should throw BadRequestException if rawBody is missing', async () => {
       const req = {} as any;
-      await expect(controller.handleStripeWebhook(req, 'sig_123')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.handleStripeWebhook(req, 'sig_123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if signature is missing', async () => {
@@ -62,20 +97,26 @@ describe('BillingController', () => {
 
       const result = await controller.handleStripeWebhook(req, 'sig_valid');
       expect(result).toEqual({ received: true });
-      expect(billingService.handleStripeWebhook).toHaveBeenCalledWith(req.rawBody, 'sig_valid');
+      expect(billingService.handleStripeWebhook).toHaveBeenCalledWith(
+        req.rawBody,
+        'sig_valid',
+      );
     });
   });
 
   describe('cancelSubscription', () => {
     it('should call billingService.cancelSubscription', async () => {
       const mockResponse = {
-        message: 'Subscription cancellation scheduled at the end of the billing period.',
+        message:
+          'Subscription cancellation scheduled at the end of the billing period.',
         cancelAtPeriodEnd: true,
         currentPeriodEnd: new Date(),
       };
       billingService.cancelSubscription.mockResolvedValue(mockResponse);
 
-      const result = await controller.cancelSubscription({ id: 'user-1' } as any);
+      const result = await controller.cancelSubscription({
+        id: 'user-1',
+      } as any);
       expect(result).toEqual(mockResponse);
       expect(billingService.cancelSubscription).toHaveBeenCalledWith('user-1');
     });

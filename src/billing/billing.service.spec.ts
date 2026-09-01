@@ -4,7 +4,11 @@ import { BillingRepository } from './billing.repo';
 import { StripeService } from './stripe/stripe.service';
 import { StripeWebhookService } from './stripe/stripe-webhook.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { BillingStatus, SubscriptionStatus } from '@prisma/client';
+import {
+  BillingInterval,
+  BillingStatus,
+  SubscriptionStatus,
+} from '@prisma/client';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -20,6 +24,7 @@ describe('BillingService', () => {
           provide: BillingRepository,
           useValue: {
             findActiveSubscriptionPlanById: jest.fn(),
+            findActiveSubscriptionPlanByInterval: jest.fn(),
             findByUserId: jest.fn(),
             createBillingAccount: jest.fn(),
             ensureBillingAccount: jest.fn(),
@@ -159,6 +164,79 @@ describe('BillingService', () => {
       await expect(
         service.startSubscriptionCheckout('user-1', 'invalid-plan'),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getBillingRecommendation', () => {
+    const monthlyPlan = {
+      interval: BillingInterval.MENSUEL,
+      price: 29,
+      currency: 'USD',
+    } as any;
+
+    beforeEach(() => {
+      billingRepo.findActiveSubscriptionPlanByInterval.mockResolvedValue(
+        monthlyPlan,
+      );
+    });
+
+    it('does not recommend a subscription below the monthly price', async () => {
+      billingRepo.findByUserId.mockResolvedValue({
+        cumulativeUsageSpend: 28,
+      } as any);
+
+      await expect(
+        service.getBillingRecommendation('user-1'),
+      ).resolves.toMatchObject({
+        recommended: false,
+        cumulativePaygSpending: 28,
+        subscriptionPrice: 29,
+      });
+    });
+
+    it('does not recommend at exactly the monthly price', async () => {
+      billingRepo.findByUserId.mockResolvedValue({
+        cumulativeUsageSpend: 29,
+      } as any);
+
+      await expect(
+        service.getBillingRecommendation('user-1'),
+      ).resolves.toMatchObject({ recommended: false });
+    });
+
+    it('recommends a subscription above the monthly price', async () => {
+      billingRepo.findByUserId.mockResolvedValue({
+        cumulativeUsageSpend: 30,
+      } as any);
+
+      await expect(
+        service.getBillingRecommendation('user-1'),
+      ).resolves.toMatchObject({
+        recommended: true,
+        cumulativePaygSpending: 30,
+        subscriptionPrice: 29,
+      });
+    });
+
+    it('compares against the annual price when requested', async () => {
+      billingRepo.findActiveSubscriptionPlanByInterval.mockResolvedValue({
+        interval: BillingInterval.ANNUEL,
+        price: 290,
+        currency: 'USD',
+      } as any);
+      billingRepo.findByUserId.mockResolvedValue({
+        cumulativeUsageSpend: 291,
+      } as any);
+
+      await expect(
+        service.getBillingRecommendation('user-1', BillingInterval.ANNUEL),
+      ).resolves.toEqual({
+        recommended: true,
+        cumulativePaygSpending: 291,
+        subscriptionPrice: 290,
+        subscriptionInterval: BillingInterval.ANNUEL,
+        currency: 'USD',
+      });
     });
   });
 

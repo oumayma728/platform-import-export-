@@ -4,12 +4,17 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { BillingStatus, SubscriptionStatus } from '@prisma/client';
+import {
+  BillingInterval,
+  BillingStatus,
+  SubscriptionStatus,
+} from '@prisma/client';
 import { BillingRepository } from './billing.repo';
 import { StripeService } from './stripe/stripe.service';
 import { StripeWebhookService } from './stripe/stripe-webhook.service';
 import { CreateCheckoutSessionResponseDto } from './dto/create-checkout-session.dto';
 import { CancelSubscriptionResponseDto } from './dto/cancel-subscription.dto';
+import { BillingRecommendationDto } from './dto/billing-recommendation.dto';
 
 @Injectable()
 export class BillingService {
@@ -32,6 +37,38 @@ export class BillingService {
       );
     }
     return plan;
+  }
+
+  /**
+   * Compare the user's cumulative successful PAYG spend with a subscription.
+   * The frontend receives the business decision and only renders it.
+   */
+  async getBillingRecommendation(
+    userId: string,
+    interval: BillingInterval = BillingInterval.MENSUEL,
+  ): Promise<BillingRecommendationDto> {
+    const billingAccount = await this.billingRepo.findByUserId(userId);
+    const plan =
+      await this.billingRepo.findActiveSubscriptionPlanByInterval(interval);
+
+    if (!plan) {
+      throw new NotFoundException(
+        `Active ${interval.toLowerCase()} subscription plan not found`,
+      );
+    }
+
+    const cumulativePaygSpending = Number(
+      billingAccount?.cumulativeUsageSpend ?? 0,
+    );
+    const subscriptionPrice = Number(plan.price);
+
+    return {
+      recommended: cumulativePaygSpending > subscriptionPrice,
+      cumulativePaygSpending,
+      subscriptionPrice,
+      subscriptionInterval: plan.interval,
+      currency: plan.currency,
+    };
   }
 
   /**
