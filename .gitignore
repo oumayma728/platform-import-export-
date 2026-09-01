@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 .venv/
@@ -30,3 +31,36 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+=======
+# Virtual environment
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Pytest
+.pytest_cache/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Nested local clone/repo that should not be tracked
+platform-import-export/
+
+*.egg-info/
+.DS_Store
+.coverage
+node_modules/
+dist/
+
+uploads/logos/
+>>>>>>> origin/main

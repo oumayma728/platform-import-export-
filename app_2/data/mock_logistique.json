@@ -1,0 +1,11 @@
+[
+  { "pays_origine": "Maroc", "pays_destination": "France", "distance_km": 1450, "cout_transport": 850, "delai_transport_jours": 5 },
+  { "pays_origine": "Tunisie", "pays_destination": "France", "distance_km": 1550, "cout_transport": 900, "delai_transport_jours": 6 },
+  { "pays_origine": "Maroc", "pays_destination": "Tunisie", "distance_km": 1900, "cout_transport": 1100, "delai_transport_jours": 8 },
+  { "pays_origine": "Vietnam", "pays_destination": "Allemagne", "distance_km": 9500, "cout_transport": 2200, "delai_transport_jours": 25 },
+  { "pays_origine": "Chine", "pays_destination": "Espagne", "distance_km": 9800, "cout_transport": 2400, "delai_transport_jours": 28 },
+  { "pays_origine": "Tunisie", "pays_destination": "Italie", "distance_km": 600, "cout_transport": 400, "delai_transport_jours": 3 },
+  { "pays_origine": "Maroc", "pays_destination": "Portugal", "distance_km": 800, "cout_transport": 500, "delai_transport_jours": 4 },
+  { "pays_origine": "Turquie", "pays_destination": "Allemagne", "distance_km": 2400, "cout_transport": 1200, "delai_transport_jours": 9 },
+  { "pays_origine": "Chine", "pays_destination": "Italie", "distance_km": 9200, "cout_transport": 2300, "delai_transport_jours": 27 }
+]
