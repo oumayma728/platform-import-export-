@@ -10,6 +10,7 @@ import com.commercial.Pont.Commercial.models.Entreprise;
 import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.EntrepriseRepository;
 import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.NotificationServiceInterface;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.UtilisateurServiceInterface;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.PhotoStorageServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
@@ -37,6 +38,8 @@ public class UtilisateurServiceImpl implements UtilisateurServiceInterface {
     private final PasswordEncoder passwordEncoder;
 
     private final PhotoStorageServiceInterface photoStorageService;
+
+    private final NotificationServiceInterface notificationService;
 
     // =========================
     // CREATE
@@ -122,6 +125,10 @@ public class UtilisateurServiceImpl implements UtilisateurServiceInterface {
                 utilisateurRepository.save(
                         utilisateur
                 );
+
+        notificationService.notifierBienvenue(
+                savedUtilisateur
+        );
 
         Integer nombreEmployes =
                 entreprise.getNombreEmployes();
@@ -388,11 +395,52 @@ public class UtilisateurServiceImpl implements UtilisateurServiceInterface {
     public UtilisateurResponseDto validerUtilisateur(
             UUID utilisateurId
     ) {
-        return changerValidationStatus(
-                utilisateurId,
+
+        Utilisateur utilisateur =
+                utilisateurRepository
+                        .findById(utilisateurId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Utilisateur non trouvé avec l'id : "
+                                                + utilisateurId
+                                )
+                        );
+
+
+        utilisateur.setValidationStatus(
                 ValidationStatus.VALIDE
         );
+
+        utilisateur.setUpdatedAt(
+                LocalDateTime.now()
+        );
+
+
+        Utilisateur saved =
+                utilisateurRepository.save(
+                        utilisateur
+                );
+
+
+        // =========================================
+        // NOTIFICATION
+        // =========================================
+
+        notificationService
+                .notifierValidationCompte(
+                        saved
+                );
+
+
+        return utilisateurMapper
+                .entityToResponse(
+                        saved
+                );
     }
+
+
+
+
 
     @Override
     public UtilisateurResponseDto rejeterUtilisateur(

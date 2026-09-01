@@ -13,6 +13,7 @@ import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import com.commercial.Pont.Commercial.security.CustomUserDetails;
 import com.commercial.Pont.Commercial.services.FileStorageService;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.DocumentConversationServiceInterface;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.NotificationServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -44,6 +45,10 @@ public class DocumentConversationServiceImpl
     private final FileStorageService fileStorageService;
 
     private final SimpMessagingTemplate messagingTemplate;
+
+    private final MessageServiceImpl messageService;
+
+    private final NotificationServiceInterface notificationService;
 
     // =========================
     // CREATE
@@ -392,7 +397,6 @@ public class DocumentConversationServiceImpl
         // =====================================================
 
         if (file == null || file.isEmpty()) {
-
             throw new IllegalArgumentException(
                     "Le fichier est obligatoire"
             );
@@ -400,7 +404,7 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Utilisateur connecté via JWT
+        // Utilisateur connecté
         // =====================================================
 
         Authentication authentication =
@@ -416,7 +420,6 @@ public class DocumentConversationServiceImpl
             );
         }
 
-
         String email = authentication.getName();
 
 
@@ -425,16 +428,38 @@ public class DocumentConversationServiceImpl
         // =====================================================
 
         Utilisateur expediteur =
-                utilisateurRepository.findByEmail(email)
+                utilisateurRepository
+                        .findByEmail(email)
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
-                                        "Utilisateur non trouvé avec l'email': "
+                                        "Utilisateur non trouvé avec l'email : "
                                                 + email
                                 )
                         );
 
 
+        // =====================================================
+        // Vérifier abonnement
+        // =====================================================
 
+        boolean abonne =
+                messageService.estUtilisateurAbonne(
+                        expediteur
+                );
+
+
+        // =====================================================
+        // Vérifier quota
+        //
+        // Un document = un message
+        // =====================================================
+
+        if (!abonne) {
+
+            messageService.verifierLimiteMessages(
+                    expediteur
+            );
+        }
 
 
         // =====================================================
@@ -442,7 +467,8 @@ public class DocumentConversationServiceImpl
         // =====================================================
 
         Conversation conversation =
-                conversationRepository.findById(conversationId)
+                conversationRepository
+                        .findById(conversationId)
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
                                         "Conversation non trouvée avec l'id : "
@@ -452,38 +478,42 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Vérification que l'utilisateur appartient
-        // à la conversation
+        // Vérifier participant
         // =====================================================
 
         boolean participant =
 
-                conversation.getInitiateur()
+                conversation
+                        .getInitiateur()
                         .getUtilisateurId()
-                        .equals(expediteur.getUtilisateurId())
+                        .equals(
+                                expediteur.getUtilisateurId()
+                        )
 
                         ||
 
-                        conversation.getDestinataire()
+                        conversation
+                                .getDestinataire()
                                 .getUtilisateurId()
-                                .equals(expediteur.getUtilisateurId());
+                                .equals(
+                                        expediteur.getUtilisateurId()
+                                );
 
 
         if (!participant) {
 
-            throw new IllegalStateException(
-                    "Vous ne participez pas à cette conversation"
+            throw new AccessDeniedException(
+                    "Vous ne participez pas à cette conversation."
             );
         }
 
 
         // =====================================================
-        // Nom original du fichier
+        // Informations fichier
         // =====================================================
 
         String nomFichier =
                 file.getOriginalFilename();
-
 
         if (nomFichier == null
                 || nomFichier.isBlank()) {
@@ -493,10 +523,6 @@ public class DocumentConversationServiceImpl
             );
         }
 
-
-        // =====================================================
-        // Extension
-        // =====================================================
 
         String extension = "";
 
@@ -512,16 +538,12 @@ public class DocumentConversationServiceImpl
         }
 
 
-        // =====================================================
-        // Taille
-        // =====================================================
-
         Long taille =
                 file.getSize();
 
 
         // =====================================================
-        // Sauvegarde physique
+        // Stockage physique
         // =====================================================
 
         String cheminFichier =
@@ -529,11 +551,12 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Création DocumentConversation
+        // Création document
         // =====================================================
 
         LocalDateTime now =
                 LocalDateTime.now();
+
 
         DocumentConversation documentConversation =
                 DocumentConversation.builder()
@@ -562,7 +585,7 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Sauvegarde DB
+        // Sauvegarde document
         // =====================================================
 
         DocumentConversation savedDocument =
@@ -572,14 +595,15 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Incrémentation nombreMessages
+        // Mise à jour conversation
+        //
+        // Document = message
         // =====================================================
 
         Integer nombreMessages =
                 conversation.getNombreMessages();
 
         if (nombreMessages == null) {
-
             nombreMessages = 0;
         }
 
@@ -591,20 +615,34 @@ public class DocumentConversationServiceImpl
                 now
         );
 
+        conversation.setUpdatedAt(
+                now
+        );
+
         conversationRepository.save(
                 conversation
         );
 
-        Integer nombreMessagesUtilisees =
-                expediteur.getNombreChatsUtilises();
 
-        expediteur.setNombreChatsUtilises(
-                nombreMessagesUtilisees + 1
+        // =====================================================
+        // Mise à jour quota
+        //
+        // Même comportement que createMyMessage()
+        // =====================================================
+
+        messageService.incrementerNombreChats(
+                expediteur,
+                abonne
         );
 
-        utilisateurRepository.save(expediteur);
+        utilisateurRepository.save(
+                expediteur
+        );
 
 
+        // =====================================================
+        // Response
+        // =====================================================
 
         DocumentConversationResponseDto response =
                 documentConversationMapper
@@ -614,7 +652,7 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Événement WebSocket
+        // WebSocket
         // =====================================================
 
         ConversationEventDto event =
@@ -631,10 +669,6 @@ public class DocumentConversationServiceImpl
                         .build();
 
 
-        // =====================================================
-        // Diffusion temps réel
-        // =====================================================
-
         messagingTemplate.convertAndSend(
 
                 "/topic/conversations/"
@@ -645,7 +679,45 @@ public class DocumentConversationServiceImpl
 
 
         // =====================================================
-        // Retour HTTP
+        // Déterminer destinataire
+        // =====================================================
+
+        Utilisateur destinataire;
+
+        if (
+                conversation
+                        .getInitiateur()
+                        .getUtilisateurId()
+                        .equals(
+                                expediteur.getUtilisateurId()
+                        )
+        ) {
+
+            destinataire =
+                    conversation.getDestinataire();
+
+        } else {
+
+            destinataire =
+                    conversation.getInitiateur();
+        }
+
+
+        // =====================================================
+        // Notification
+        //
+        // Document considéré comme nouveau message
+        // =====================================================
+
+        notificationService
+                .notifierNouveauMessage(
+                        destinataire,
+                        expediteur
+                );
+
+
+        // =====================================================
+        // Retour
         // =====================================================
 
         return response;

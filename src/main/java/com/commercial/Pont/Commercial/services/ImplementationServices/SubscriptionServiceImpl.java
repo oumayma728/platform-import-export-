@@ -11,6 +11,7 @@ import com.commercial.Pont.Commercial.enums.PaiementStatus;
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.SubscriptionMapperInterface;
 import com.commercial.Pont.Commercial.models.*;
 import com.commercial.Pont.Commercial.repositories.*;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.NotificationServiceInterface;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.SubscriptionServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,9 @@ public class SubscriptionServiceImpl
     private final FacturationRepository facturationRepository;
 
     private final PaiementRepository paiementRepository;
+
+    private final NotificationServiceInterface notificationService;
+
 
     // =========================
     // CREATE
@@ -1054,6 +1058,12 @@ public class SubscriptionServiceImpl
         subscriptionRepository.save(
                 subscription
         );
+
+
+        notificationService
+                .notifierPaiementConfirme(
+                        utilisateur
+                );
     }
 
 

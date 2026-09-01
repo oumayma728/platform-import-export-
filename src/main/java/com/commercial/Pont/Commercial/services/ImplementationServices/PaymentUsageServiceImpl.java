@@ -14,6 +14,7 @@ import com.commercial.Pont.Commercial.mappers.InterfaceMappers.PaymentUsageMappe
 import com.commercial.Pont.Commercial.models.*;
 import com.commercial.Pont.Commercial.repositories.*;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.CurrencyConversionServiceInterface;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.NotificationServiceInterface;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.PaymentUsageServiceInterface;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
@@ -53,6 +54,8 @@ public class PaymentUsageServiceImpl
     private final BillingConfig billingConfig;
 
     private final CurrencyConversionServiceInterface currencyConversionService;
+
+    private final NotificationServiceInterface notificationService;
 
 
 
@@ -921,6 +924,12 @@ public class PaymentUsageServiceImpl
         paymentUsageRepository.save(
                 paymentUsage
         );
+
+
+        notificationService
+                .notifierPaiementConfirme(
+                        utilisateur
+                );
     }
 
 

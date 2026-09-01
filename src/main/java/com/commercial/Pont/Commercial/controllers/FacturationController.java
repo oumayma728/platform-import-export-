@@ -10,10 +10,18 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/facturations")
 @RequiredArgsConstructor
+@Tag(
+        name = "Facturation",
+        description = "Gestion des factures et des informations de facturation de la plateforme"
+)
 public class FacturationController {
 
     private final FacturationServiceInterface facturationService;
@@ -22,7 +30,16 @@ public class FacturationController {
     // =========================
     // CREATE
     // =========================
-
+    @Operation(
+            summary = "Créer une facturation",
+            description = "Crée un nouvel enregistrement de facturation."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Facturation créée avec succès"),
+            @ApiResponse(responseCode = "400", description = "Données de facturation invalides"),
+            @ApiResponse(responseCode = "401", description = "Utilisateur non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé")
+    })
     @PostMapping
     public ResponseEntity<FacturationResponseDto> create(
             @RequestBody FacturationRequestDto facturationRequestDto
@@ -42,9 +59,23 @@ public class FacturationController {
     // =========================
     // UPDATE
     // =========================
-
+    @Operation(
+            summary = "Modifier une facturation",
+            description = "Modifie une facturation existante."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Facturation modifiée avec succès"),
+            @ApiResponse(responseCode = "400", description = "Données invalides"),
+            @ApiResponse(responseCode = "401", description = "Utilisateur non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé"),
+            @ApiResponse(responseCode = "404", description = "Facturation introuvable")
+    })
     @PutMapping("/{facturationId}")
     public ResponseEntity<FacturationResponseDto> update(
+            @Parameter(
+                    description = "Identifiant UUID de la facturation",
+                    required = true
+            )
             @PathVariable UUID facturationId,
             @RequestBody FacturationRequestDto facturationRequestDto
     ) {
@@ -62,9 +93,22 @@ public class FacturationController {
     // =========================
     // GET BY ID
     // =========================
-
+    @Operation(
+            summary = "Récupérer une facturation",
+            description = "Retourne une facturation à partir de son identifiant."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Facturation récupérée avec succès"),
+            @ApiResponse(responseCode = "401", description = "Utilisateur non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé"),
+            @ApiResponse(responseCode = "404", description = "Facturation introuvable")
+    })
     @GetMapping("/{facturationId}")
     public ResponseEntity<FacturationResponseDto> getById(
+            @Parameter(
+                    description = "Identifiant UUID de la facturation",
+                    required = true
+            )
             @PathVariable UUID facturationId
     ) {
 
@@ -80,7 +124,15 @@ public class FacturationController {
     // =========================
     // GET ALL
     // =========================
-
+    @Operation(
+            summary = "Lister toutes les facturations",
+            description = "Retourne toutes les facturations enregistrées."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Facturations récupérées avec succès"),
+            @ApiResponse(responseCode = "401", description = "Utilisateur non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé")
+    })
     @GetMapping
     public ResponseEntity<List<FacturationResponseDto>> getAll() {
 
@@ -94,7 +146,16 @@ public class FacturationController {
     // =========================
     // DELETE
     // =========================
-
+    @Operation(
+            summary = "Supprimer une facturation",
+            description = "Supprime une facturation à partir de son identifiant."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Facturation supprimée avec succès"),
+            @ApiResponse(responseCode = "401", description = "Utilisateur non authentifié"),
+            @ApiResponse(responseCode = "403", description = "Accès refusé"),
+            @ApiResponse(responseCode = "404", description = "Facturation introuvable")
+    })
     @DeleteMapping("/{facturationId}")
     public ResponseEntity<Void> delete(
             @PathVariable UUID facturationId

@@ -109,11 +109,26 @@ public class SecurityConfig {
                         // Routes publiques
                         .requestMatchers(
                                 "/auth/**",
+
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
+
+                                "/v3/api-docs",
                                 "/v3/api-docs/**",
+
                                 "/ws/**",
-                                "/webhooks/stripe"
+
+                                "/webhooks/stripe",
+
+                                "/docs/**",
+                                "/docs",
+
+                                "/openapi.json",
+                                "/openapi.json/**",
+
+                                "/redoc/**",
+                                "/redoc",
+                                "/redoc.html"
                         )
                         .permitAll()
 

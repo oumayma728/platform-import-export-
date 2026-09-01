@@ -5,17 +5,29 @@ import com.commercial.Pont.Commercial.dtos.responseDtos.DocumentAnnonceResponseD
 import com.commercial.Pont.Commercial.mappers.InterfaceMappers.DocumentAnnonceMapperInterface;
 import com.commercial.Pont.Commercial.models.Annonce;
 import com.commercial.Pont.Commercial.models.DocumentAnnonce;
+import com.commercial.Pont.Commercial.models.Utilisateur;
 import com.commercial.Pont.Commercial.repositories.AnnonceRepository;
 import com.commercial.Pont.Commercial.repositories.DocumentAnnonceRepository;
+import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
+import com.commercial.Pont.Commercial.services.FileStorageService;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.DocumentAnnonceServiceInterface;
+
 import jakarta.persistence.EntityNotFoundException;
+
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -23,51 +35,50 @@ import java.util.UUID;
 public class DocumentAnnonceServiceImpl
         implements DocumentAnnonceServiceInterface {
 
-    private final DocumentAnnonceRepository documentAnnonceRepository;
+    private final DocumentAnnonceRepository
+            documentAnnonceRepository;
 
-    private final DocumentAnnonceMapperInterface documentAnnonceMapper;
+    private final DocumentAnnonceMapperInterface
+            documentAnnonceMapper;
 
-    private final AnnonceRepository annonceRepository;
+    private final AnnonceRepository
+            annonceRepository;
+
+    private final UtilisateurRepository
+            utilisateurRepository;
+
+    private final FileStorageService
+            fileStorageService;
 
 
-    // =========================
-    // CREATE
-    // =========================
+    // =========================================================
+    // CREATE GENERIC
+    // =========================================================
 
     @Override
     public DocumentAnnonceResponseDto create(
-            DocumentAnnonceRequestDto documentAnnonceRequestDto
+            DocumentAnnonceRequestDto requestDto
     ) {
 
         DocumentAnnonce documentAnnonce =
                 documentAnnonceMapper.requestToEntity(
-                        documentAnnonceRequestDto
+                        requestDto
                 );
-
-
-        // Recherche de l'annonce
 
         Annonce annonce =
                 annonceRepository.findById(
-                                documentAnnonceRequestDto.getAnnonceId()
+                                requestDto.getAnnonceId()
                         )
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
                                         "Annonce non trouvée avec l'id : "
-                                                + documentAnnonceRequestDto
-                                                .getAnnonceId()
+                                                + requestDto.getAnnonceId()
                                 )
                         );
-
-
-        // Association du document à l'annonce
 
         documentAnnonce.setAnnonce(
                 annonce
         );
-
-
-        // Gestion des dates
 
         LocalDateTime now =
                 LocalDateTime.now();
@@ -80,32 +91,30 @@ public class DocumentAnnonceServiceImpl
                 now
         );
 
-
-        DocumentAnnonce savedDocumentAnnonce =
+        DocumentAnnonce savedDocument =
                 documentAnnonceRepository.save(
                         documentAnnonce
                 );
 
         return documentAnnonceMapper.entityToResponse(
-                savedDocumentAnnonce
+                savedDocument
         );
     }
 
 
-    // =========================
+    // =========================================================
     // UPDATE
-    // =========================
+    // =========================================================
 
     @Override
     public DocumentAnnonceResponseDto update(
             UUID documentAnnonceId,
-            DocumentAnnonceRequestDto documentAnnonceRequestDto
+            DocumentAnnonceRequestDto requestDto
     ) {
 
-        DocumentAnnonce existingDocumentAnnonce =
-                documentAnnonceRepository.findById(
-                                documentAnnonceId
-                        )
+        DocumentAnnonce documentAnnonce =
+                documentAnnonceRepository
+                        .findById(documentAnnonceId)
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
                                         "Document annonce non trouvé avec l'id : "
@@ -114,85 +123,88 @@ public class DocumentAnnonceServiceImpl
                         );
 
 
-        // =========================
-        // Mise à jour des informations
-        // =========================
+        if (requestDto.getNomFichier() != null) {
 
-        existingDocumentAnnonce.setNomFichier(
-                documentAnnonceRequestDto.getNomFichier()
-        );
-
-        existingDocumentAnnonce.setCheminFichier(
-                documentAnnonceRequestDto.getCheminFichier()
-        );
-
-        existingDocumentAnnonce.setExtension(
-                documentAnnonceRequestDto.getExtension()
-        );
-
-        existingDocumentAnnonce.setTaille(
-                documentAnnonceRequestDto.getTaille()
-        );
+            documentAnnonce.setNomFichier(
+                    requestDto.getNomFichier()
+            );
+        }
 
 
-        // =========================
-        // Mise à jour de l'annonce
-        // =========================
+        if (requestDto.getCheminFichier() != null) {
+
+            documentAnnonce.setCheminFichier(
+                    requestDto.getCheminFichier()
+            );
+        }
+
+
+        if (requestDto.getExtension() != null) {
+
+            documentAnnonce.setExtension(
+                    requestDto.getExtension()
+            );
+        }
+
+
+        if (requestDto.getTaille() != null) {
+
+            documentAnnonce.setTaille(
+                    requestDto.getTaille()
+            );
+        }
+
 
         if (
-                documentAnnonceRequestDto.getAnnonceId() != null
+                requestDto.getAnnonceId() != null
                         &&
-                        !documentAnnonceRequestDto
+                        !requestDto
                                 .getAnnonceId()
                                 .equals(
-                                        existingDocumentAnnonce
+                                        documentAnnonce
                                                 .getAnnonce()
                                                 .getAnnonceId()
                                 )
         ) {
 
             Annonce annonce =
-                    annonceRepository.findById(
-                                    documentAnnonceRequestDto
-                                            .getAnnonceId()
+                    annonceRepository
+                            .findById(
+                                    requestDto.getAnnonceId()
                             )
                             .orElseThrow(() ->
                                     new EntityNotFoundException(
                                             "Annonce non trouvée avec l'id : "
-                                                    + documentAnnonceRequestDto
+                                                    + requestDto
                                                     .getAnnonceId()
                                     )
                             );
 
-            existingDocumentAnnonce.setAnnonce(
+            documentAnnonce.setAnnonce(
                     annonce
             );
         }
 
 
-        // =========================
-        // Mise à jour automatique
-        // =========================
-
-        existingDocumentAnnonce.setUpdatedAt(
+        documentAnnonce.setUpdatedAt(
                 LocalDateTime.now()
         );
 
 
-        DocumentAnnonce updatedDocumentAnnonce =
+        DocumentAnnonce savedDocument =
                 documentAnnonceRepository.save(
-                        existingDocumentAnnonce
+                        documentAnnonce
                 );
 
         return documentAnnonceMapper.entityToResponse(
-                updatedDocumentAnnonce
+                savedDocument
         );
     }
 
 
-    // =========================
+    // =========================================================
     // GET BY ID
-    // =========================
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -201,9 +213,8 @@ public class DocumentAnnonceServiceImpl
     ) {
 
         DocumentAnnonce documentAnnonce =
-                documentAnnonceRepository.findById(
-                                documentAnnonceId
-                        )
+                documentAnnonceRepository
+                        .findById(documentAnnonceId)
                         .orElseThrow(() ->
                                 new EntityNotFoundException(
                                         "Document annonce non trouvé avec l'id : "
@@ -217,15 +228,16 @@ public class DocumentAnnonceServiceImpl
     }
 
 
-    // =========================
+    // =========================================================
     // GET ALL
-    // =========================
+    // =========================================================
 
     @Override
     @Transactional(readOnly = true)
     public List<DocumentAnnonceResponseDto> getAll() {
 
-        return documentAnnonceRepository.findAll()
+        return documentAnnonceRepository
+                .findAll()
                 .stream()
                 .map(
                         documentAnnonceMapper::entityToResponse
@@ -234,30 +246,426 @@ public class DocumentAnnonceServiceImpl
     }
 
 
-    // =========================
-    // DELETE
-    // =========================
+    // =========================================================
+    // DELETE GENERIC
+    // =========================================================
 
     @Override
     public void delete(
             UUID documentAnnonceId
     ) {
 
+        DocumentAnnonce documentAnnonce =
+                documentAnnonceRepository
+                        .findById(documentAnnonceId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Document annonce non trouvé avec l'id : "
+                                                + documentAnnonceId
+                                )
+                        );
+
+
+        // Supprimer aussi le fichier physique
+
         if (
-                !documentAnnonceRepository
-                        .existsById(
-                                documentAnnonceId
-                        )
+                documentAnnonce.getCheminFichier() != null
         ) {
 
-            throw new EntityNotFoundException(
-                    "Document annonce non trouvé avec l'id : "
-                            + documentAnnonceId
+            fileStorageService.delete(
+                    documentAnnonce.getCheminFichier()
             );
         }
 
-        documentAnnonceRepository.deleteById(
-                documentAnnonceId
+
+        documentAnnonceRepository.delete(
+                documentAnnonce
+        );
+    }
+
+
+    // =========================================================
+    // ADD DOCUMENT TO ANNONCE
+    // =========================================================
+
+    @Override
+    public DocumentAnnonceResponseDto addDocumentToAnnonce(
+            UUID annonceId,
+            MultipartFile file
+    ) {
+
+        // =====================================================
+        // Vérification fichier
+        // =====================================================
+
+        if (
+                file == null
+                        ||
+                        file.isEmpty()
+        ) {
+
+            throw new IllegalArgumentException(
+                    "Le fichier est obligatoire."
+            );
+        }
+
+
+        // =====================================================
+        // Utilisateur connecté
+        // =====================================================
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+
+        if (
+                authentication == null
+                        ||
+                        !authentication.isAuthenticated()
+        ) {
+
+            throw new IllegalStateException(
+                    "Utilisateur non authentifié."
+            );
+        }
+
+
+        String email =
+                authentication.getName();
+
+
+        // =====================================================
+        // Recherche utilisateur
+        // =====================================================
+
+        Utilisateur utilisateur =
+                utilisateurRepository
+                        .findByEmail(email)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Utilisateur non trouvé avec l'email : "
+                                                + email
+                                )
+                        );
+
+
+        // =====================================================
+        // Recherche annonce
+        // =====================================================
+
+        Annonce annonce =
+                annonceRepository
+                        .findById(annonceId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Annonce non trouvée avec l'id : "
+                                                + annonceId
+                                )
+                        );
+
+
+        // =====================================================
+        // Vérifier propriétaire
+        // =====================================================
+
+        if (
+                annonce.getUtilisateur() == null
+                        ||
+                        !annonce
+                                .getUtilisateur()
+                                .getUtilisateurId()
+                                .equals(
+                                        utilisateur.getUtilisateurId()
+                                )
+        ) {
+
+            throw new AccessDeniedException(
+                    "Vous ne pouvez ajouter des documents "
+                            + "qu'à vos propres annonces."
+            );
+        }
+
+
+        // =====================================================
+        // Informations fichier
+        // =====================================================
+
+        String nomFichier =
+                file.getOriginalFilename();
+
+
+        if (
+                nomFichier == null
+                        ||
+                        nomFichier.isBlank()
+        ) {
+
+            throw new IllegalArgumentException(
+                    "Nom du fichier invalide."
+            );
+        }
+
+
+        String extension = "";
+
+        int lastDot =
+                nomFichier.lastIndexOf(".");
+
+
+        if (lastDot > 0) {
+
+            extension =
+                    nomFichier.substring(
+                            lastDot + 1
+                    );
+        }
+
+
+        Long taille =
+                file.getSize();
+
+
+        // =====================================================
+        // Stockage fichier physique
+        // =====================================================
+
+        String cheminFichier =
+                fileStorageService.store(
+                        file
+                );
+
+
+        // =====================================================
+        // Création DocumentAnnonce
+        // =====================================================
+
+        LocalDateTime now =
+                LocalDateTime.now();
+
+
+        DocumentAnnonce documentAnnonce =
+                DocumentAnnonce.builder()
+
+                        .nomFichier(
+                                nomFichier
+                        )
+
+                        .cheminFichier(
+                                cheminFichier
+                        )
+
+                        .extension(
+                                extension
+                        )
+
+                        .taille(
+                                taille
+                        )
+
+                        .createdAt(
+                                now
+                        )
+
+                        .updatedAt(
+                                now
+                        )
+
+                        .annonce(
+                                annonce
+                        )
+
+                        .build();
+
+
+        // =====================================================
+        // Sauvegarde DB
+        // =====================================================
+
+        DocumentAnnonce savedDocument =
+                documentAnnonceRepository.save(
+                        documentAnnonce
+                );
+
+
+        return documentAnnonceMapper.entityToResponse(
+                savedDocument
+        );
+    }
+
+
+    // =========================================================
+    // GET DOCUMENTS BY ANNONCE
+    // =========================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DocumentAnnonceResponseDto>
+    getDocumentsByAnnonce(
+            UUID annonceId
+    ) {
+
+        // =====================================================
+        // Vérifier existence annonce
+        // =====================================================
+
+        if (
+                !annonceRepository.existsById(
+                        annonceId
+                )
+        ) {
+
+            throw new EntityNotFoundException(
+                    "Annonce non trouvée avec l'id : "
+                            + annonceId
+            );
+        }
+
+
+        // =====================================================
+        // Documents de l'annonce
+        // =====================================================
+
+        return documentAnnonceRepository
+                .findByAnnonce_AnnonceId(
+                        annonceId
+                )
+                .stream()
+                .map(
+                        documentAnnonceMapper::entityToResponse
+                )
+                .toList();
+    }
+
+
+    // =========================================================
+    // DELETE DOCUMENT FROM ANNONCE
+    // =========================================================
+
+    @Override
+    public void deleteDocumentFromAnnonce(
+            UUID annonceId,
+            UUID documentAnnonceId
+    ) {
+
+        // =====================================================
+        // Utilisateur connecté
+        // =====================================================
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+
+        if (
+                authentication == null
+                        ||
+                        !authentication.isAuthenticated()
+        ) {
+
+            throw new IllegalStateException(
+                    "Utilisateur non authentifié."
+            );
+        }
+
+
+        String email =
+                authentication.getName();
+
+
+        Utilisateur utilisateur =
+                utilisateurRepository
+                        .findByEmail(email)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Utilisateur connecté non trouvé."
+                                )
+                        );
+
+
+        // =====================================================
+        // Recherche document
+        // =====================================================
+
+        DocumentAnnonce documentAnnonce =
+                documentAnnonceRepository
+                        .findById(
+                                documentAnnonceId
+                        )
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Document annonce non trouvé avec l'id : "
+                                                + documentAnnonceId
+                                )
+                        );
+
+
+        // =====================================================
+        // Vérifier annonce
+        // =====================================================
+
+        Annonce annonce =
+                documentAnnonce.getAnnonce();
+
+
+        if (
+                !annonce
+                        .getAnnonceId()
+                        .equals(
+                                annonceId
+                        )
+        ) {
+
+            throw new IllegalArgumentException(
+                    "Ce document n'appartient pas à cette annonce."
+            );
+        }
+
+
+        // =====================================================
+        // Vérifier propriétaire annonce
+        // =====================================================
+
+        if (
+                annonce.getUtilisateur() == null
+                        ||
+                        !annonce
+                                .getUtilisateur()
+                                .getUtilisateurId()
+                                .equals(
+                                        utilisateur.getUtilisateurId()
+                                )
+        ) {
+
+            throw new AccessDeniedException(
+                    "Vous ne pouvez supprimer que les documents "
+                            + "de vos propres annonces."
+            );
+        }
+
+
+        // =====================================================
+        // Supprimer fichier physique
+        // =====================================================
+
+        if (
+                documentAnnonce.getCheminFichier() != null
+        ) {
+
+            fileStorageService.delete(
+                    documentAnnonce.getCheminFichier()
+            );
+        }
+
+
+        // =====================================================
+        // Supprimer DB
+        // =====================================================
+
+        documentAnnonceRepository.delete(
+                documentAnnonce
         );
     }
 }

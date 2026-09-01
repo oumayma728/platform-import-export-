@@ -10,6 +10,7 @@ import com.commercial.Pont.Commercial.mappers.InterfaceMappers.MessageMapperInte
 import com.commercial.Pont.Commercial.models.*;
 import com.commercial.Pont.Commercial.repositories.*;
 import com.commercial.Pont.Commercial.services.ServiceInterfaces.MessageServiceInterface;
+import com.commercial.Pont.Commercial.services.ServiceInterfaces.NotificationServiceInterface;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -41,9 +42,9 @@ public class MessageServiceImpl implements MessageServiceInterface {
 
     private final FacturationServiceImpl facturationService;
 
-
     private final SubscriptionRepository subscriptionRepository;
 
+    private final NotificationServiceInterface notificationService;
     // =========================
     // CREATE
     // =========================
@@ -414,6 +415,36 @@ public class MessageServiceImpl implements MessageServiceInterface {
                         + conversation.getConversationId(),
                 event
         );
+
+
+        Utilisateur destinataire;
+
+
+
+        if (
+                conversation
+                        .getInitiateur()
+                        .getUtilisateurId()
+                        .equals(
+                                utilisateur.getUtilisateurId()
+                        )
+        ) {
+
+            destinataire =
+                    conversation.getDestinataire();
+
+        } else {
+
+            destinataire =
+                    conversation.getInitiateur();
+        }
+
+
+        notificationService
+                .notifierNouveauMessage(
+                        destinataire,
+                        utilisateur
+                );
 
 
         return response;
@@ -979,6 +1010,10 @@ public class MessageServiceImpl implements MessageServiceInterface {
                     utilisateur
             );
 
+            notificationService
+                    .notifierQuotaAtteint(
+                            utilisateur
+                    );
             throw new IllegalStateException(
                     "Vous avez atteint votre limite de messages."
             );
