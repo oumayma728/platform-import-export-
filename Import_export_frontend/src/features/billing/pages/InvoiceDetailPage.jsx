@@ -5,7 +5,7 @@ import AsyncState from "../../../components/organisms/AsyncState";
 import SectionCard from "../../../components/molecules/SectionCard";
 import StatusBadge from "../../../components/molecules/StatusBadge";
 import Button from "../../../components/atoms/Button";
-import { getInvoiceById } from "../api/billing";
+import { getInvoiceById, getInvoicePdfUrl } from "../api/billing";
 import { colors, spacing, typography } from "../../../styles/tokens";
 
 export default function InvoiceDetailPage() {
@@ -13,11 +13,19 @@ export default function InvoiceDetailPage() {
   const navigate = useNavigate();
 
   const { item: invoice, isLoading, error } = useResourceItem(getInvoiceById, id);
+  
 
-  function handleDownload() {
-    window.alert(
-      `Téléchargement du PDF pour la facture ${id} — fonctionnalité branchée dès que l'API de facturation sera disponible.`
-    );
+  async function handleDownload() {
+    try {
+      const { url } = await getInvoicePdfUrl(id);
+      if (!url) {
+        window.alert("PDF indisponible pour cette facture.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      window.alert(error.response?.data?.detail || "PDF indisponible pour cette facture.");
+    }
   }
 
   return (
@@ -55,9 +63,8 @@ export default function InvoiceDetailPage() {
             >
               <div>
                 <h1 style={{ fontFamily: typography.display, fontSize: typography.fontSizeLg, margin: 0 }}>
-                  Facture {invoice.id}
+                  {invoice.planTitle || "Paiement"}
                 </h1>
-                <p style={{ color: colors.textMuted, margin: "4px 0 0" }}>{invoice.description}</p>
               </div>
               <StatusBadge status={invoice.status} />
             </div>
@@ -75,9 +82,11 @@ export default function InvoiceDetailPage() {
             >
               <Field label="Date" value={invoice.date} />
               <Field label="Montant" value={invoice.amount} />
-              <Field label="Offre" value={invoice.planTitle} />
               <Field label="Méthode de paiement" value={invoice.method} />
+              <Field label="Type" value={invoice.planTitle} />
             </div>
+
+           
 
             <div style={{ display: "flex", gap: spacing.sm, flexWrap: "wrap" }}>
               <Button onClick={handleDownload}>

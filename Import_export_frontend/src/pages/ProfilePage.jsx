@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import StatusBadge from "../components/molecules/StatusBadge";
@@ -8,29 +8,39 @@ import Reveal from "../components/atoms/Reveal";
 import Input from "../components/atoms/Input";
 import Select from "../components/atoms/Select";
 import Button from "../components/atoms/Button";
-import { uploadCompanyLogo } from "../api/auth";
+import { completeProfile, uploadCompanyLogo, changePassword } from "../api/auth";
 import { colors, spacing, typography } from "../styles/tokens";
 import { toRoleArray, ROLE_LABEL } from "../utils/roles";
 
 const COUNTRY_OPTIONS = [
-  "Tunisie",
-  "France",
-  "Maroc",
-  "Algérie",
-  "Égypte",
-  "Chine",
-  "Italie",
-  "Espagne",
-].map((c) => ({ value: c, label: c }));
+  { value: "Tunisie", label: "🇹🇳 Tunisie" },
+  { value: "France", label: "🇫🇷 France" },
+  { value: "Italie", label: "🇮🇹 Italie" },
+  { value: "Espagne", label: "🇪🇸 Espagne" },
+  { value: "Allemagne", label: "🇩🇪 Allemagne" },
+  { value: "Belgique", label: "🇧🇪 Belgique" },
+  { value: "Pays-Bas", label: "🇳🇱 Pays-Bas" },
+  { value: "Maroc", label: "🇲🇦 Maroc" },
+  { value: "Algérie", label: "🇩🇿 Algérie" },
+  { value: "Égypte", label: "🇪🇬 Égypte" },
+  { value: "Turquie", label: "🇹🇷 Turquie" },
+  { value: "Chine", label: "🇨🇳 Chine" },
+  { value: "Inde", label: "🇮🇳 Inde" },
+  { value: "États-Unis", label: "🇺🇸 États-Unis" },
+  { value: "Canada", label: "🇨🇦 Canada" },
+];
 
 const SECTOR_OPTIONS = [
-  "Agroalimentaire",
-  "Textile",
-  "Industrie",
-  "Énergie",
-  "Chimie",
-  "Cosmétique",
-].map((s) => ({ value: s, label: s }));
+  { value: "Agroalimentaire", label: "Agroalimentaire" },
+  { value: "Énergie", label: "Énergie" },
+  { value: "Textile", label: "Textile" },
+  { value: "Électronique", label: "Électronique" },
+  { value: "Automobile", label: "Automobile" },
+  { value: "Cosmétique", label: "Cosmétique" },
+  { value: "Construction", label: "Construction" },
+  { value: "Machines industrielles", label: "Machines industrielles" },
+  { value: "Emballage & Logistique", label: "Emballage & Logistique" },
+];
 
 const ROLE_OPTIONS = [
   { value: "exporter", label: "Exportateur" },
@@ -60,16 +70,115 @@ export default function ProfilePage() {
   const [accountInfo, setAccountInfo] = useState({
     email: user?.email || "",
     phone: user?.phone || "",
-    role: toRoleArray(user?.role).length > 0 ? toRoleArray(user?.role) : ["exporter"],
+    role: toRoleArray(user?.type_compte ?? user?.role).length > 0
+      ? toRoleArray(user?.type_compte ?? user?.role)
+      : ["exporter"],
   });
   const [accountSaved, setAccountSaved] = useState(false);
+  const [accountSaveError, setAccountSaveError] = useState("");
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [companySaved, setCompanySaved] = useState(false);
+  const [companySaveError, setCompanySaveError] = useState("");
+  const [isSavingCompany, setIsSavingCompany] = useState(false);
 
   const [companyInfo, setCompanyInfo] = useState({
-    companyName: user?.profile?.companyName || "Olive Tunisia",
-    country: user?.profile?.country || "",
+    companyName: user?.profile?.companyName || user?.entreprise || "",
+    country: user?.profile?.country || user?.pays || "",
     sector: user?.profile?.sector || "",
-    certifications: user?.profile?.certifications?.join(", ") || "",
+    certifications: Array.isArray(user?.profile?.certifications)
+      ? user.profile.certifications.join(", ")
+      : user?.profile?.certifications || "",
+    description: user?.profile?.description || "",
   });
+
+  useEffect(() => {
+    if (!user) return;
+    setAccountInfo({
+      email: user.email || "",
+      phone: user.phone || user.telephone || "",
+      role: toRoleArray(user.type_compte ?? user.role).length > 0
+        ? toRoleArray(user.type_compte ?? user.role)
+        : ["exporter"],
+    });
+    setCompanyInfo({
+      companyName: user.profile?.companyName || user.entreprise || "",
+      country: user.profile?.country || user.pays || "",
+      sector: user.profile?.sector || "",
+      certifications: Array.isArray(user.profile?.certifications)
+        ? user.profile.certifications.join(", ")
+        : user.profile?.certifications || "",
+      description: user.profile?.description || "",
+    });
+    setLogoUrl(user.profile?.logoUrl || null);
+  }, [user]);
+
+  async function handleAccountSave() {
+    setAccountSaveError("");
+    setAccountSaved(false);
+    setIsSavingAccount(true);
+
+    try {
+      const payload = {
+        email: accountInfo.email.trim(),
+        telephone: accountInfo.phone?.trim() || null,
+        // Envoi explicite de la source de vérité backend.
+        // On évite ainsi toute ambiguïté entre role et type_compte.
+        type_compte: accountInfo.role,
+      };
+
+      // Persistance réelle via PUT /api/auth/profile.
+      const updated = await completeProfile(payload);
+
+      // Le contexte est mis à jour avec la réponse réelle du backend.
+      updateUser(updated);
+
+      // On réaligne aussi explicitement l'état local sur la réponse persistée.
+      // Cela évite qu'un useEffect ou une ancienne valeur du contexte ne remette
+      // immédiatement le rôle précédent à l'écran.
+      const persistedRoles = toRoleArray(updated?.type_compte ?? updated?.role);
+      setAccountInfo((prev) => ({
+        ...prev,
+        email: updated?.email || prev.email,
+        phone: updated?.telephone ?? updated?.phone ?? prev.phone,
+        role: persistedRoles.length > 0 ? persistedRoles : prev.role,
+      }));
+
+      setAccountSaved(true);
+      setTimeout(() => setAccountSaved(false), 2500);
+    } catch (err) {
+      console.error("Erreur modification compte :", err);
+      setAccountSaveError(
+        err?.message || "Impossible d'enregistrer les modifications du compte."
+      );
+    } finally {
+      setIsSavingAccount(false);
+    }
+  }
+
+  async function handleCompanySave() {
+    setCompanySaveError("");
+    setCompanySaved(false);
+    setIsSavingCompany(true);
+    try {
+      const payload = {
+        companyName: companyInfo.companyName.trim(),
+        country: companyInfo.country || null,
+        sector: companyInfo.sector || null,
+        certifications: companyInfo.certifications
+          ? companyInfo.certifications.split(",").map((item) => item.trim()).filter(Boolean)
+          : [],
+        description: companyInfo.description?.trim() || null,
+      };
+      const updated = await completeProfile(payload);
+      updateUser(updated);
+      setCompanySaved(true);
+      setTimeout(() => setCompanySaved(false), 2500);
+    } catch (err) {
+      setCompanySaveError(err.message || "Impossible d'enregistrer les informations entreprise.");
+    } finally {
+      setIsSavingCompany(false);
+    }
+  }
 
   const [logoUrl, setLogoUrl] = useState(user?.profile?.logoUrl || null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -97,6 +206,59 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  async function handleChangePassword() {
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!passwordData.currentPassword) {
+      setPasswordError("Saisissez votre mot de passe actuel.");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
+      return;
+    }
+
+    if (!/[A-Z]/.test(passwordData.newPassword)) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins une majuscule.");
+      return;
+    }
+
+    if (!/[0-9]/.test(passwordData.newPassword)) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins un chiffre.");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError("Les nouveaux mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setPasswordError("Le nouveau mot de passe doit être différent du mot de passe actuel.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const result = await changePassword(passwordData);
+      setPasswordSuccess(result?.message || "Mot de passe modifié avec succès.");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (err) {
+      setPasswordError(err.message || "Impossible de modifier le mot de passe.");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
@@ -250,22 +412,17 @@ export default function ProfilePage() {
               </div>
 
               <div style={{ marginTop: spacing.sm, display: "flex", alignItems: "center", gap: spacing.sm }}>
-                <Button
-                  onClick={() => {
-                    updateUser({
-                      email: accountInfo.email,
-                      phone: accountInfo.phone,
-                      role: accountInfo.role,
-                    });
-                    setAccountSaved(true);
-                    setTimeout(() => setAccountSaved(false), 2500);
-                  }}
-                >
-                  Enregistrer
+                <Button onClick={handleAccountSave} disabled={isSavingAccount}>
+                  {isSavingAccount ? "Enregistrement..." : "Enregistrer"}
                 </Button>
                 {accountSaved && (
                   <span style={{ color: colors.success, fontSize: 13, fontWeight: 600 }}>
                     ✅ Modifications enregistrées
+                  </span>
+                )}
+                {accountSaveError && (
+                  <span style={{ color: colors.danger, fontSize: 13, fontWeight: 600 }}>
+                    ⚠️ {accountSaveError}
                   </span>
                 )}
               </div>
@@ -307,8 +464,20 @@ export default function ProfilePage() {
                 onChange={(e) => setCompanyInfo({ ...companyInfo, certifications: e.target.value })}
               />
 
-              <div style={{ marginTop: spacing.sm }}>
-                <Button>Enregistrer</Button>
+              <div style={{ marginTop: spacing.sm, display: "flex", alignItems: "center", gap: spacing.sm, flexWrap: "wrap" }}>
+                <Button onClick={handleCompanySave} disabled={isSavingCompany}>
+                  {isSavingCompany ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+                {companySaved && (
+                  <span style={{ color: colors.success, fontSize: 13, fontWeight: 600 }}>
+                    ✅ Informations entreprise enregistrées
+                  </span>
+                )}
+                {companySaveError && (
+                  <span style={{ color: colors.danger, fontSize: 13, fontWeight: 600 }}>
+                    ⚠️ {companySaveError}
+                  </span>
+                )}
               </div>
             </SectionCard>
           </Reveal>
@@ -351,8 +520,40 @@ export default function ProfilePage() {
                 Mot de passe oublié ?
               </Link>
 
+              {passwordError && (
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    color: colors.danger,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ {passwordError}
+                </p>
+              )}
+
+              {passwordSuccess && (
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    color: colors.success,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  ✅ {passwordSuccess}
+                </p>
+              )}
+
               <div>
-                <Button variant="dark">Changer le mot de passe</Button>
+                <Button
+                  variant="dark"
+                  onClick={handleChangePassword}
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? "Modification..." : "Changer le mot de passe"}
+                </Button>
               </div>
             </SectionCard>
           </Reveal>

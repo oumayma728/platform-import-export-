@@ -14,6 +14,28 @@ import { formatRoleLabel } from "../utils/roles";
 import AsyncState from "../components/organisms/AsyncState";
 import DetailCard from "../components/molecules/DetailCard";
 
+
+function resolveMediaUrl(url) {
+  if (!url) return null;
+
+  const value = String(url).trim();
+  if (!value) return null;
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("blob:") ||
+    value.startsWith("data:")
+  ) {
+    return value;
+  }
+
+  const backendBase =
+    import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+
+  return `${backendBase.replace(/\/+$/, "")}${value.startsWith("/") ? "" : "/"}${value}`;
+}
+
 import {
   FaBox,
   FaDollarSign,
@@ -26,6 +48,7 @@ import {
   FaBuilding,
   FaUserTie,
 } from "react-icons/fa";
+import LogisticsCard from "../features/logistics/components/LogisticsCard";
 
 export default function ListingDetailPage() {
   const { id } = useParams();
@@ -34,6 +57,7 @@ export default function ListingDetailPage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const [favoriteError, setFavoriteError] = useState(null);
+  const [ownerLogoFailed, setOwnerLogoFailed] = useState(false);
 
 const {
   item: listing,
@@ -51,6 +75,18 @@ const isMyListing =
 
   const [ownerAccount, setOwnerAccount] = useState(null);
   const [isOwnerAccountLoading, setIsOwnerAccountLoading] = useState(false);
+
+  const ownerLogoUrl = resolveMediaUrl(
+    ownerAccount?.logoUrl ||
+    ownerAccount?.logo_url ||
+    ownerAccount?.profile?.logoUrl ||
+    ownerAccount?.profile?.logo_url ||
+    null
+  );
+
+  useEffect(() => {
+    setOwnerLogoFailed(false);
+  }, [ownerLogoUrl]);
 
   // Charge les infos publiques du compte (importateur/exportateur)
   // propriétaire de l'annonce, pour les afficher avant/pendant le contact.
@@ -289,6 +325,15 @@ const isMyListing =
                 />
               </div>
 
+              {/* LOGISTIQUE */}
+
+              <LogisticsCard
+                listingCountry={listing.country}
+                userCountry={user?.pays || user?.profile?.country}
+                listingType={listing.type}
+                listingCurrency={listing.currency}
+              />
+
               {/* DOCUMENTS */}
 
               {listing.attachments?.length > 0 && (
@@ -521,7 +566,27 @@ const isMyListing =
                         flexShrink: 0,
                       }}
                     >
-                      <FaBuilding />
+                      {ownerLogoUrl && !ownerLogoFailed ? (
+                        <img
+                          src={ownerLogoUrl}
+                          alt={`Logo ${ownerAccount?.companyName || "entreprise"}`}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                          onError={(event) => {
+                            console.error(
+                              "Impossible de charger le logo du propriétaire :",
+                              event.currentTarget.src
+                            );
+                            setOwnerLogoFailed(true);
+                          }}
+                        />
+                      ) : (
+                        <FaBuilding />
+                      )}
                     </div>
 
                     {isOwnerAccountLoading ? (

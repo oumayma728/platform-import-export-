@@ -5,6 +5,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     UploadFile,
     WebSocket,
@@ -30,6 +31,7 @@ from app.controllers.conversation_controller import (
     get_conversation as get_conversation_controller,
     list_conversations,
     get_messages,
+    mark_conversation_read,
     upload_document,
     update_conversation_status,
 )
@@ -325,6 +327,7 @@ async def send(
 async def document(
     conversation_id: int,
     file: UploadFile = File(...),
+    contenu: str | None = Form(default=None),
     user: dict = Depends(verify_token),
     db: Session = Depends(get_db),
 ):
@@ -359,6 +362,7 @@ async def document(
         file.content_type or "application/octet-stream",
         os.path.getsize(filepath),
         db,
+        contenu=contenu,
     )
 
     await manager.broadcast(
@@ -367,6 +371,26 @@ async def document(
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Marquer une conversation comme lue
+# ---------------------------------------------------------------------------
+
+@router.patch(
+    "/{conversation_id}/read",
+    summary="Marquer les messages reçus comme lus",
+)
+def mark_read(
+    conversation_id: int,
+    user: dict = Depends(verify_token),
+    db: Session = Depends(get_db),
+):
+    return mark_conversation_read(
+        conversation_id,
+        user["id"],
+        db,
+    )
 
 
 # ---------------------------------------------------------------------------

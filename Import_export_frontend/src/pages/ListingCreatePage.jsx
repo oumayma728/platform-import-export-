@@ -9,6 +9,7 @@ import ErrorMessage from "../components/atoms/ErrorMessage";
 import SectionCard from "../components/molecules/SectionCard";
 import FileDropzone from "../components/molecules/FileDropzone";
 import { createListing, updateListing, getListingById } from "../api/listings";
+import { getReferenceOptions, addReferenceOption } from "../api/referenceOptions";
 import { colors, typography } from "../styles/tokens";
 
 const TYPE_OPTIONS = [
@@ -16,13 +17,13 @@ const TYPE_OPTIONS = [
   { value: "demand", label: "📦 Demande (j'importe)" },
 ];
 
-const INCOTERM_OPTIONS = [
+const FALLBACK_INCOTERM_OPTIONS = [
   { value: "EXW", label: "EXW" },
   { value: "FOB", label: "FOB" },
   { value: "CIF", label: "CIF" },
 ];
 
-const QUANTITY_UNIT_OPTIONS = [
+const FALLBACK_QUANTITY_UNIT_OPTIONS = [
   { value: "kg", label: "Kg" },
   { value: "g", label: "g" },
   { value: "tonne", label: "Tonne" },
@@ -31,14 +32,14 @@ const QUANTITY_UNIT_OPTIONS = [
   { value: "piece", label: "Pièce" },
 ];
 
-const CURRENCY_OPTIONS = [
+const FALLBACK_CURRENCY_OPTIONS = [
   { value: "TND", label: "TND" },
   { value: "EUR", label: "EUR" },
   { value: "USD", label: "USD" },
   { value: "GBP", label: "GBP" },
 ];
 
-const CATEGORY_OPTIONS = [
+const FALLBACK_CATEGORY_OPTIONS = [
  { value: "Agroalimentaire", label: "Agroalimentaire" },
     { value: "Énergie", label: "Énergie" },
     { value: "Textile", label: "Textile" },
@@ -50,7 +51,7 @@ const CATEGORY_OPTIONS = [
     { value: "Emballage & Logistique", label: "Emballage & Logistique" },
 ];
 
-const COUNTRY_OPTIONS = [
+const FALLBACK_COUNTRY_OPTIONS = [
   { value: "Tunisie", label: "🇹🇳 Tunisie" },
   { value: "France", label: "🇫🇷 France" },
   { value: "Italie", label: "🇮🇹 Italie" },
@@ -85,6 +86,70 @@ export default function ListingCreatePage() {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const [formDataToSubmit, setFormDataToSubmit] = useState(null);
+
+  const [referenceOptions, setReferenceOptions] = useState({
+    quantity_unit: FALLBACK_QUANTITY_UNIT_OPTIONS,
+    currency: FALLBACK_CURRENCY_OPTIONS,
+    country: FALLBACK_COUNTRY_OPTIONS,
+    category: FALLBACK_CATEGORY_OPTIONS,
+    incoterm: FALLBACK_INCOTERM_OPTIONS,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(["quantity_unit","currency","country","category","incoterm"].map(async (kind) => [kind, await getReferenceOptions(kind)]))
+      .then((entries) => { if (!cancelled) setReferenceOptions((prev) => ({...prev, ...Object.fromEntries(entries)})); })
+      .catch((err) => console.error("Impossible de charger les référentiels", err));
+    return () => { cancelled = true; };
+  }, []);
+
+  async function handleAddReference(kind, value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) {
+      throw new Error("La valeur est obligatoire.");
+    }
+
+    const existing = (referenceOptions[kind] || []).find(
+      (option) =>
+        String(option.value).trim().toLowerCase() === trimmed.toLowerCase() ||
+        String(option.label || "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (existing) {
+      return existing;
+    }
+
+    const created = await addReferenceOption(kind, trimmed, trimmed);
+
+    setReferenceOptions((previous) => {
+      const list = previous[kind] || [];
+      const alreadyInList = list.some(
+        (option) =>
+          String(option.value).trim().toLowerCase() ===
+          String(created.value).trim().toLowerCase()
+      );
+
+      if (alreadyInList) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [kind]: [
+          ...list,
+          {
+            id: created.id,
+            value: created.value,
+            label: created.label || created.value,
+            is_custom: Boolean(created.is_custom),
+          },
+        ],
+      };
+    });
+
+    return created;
+  }
+
   const { id } = useParams();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
@@ -101,6 +166,7 @@ export default function ListingCreatePage() {
         country: !watchedValues.country ? "Pays requis" : null,
       }
     : {};
+
 
 
   function validateAttachments(data, files) {
@@ -142,7 +208,7 @@ export default function ListingCreatePage() {
           price: listing.price,
           currency: listing.currency,
           incoterm: listing.incoterm,
-          country: listing.country,
+          country: listing.originCountry || listing.country,
           deadline: listing.deadline,
           certifications: listing.certifications?.join(", ") || "",
         });
@@ -374,9 +440,10 @@ async function handleConfirmEdit() {
                 </label>
 
                 <SelectWithAdd
-                  options={QUANTITY_UNIT_OPTIONS}
+                  options={referenceOptions.quantity_unit}
                   placeholder="Unité"
                   addPlaceholder="Ex: Palette"
+                  onAdd={(value) => handleAddReference("quantity_unit", value)}
                   value={watch("quantityUnit")}
                   onChange={(value) =>
                     setValue(
@@ -404,9 +471,10 @@ async function handleConfirmEdit() {
               </label>
 
               <SelectWithAdd
-                options={CATEGORY_OPTIONS}
+                options={referenceOptions.category}
                 placeholder="Choisir une catégorie"
                 addPlaceholder="Ex: Ameublement"
+                onAdd={(value) => handleAddReference("category", value)}
                 value={watch("category")}
                 onChange={(value) =>
                   setValue("category", value)
@@ -454,9 +522,10 @@ async function handleConfirmEdit() {
                 </label>
 
                 <SelectWithAdd
-                  options={CURRENCY_OPTIONS}
+                  options={referenceOptions.currency}
                   placeholder="Devise"
                   addPlaceholder="Ex: TND"
+                  onAdd={(value) => handleAddReference("currency", value)}
                   value={watch("currency")}
                   onChange={(value) =>
                     setValue(
@@ -484,9 +553,10 @@ async function handleConfirmEdit() {
               </label>
 
               <SelectWithAdd
-                options={INCOTERM_OPTIONS}
+                options={referenceOptions.incoterm}
                 placeholder="Choisir un incoterm"
                 addPlaceholder="Ex: DAF"
+                onAdd={(value) => handleAddReference("incoterm", value)}
                 value={watch("incoterm")}
                 onChange={(value) =>
                   setValue("incoterm", value)
@@ -514,13 +584,14 @@ async function handleConfirmEdit() {
                   color: colors.textPrimary,
                 }}
               >
-                Pays
+                Pays d'origine
               </label>
 
               <SelectWithAdd
-                options={COUNTRY_OPTIONS}
-                placeholder="Choisir un pays"
-                addPlaceholder="Ex: Qatar"
+                options={referenceOptions.country}
+                placeholder="Choisir un pays d'origine"
+                addPlaceholder="Ex: Tunisie"
+                onAdd={(value) => handleAddReference("country", value)}
                 value={watch("country")}
                 onChange={(value) =>
                   setValue("country", value)

@@ -168,10 +168,13 @@ def mark_notification_read(db, notification_id, user_id):
 def _send_email_notification(to_email: str, subject: str, content: str):
     
     result = send_email(to_email, subject, content)
-    
-    if result.get("error"):
+
+    # Le service Brevo actuel retourne True en cas de succès et lève
+    # une exception en cas d'échec. Compatibilité conservée avec l'ancien
+    # format dict {"error": ...}.
+    if isinstance(result, dict) and result.get("error"):
         raise Exception(f"Erreur d'envoi email: {result.get('error')}")
-    
+
     logger.info(f"Email envoyé avec succès à {to_email}")
 
 

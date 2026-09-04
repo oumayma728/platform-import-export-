@@ -1,11 +1,12 @@
+
 from datetime import date
-from app.matching.models import Listing, ProfilEntreprise, DonneesLogistiques, MatchResult, MatchingCriteria
-#from sentence_transformers import SentenceTransformer
+from app_2.models import Listing, ProfilEntreprise, DonneesLogistiques, MatchResult, MatchingCriteria
+from sentence_transformers import SentenceTransformer
 from difflib import SequenceMatcher
 from rapidfuzz import fuzz
-from app.matching.mock_client import get_profil_entreprise, get_donnees_logistiques
+from app_2.mock_client import get_profil_entreprise, get_donnees_logistiques
 
-#_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 
 POIDS_GLOBAL = {
@@ -246,15 +247,14 @@ def calcul_score_global(
     profil: ProfilEntreprise | None = None,
     logistique: DonneesLogistiques | None = None,
 ) -> MatchResult:
-    #Combine les 5 critères de scoring en un score global pondéré (0-100).
-    # `profil`/`logistique` peuvent être fournis directement par l'appelant
-    # (ex: intégration sur de vraies données) ; sinon, comportement inchangé
-    # : on va les chercher via les données mockées comme avant.
-
+    # Combine les 5 critères de scoring en un score global pondéré (0-100).
+    # Si profil/logistique ne sont pas fournis (usage historique avec les
+    # données mock), on les récupère nous-mêmes comme avant.
     if profil is None:
         profil = get_profil_entreprise(listing_offre.entreprise_id)
     if logistique is None:
         logistique = get_donnees_logistiques(listing_offre.pays, listing_demande.pays)
+
     criteria = MatchingCriteria(
         produit=score_produit(listing_demande, listing_offre),
         prix_quantite=score_prix_quantite(listing_demande, listing_offre),
@@ -277,36 +277,3 @@ def calcul_score_global(
         scores_detailles=criteria,
         explication=generer_explication(criteria),
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

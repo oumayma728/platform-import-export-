@@ -25,16 +25,14 @@ def serialize(listing: Listing):
     data["quantity"] = data.get("quantite")
     data["category"] = data.get("categorie")
     data["price"] = data.get("prix")
-    data["currency"] = data.get("devise")
+    data["currency"] = data.get("devise") or "USD"
     data["status"] = data.get("statut")
     data["ownerId"] = data.get("user_id")
     data["country"] = data.get("pays_origine") or data.get("pays_destination")
     data["country_label"] = data["country"]
     data["quantityUnit"] = data.get("quantity_unit")
 
-    raw_backend_type = data.get("type")
-
-    if raw_backend_type == "offre":
+    if raw_type == "offre":
         data["deadline"] = data.get("date_disponibilite")
     else:
         data["deadline"] = data.get("date_limite")
@@ -161,7 +159,7 @@ async def get_all_listings(db: Session, country=None, category=None, listing_typ
     
     query = db.query(Listing).filter(Listing.statut == "active", Listing.suspendue.is_(False))
     if country_iso: query = query.filter((Listing.pays_origine == country_iso) | (Listing.pays_destination == country_iso))
-    if category: query = query.filter(Listing.categorie == category)
+    if category: query = query.filter(Listing.categorie.ilike(category))
     if listing_type_normalized: query = query.filter(Listing.type == listing_type_normalized)
     if min_price is not None: query = query.filter(Listing.prix >= min_price)
     if max_price is not None: query = query.filter(Listing.prix <= max_price)
@@ -198,6 +196,11 @@ async def get_all_listings(db: Session, country=None, category=None, listing_typ
     for annonce in annonces:
         annonce.setdefault("prix_converti" , None)
         annonce.setdefault("devise_affichage", None)
+        # Assurer que la devise est toujours présente
+        if not annonce.get("currency"):
+            annonce["currency"] = "USD"
+        if not annonce.get("devise"):
+            annonce["devise"] = annonce["currency"]
         
     return {"total": total, "page": page, "page_size": page_size, "annonces": annonces}
 

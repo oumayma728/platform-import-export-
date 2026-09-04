@@ -154,3 +154,23 @@ class ValidationUpdate(BaseModel):
     statut: ValidationStatus
 
     model_config = ConfigDict(from_attributes=True)
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=72)
+    new_password: str = Field(..., min_length=8, max_length=72)
+    confirm_password: str = Field(..., min_length=8, max_length=72)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_strength(cls, value: str):
+        if not re.search(r"[A-Z]", value):
+            raise ValueError("Le nouveau mot de passe doit contenir au moins une majuscule")
+        if not re.search(r"[0-9]", value):
+            raise ValueError("Le nouveau mot de passe doit contenir au moins un chiffre")
+        return value
+
+    @model_validator(mode="after")
+    def passwords_match(self):
+        if self.new_password != self.confirm_password:
+            raise ValueError("Les nouveaux mots de passe ne correspondent pas")
+        return self

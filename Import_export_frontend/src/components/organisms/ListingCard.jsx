@@ -15,8 +15,15 @@ export default function ListingCard({ listing }) {
       </h3>
 
       <p style={{ fontSize: typography.fontSizeBase, color: colors.textPrimary, margin: "0 0 6px", fontWeight: 500 }}>
-        {listing.quantity} · {listing.price}
+        {listing.quantity} · {listing.price} {listing.currency || "USD"}
       </p>
+
+      {/* Prix converti si disponible */}
+      {listing.prix_converti && listing.devise_affichage && listing.devise_affichage !== listing.currency && (
+        <p style={{ fontSize: typography.fontSizeBase, color: colors.primary, margin: "0 0 10px", fontWeight: 500 }}>
+          ≈ {listing.prix_converti} {listing.devise_affichage}
+        </p>
+      )}
 
       <p style={{ fontSize: typography.fontSizeBase, color: colors.textMuted, margin: "0 0 10px" }}>
         {listing.country} — {listing.category} — Incoterm {listing.incoterm}

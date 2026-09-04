@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.middleware.auth import verify_token
+from app.controllers.auth_controller import require_admin
 from app.services.notification_service import (
     create_notification,
     list_notifications_for_user,
@@ -67,4 +68,5 @@ def send_sms(to: str, message: str, user: dict = Depends(verify_token), db: Sess
     description="Retente l'envoi des notifications en échec (max 3 tentatives, admin uniquement).",
 )
 def retry_failed(user: dict = Depends(verify_token), db: Session = Depends(get_db)):
+    require_admin(user)
     return retry_failed_notifications(db)

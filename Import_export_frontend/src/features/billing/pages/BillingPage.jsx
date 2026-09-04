@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import AsyncState from "../../../components/organisms/AsyncState";
 import SectionCard from "../../../components/molecules/SectionCard";
@@ -10,13 +10,21 @@ import CurrentPlanCard from "../components/CurrentPlanCard";
 import PricingCard from "../components/PricingCard";
 import InvoiceTable from "../components/InvoiceTable";
 import SmartRecommendationBanner from "../components/SmartRecommendationBanner";
-import { getUsage, getSubscription, getInvoices, getSmartRecommendation } from "../api/billing";
+import {
+  getUsage,
+  getSubscription,
+  getInvoices,
+  getSmartRecommendation,
+  waitForPlanUpdate,
+} from "../api/billing";
 import { mockPlans } from "../mocks/billing.mock";
 import { colors, spacing, typography } from "../../../styles/tokens";
 
 export default function BillingPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isMountedRef = useRef(false);
 
   const [usage, setUsage] = useState(null);
   const [subscription, setSubscription] = useState(null);
@@ -25,26 +33,77 @@ export default function BillingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  async function loadBillingData() {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const [usageData, subscriptionData, invoicesData, recommendationData] = await Promise.all([
+        getUsage(),
+        getSubscription(),
+        getInvoices(),
+        getSmartRecommendation(),
+      ]);
+
+      if (!isMountedRef.current) return;
+      setUsage(usageData);
+      setSubscription(subscriptionData);
+      setInvoices(invoicesData);
+      setRecommendation(recommendationData);
+      setError(null);
+    } catch (err) {
+      if (isMountedRef.current) setError(err.message || "Erreur lors du chargement");
+    } finally {
+      if (isMountedRef.current) setIsLoading(false);
+    }
+  }
+
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (!user) {
       setIsLoading(false);
       return;
     }
-    let isMounted = true;
-    setIsLoading(true);
-    Promise.all([getUsage(), getSubscription(), getInvoices(), getSmartRecommendation()])
-      .then(([usageData, subscriptionData, invoicesData, recommendationData]) => {
-        if (!isMounted) return;
-        setUsage(usageData);
-        setSubscription(subscriptionData);
-        setInvoices(invoicesData);
-        setRecommendation(recommendationData);
-      })
-      .catch((err) => isMounted && setError(err.message || "Erreur lors du chargement"))
-      .finally(() => isMounted && setIsLoading(false));
+    loadBillingData();
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
+    // location.key change à CHAQUE navigation, même vers la même route —
+    // ça force un rechargement frais des données de facturation à chaque
+    // retour sur cette page (ex: après un paiement), sans dépendre de
+    // savoir si React a démonté ou non le composant.
+  }, [user, location.key]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const pendingPlan = sessionStorage.getItem("pending-billing-refresh");
+    if (!pendingPlan) return undefined;
+
+    let cancelled = false;
+
+    (async () => {
+      await waitForPlanUpdate(pendingPlan, { attempts: 30, delayMs: 1000 });
+      if (cancelled) return;
+      sessionStorage.removeItem("pending-billing-refresh");
+      await loadBillingData();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, location.key]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const handleBillingUpdated = () => {
+      loadBillingData();
+    };
+
+    window.addEventListener("billing-updated", handleBillingUpdated);
+    return () => window.removeEventListener("billing-updated", handleBillingUpdated);
   }, [user]);
 
   if (authLoading) return <p>Chargement...</p>;
@@ -93,11 +152,6 @@ export default function BillingPage() {
             />
           ))}
         </div>
-        {/* <div style={{ textAlign: "center", marginTop: spacing.lg }}>
-          <Link to="/billing/plans">
-            <Button variant="secondary">Comparer les offres en détail</Button>
-          </Link>
-        </div> */}
       </SectionCard>
 
       {user && invoices.length > 0 && (

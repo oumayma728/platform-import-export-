@@ -16,6 +16,8 @@ import { useResourceList } from "../hooks/useResourceList";
 import { getMatches } from "../api/matches";
 import { getOrCreateConversation } from "../features/messaging/api/messages";
 import { getPublicAccount } from "../api/accounts";
+import { useAuth } from "../context/AuthContext";
+import { toRoleArray } from "../utils/roles";
 import AsyncState from "../components/organisms/AsyncState";
 import { colors, radius, shadow, spacing, typography } from "../styles/tokens";
 
@@ -47,6 +49,19 @@ function scoreColor(score) {
 
 export default function MatchingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const userRoles = toRoleArray(user?.role);
+  const isExporterOnly =
+    userRoles.includes("exporter") && !userRoles.includes("importer");
+  const isImporterOnly =
+    userRoles.includes("importer") && !userRoles.includes("exporter");
+
+  const matchingNeedLabel = isExporterOnly
+    ? "Exportateur : correspondances avec les demandes des importateurs."
+    : isImporterOnly
+    ? "Importateur : correspondances avec les offres des exportateurs."
+    : "Double rôle : correspondances offre ↔ demande selon chacune de vos annonces.";
 
   // useResourceList appelle getMatches(filters) à chaque changement de
   // filtres -> GET /matching-results?minScore=... côté vraie API.
@@ -141,6 +156,17 @@ export default function MatchingPage() {
           <p style={{ marginTop: "8px", color: colors.textMuted }}>
             Les correspondances que notre agent IA a identifiées pour vos
             annonces, triées par score de pertinence.
+          </p>
+          <p
+            style={{
+              marginTop: "8px",
+              marginBottom: 0,
+              color: colors.primary,
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            {matchingNeedLabel}
           </p>
         </div>
 

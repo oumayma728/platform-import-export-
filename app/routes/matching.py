@@ -12,13 +12,14 @@ from app.models.company import Company
 from app.models.user import User
 from app.models.conversations import Conversation
 
-from app.matching.models import (
+from app_2.models import (
     Listing as MatchingListing,
     ProfilEntreprise,
     DonneesLogistiques,
 )
 
-from app.matching.scoring import calcul_score_global
+from app_2.scoring import calcul_score_global
+from app_2.mock_client import get_donnees_logistiques
 
 
 router = APIRouter(
@@ -30,6 +31,48 @@ TYPE_OPPOSE = {
     "offre": "demande",
     "demande": "offre",
 }
+
+
+def _normalize_user_roles(role_value: str | None) -> set[str]:
+    """Normalise les rôles stockés en base (FR/EN, séparés par virgule)."""
+    if not role_value:
+        return set()
+
+    mapping = {
+        "EXPORTATEUR": "exporter",
+        "IMPORTATEUR": "importer",
+        "EXPORTER": "exporter",
+        "IMPORTER": "importer",
+    }
+
+    roles = set()
+    for raw in str(role_value).split(","):
+        value = raw.strip()
+        if not value:
+            continue
+        roles.add(mapping.get(value.upper(), value.lower()))
+    return roles
+
+
+def _matching_direction_for_user(user: User | None) -> tuple[str | None, str | None]:
+    """
+    Retourne (type_de_mes_annonces, type_des_candidats).
+
+    Règle métier :
+    - exportateur -> ses OFFRES sont comparées aux DEMANDES ;
+    - importateur -> ses DEMANDES sont comparées aux OFFRES ;
+    - double rôle / rôle inconnu -> chaque annonce est comparée à son type opposé.
+    """
+    roles = _normalize_user_roles((user.type_compte or user.role) if user else None)
+
+    exporter_only = "exporter" in roles and "importer" not in roles
+    importer_only = "importer" in roles and "exporter" not in roles
+
+    if exporter_only:
+        return "offre", "demande"
+    if importer_only:
+        return "demande", "offre"
+    return None, None
 
 
 UNIT_FAMILIES = {
@@ -178,9 +221,9 @@ def _to_matching_listing(
 
     pays = (
         db_listing.pays_origine
-        or db_listing.pays_destination
-        or "N/A"
-    )
+        if db_listing.type == "offre"
+        else db_listing.pays_destination
+    ) or db_listing.pays_origine or db_listing.pays_destination or "N/A"
 
     return MatchingListing(
         id=str(db_listing.id),
@@ -260,21 +303,40 @@ def _build_profil_entreprise(
 
 def _build_donnees_logistiques(
     db_listing_offre: DBListing,
+    db_listing_demande: DBListing,
 ) -> DonneesLogistiques | None:
+
+    pays_origine = (
+        db_listing_offre.pays_origine
+        or db_listing_offre.pays_destination
+        or ""
+    ).upper()
+    pays_destination = (
+        db_listing_demande.pays_destination
+        or db_listing_demande.pays_origine
+        or ""
+    ).upper()
+
+    if not pays_origine or not pays_destination:
+        return None
+
+    logistique = get_donnees_logistiques(pays_origine, pays_destination)
+    if logistique is not None:
+        return logistique
 
     if (
         db_listing_offre.distance_km is None
-        or db_listing_offre.pays_origine is None
-        or db_listing_offre.pays_destination is None
+        or db_listing_offre.estimated_cost_usd is None
+        or db_listing_offre.estimated_days is None
     ):
         return None
 
     return DonneesLogistiques(
-        pays_origine=db_listing_offre.pays_origine,
-        pays_destination=db_listing_offre.pays_destination,
+        pays_origine=pays_origine,
+        pays_destination=pays_destination,
         distance_km=db_listing_offre.distance_km,
-        cout_transport=db_listing_offre.estimated_cost_usd or 0.0,
-        delai_transport_jours=db_listing_offre.estimated_days or 0,
+        cout_transport=db_listing_offre.estimated_cost_usd,
+        delai_transport_jours=db_listing_offre.estimated_days,
     )
 
 
@@ -353,6 +415,9 @@ def get_matches(
     db: Session = Depends(get_db),
 ):
 
+    db_user = db.get(User, current_user["id"])
+    source_type_for_role, target_type_for_role = _matching_direction_for_user(db_user)
+
     mes_annonces_query = (
         db.query(DBListing)
         .filter(
@@ -361,6 +426,14 @@ def get_matches(
             DBListing.statut == "active",
         )
     )
+
+    # Le rôle détermine le besoin métier. Un exportateur cherche des demandes ;
+    # un importateur cherche des offres. On ignore donc ses annonces du mauvais
+    # type au lieu de produire des correspondances incohérentes.
+    if source_type_for_role is not None:
+        mes_annonces_query = mes_annonces_query.filter(
+            DBListing.type == source_type_for_role
+        )
 
     if listing_id is not None:
         mes_annonces_query = mes_annonces_query.filter(
@@ -373,8 +446,9 @@ def get_matches(
 
     for mon_annonce in mes_annonces:
 
-        type_oppose = TYPE_OPPOSE.get(
-            mon_annonce.type
+        type_oppose = (
+            target_type_for_role
+            or TYPE_OPPOSE.get(mon_annonce.type)
         )
 
         if not type_oppose:
@@ -432,7 +506,8 @@ def get_matches(
             )
 
             logistique = _build_donnees_logistiques(
-                db_offre
+                db_offre,
+                db_demande,
             )
 
             resultat = calcul_score_global(
@@ -504,6 +579,7 @@ def get_matches(
 
                 "listing": {
                     "id": mon_annonce.id,
+                    "type": mon_annonce.type,
                     "product": mon_annonce.titre,
                     "quantity": mon_annonce.quantite,
                     "quantityUnit": mon_annonce.quantity_unit,
@@ -536,6 +612,7 @@ def get_matches(
 
                 "counterpartListing": {
                     "id": candidat.id,
+                    "type": candidat.type,
                     "product": candidat.titre,
                     "quantity": candidat.quantite,
                     "quantityUnit": candidat.quantity_unit,

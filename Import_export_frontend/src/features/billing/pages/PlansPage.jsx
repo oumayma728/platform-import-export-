@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AsyncState from "../../../components/organisms/AsyncState";
 import BillingSubNav from "../components/BillingSubNav";
@@ -14,20 +14,38 @@ export default function PlansPage() {
   const [recommendation, setRecommendation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isMountedRef = useRef(false);
+
+  async function loadPlansData() {
+    setIsLoading(true);
+    try {
+      const [sub, rec] = await Promise.all([getSubscription(), getSmartRecommendation()]);
+      if (!isMountedRef.current) return;
+      setSubscription(sub);
+      setRecommendation(rec);
+      setError(null);
+    } catch (err) {
+      if (isMountedRef.current) setError(err.message || "Erreur lors du chargement");
+    } finally {
+      if (isMountedRef.current) setIsLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let isMounted = true;
-    Promise.all([getSubscription(), getSmartRecommendation()])
-      .then(([sub, rec]) => {
-        if (!isMounted) return;
-        setSubscription(sub);
-        setRecommendation(rec);
-      })
-      .catch((err) => isMounted && setError(err.message || "Erreur lors du chargement"))
-      .finally(() => isMounted && setIsLoading(false));
+    isMountedRef.current = true;
+    loadPlansData();
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleBillingUpdated = () => {
+      if (isMountedRef.current) loadPlansData();
+    };
+
+    window.addEventListener("billing-updated", handleBillingUpdated);
+    return () => window.removeEventListener("billing-updated", handleBillingUpdated);
   }, []);
 
   return (

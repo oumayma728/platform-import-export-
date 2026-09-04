@@ -8,7 +8,7 @@ import { colors, radius, shadow, spacing, typography } from "../styles/tokens";
 
 const CONTACT_ITEMS = [
   { Icon: MapPin, value: "Bizerte, Tunisie" },
-  { Icon: Mail, value: "contact.indeed2@gmail.com" },
+  { Icon: Mail, value: "ContactIndeed02@gmail.com" },
   { Icon: Phone, value: "+216 12-345-678" },
 ];
 

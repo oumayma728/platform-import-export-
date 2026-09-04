@@ -28,9 +28,9 @@ export default function SmartRecommendationBanner({ recommendation }) {
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
         <Lightbulb size={20} color="#B8720A" style={{ flexShrink: 0, marginTop: 2 }} />
         <p style={{ margin: 0, fontSize: 14, color: "#3730a3", lineHeight: 1.5 }}>
-          Avec <strong>{messageCount} messages</strong> ce mois-ci, le paiement à l'usage vous
-          coûterait <strong>{estimatedPayPerUseCost.toFixed(2)} €</strong> — l'abonnement Premium
-          ({premiumPrice} €) vous ferait économiser <strong>{savings.toFixed(2)} €</strong>.
+          Avec <strong>{messageCount} messages</strong> facturés à l'usage, cela vous
+          coûterait <strong>{estimatedPayPerUseCost.toFixed(2)} €</strong> au total — l'abonnement
+          Premium ({premiumPrice} €/mois) vous ferait économiser <strong>{savings.toFixed(2)} €</strong>.
         </p>
       </div>
       <Link to="/billing/checkout/premium">

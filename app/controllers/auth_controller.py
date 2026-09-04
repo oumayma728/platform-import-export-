@@ -28,17 +28,44 @@ STATUS_MAP = {
 }
 
 
-def map_role(role_value: str | None):
-    """Traduit un ou plusieurs rôles FR (BDD, ex: "EXPORTATEUR,IMPORTATEUR")
-    vers l'anglais attendu par le frontend. Retourne une liste si plusieurs
-    rôles sont déclarés (ex: ["exporter", "importer"]), une simple chaîne
-    sinon. Une valeur inconnue (ex: "ADMIN") est laissée inchangée."""
-    if not role_value:
-        return role_value
-    parts = [p.strip() for p in str(role_value).split(",") if p.strip()]
-    if len(parts) <= 1:
-        return ROLE_MAP.get(role_value, role_value)
-    return [ROLE_MAP.get(p, p) for p in parts]
+def normalize_role_storage(role_value):
+    """Normalise les rôles dans le format canonique de la BDD.
+
+    Accepte une chaîne, une chaîne CSV ou une liste et renvoie :
+    EXPORTATEUR, IMPORTATEUR ou EXPORTATEUR,IMPORTATEUR.
+    """
+    if role_value is None:
+        return None
+
+    raw_values = role_value if isinstance(role_value, (list, tuple, set)) else str(role_value).split(",")
+    mapping = {
+        "exporter": "EXPORTATEUR",
+        "exportateur": "EXPORTATEUR",
+        "importer": "IMPORTATEUR",
+        "importateur": "IMPORTATEUR",
+    }
+
+    roles = []
+    for raw in raw_values:
+        key = str(raw).strip()
+        if not key:
+            continue
+        normalized = mapping.get(key.lower(), key.upper())
+        if normalized in {"EXPORTATEUR", "IMPORTATEUR"} and normalized not in roles:
+            roles.append(normalized)
+
+    # Ordre stable pour éviter les bascules visuelles après F5.
+    ordered = [r for r in ("EXPORTATEUR", "IMPORTATEUR") if r in roles]
+    return ",".join(ordered) if ordered else None
+
+
+def map_role(role_value):
+    """Traduit le format BDD vers les valeurs attendues par React."""
+    canonical = normalize_role_storage(role_value)
+    if not canonical:
+        return []
+    mapped = [ROLE_MAP[p] for p in canonical.split(",") if p in ROLE_MAP]
+    return mapped[0] if len(mapped) == 1 else mapped
 
 
 def user_payload(user: User, company: Company | None = None):
@@ -50,7 +77,7 @@ def user_payload(user: User, company: Company | None = None):
         "id": user.id, "nom": user.nom, "email": user.email, "type_compte": user.type_compte,
         "pays": user.pays, "telephone": user.telephone, "entreprise": user.entreprise,
         "adresse": user.adresse,
-        "role": map_role(user.role),
+        "role": map_role(user.type_compte or user.role),
         "statut_validation": user.statut_validation,
         "profileStatus": STATUS_MAP.get(user.statut_validation, "pending"),
         "email_verifie": user.email_verifie, "logo_url": user.logo_url,
@@ -124,6 +151,9 @@ def login_user(credentials: UserLogin, db: Session):
 
 
 def update_profile(user: User, data: UserUpdate, db: Session):
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
     if data.email:
         existing = db.query(User).filter(User.email == data.email, User.id != user.id).first()
         if existing:
@@ -135,6 +165,16 @@ def update_profile(user: User, data: UserUpdate, db: Session):
     company_certifications = values.pop("certifications", None)
     company_description = values.pop("description", None)
     company_name = values.get("entreprise")
+
+    # Important : le rôle est traité explicitement, séparément des autres champs.
+    # type_compte est la source de vérité, role est maintenu synchronisé pour
+    # compatibilité avec le reste du projet.
+    if "type_compte" in values:
+        canonical_roles = normalize_role_storage(values.pop("type_compte"))
+        if not canonical_roles:
+            raise HTTPException(status_code=422, detail="Au moins un type de compte est requis")
+        user.type_compte = canonical_roles
+        user.role = canonical_roles
 
     for key, value in values.items():
         setattr(user, key, value)
@@ -163,6 +203,15 @@ def update_profile(user: User, data: UserUpdate, db: Session):
 
     db.commit()
     db.refresh(user)
+
+    # Défense supplémentaire contre les anciennes lignes désynchronisées.
+    persisted = normalize_role_storage(user.type_compte or user.role)
+    if persisted and (user.type_compte != persisted or user.role != persisted):
+        user.type_compte = persisted
+        user.role = persisted
+        db.commit()
+        db.refresh(user)
+
     company = db.query(Company).filter(Company.user_id == user.id).first()
     return user_payload(user, company)
 
@@ -194,3 +243,26 @@ def hash_refresh_token(token: str) -> str:
 def create_refresh_token():
     raw_token = str(uuid4())
     return raw_token, hash_refresh_token(raw_token)
+
+def change_password(user: User, current_password: str, new_password: str, db: Session):
+    """Change le mot de passe après vérification de l'ancien."""
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    if not pwd_context.verify(current_password, user.mot_de_passe):
+        raise HTTPException(status_code=400, detail="Le mot de passe actuel est incorrect.")
+
+    if pwd_context.verify(new_password, user.mot_de_passe):
+        raise HTTPException(
+            status_code=400,
+            detail="Le nouveau mot de passe doit être différent du mot de passe actuel.",
+        )
+
+    user.mot_de_passe = pwd_context.hash(new_password)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "success": True,
+        "message": "Mot de passe modifié avec succès.",
+    }

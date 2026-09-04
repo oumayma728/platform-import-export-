@@ -148,6 +148,62 @@ export async function updateListing(id, payload) {
 }
 
 /**
+ * PATCH /listings/:id/suspend | /resume | /close — actions dédiées côté
+ * backend (plutôt qu'un PUT générique : ListingUpdate n'a pas de champ
+ * `status`, donc un PUT avec { status } serait silencieusement ignoré).
+ */
+export async function suspendListing(id) {
+  if (USE_MOCKS) {
+    return updateListing(id, { status: "suspended" });
+  }
+  try {
+    const { data } = await apiClient.patch(`/listings/${id}/suspend`);
+    return data;
+  } catch (err) {
+    if (err.response?.status === 404) {
+      throw new Error("Annonce introuvable");
+    }
+    throw new Error(
+      err.response?.data?.detail || err.response?.data?.message || "Impossible de suspendre cette annonce pour le moment."
+    );
+  }
+}
+
+export async function resumeListing(id) {
+  if (USE_MOCKS) {
+    return updateListing(id, { status: "active" });
+  }
+  try {
+    const { data } = await apiClient.patch(`/listings/${id}/resume`);
+    return data;
+  } catch (err) {
+    if (err.response?.status === 404) {
+      throw new Error("Annonce introuvable");
+    }
+    throw new Error(
+      err.response?.data?.detail || err.response?.data?.message || "Impossible de réactiver cette annonce pour le moment."
+    );
+  }
+}
+
+export async function closeListing(id) {
+  if (USE_MOCKS) {
+    return updateListing(id, { status: "closed" });
+  }
+  try {
+    const { data } = await apiClient.patch(`/listings/${id}/close`);
+    return data;
+  } catch (err) {
+    if (err.response?.status === 404) {
+      throw new Error("Annonce introuvable");
+    }
+    throw new Error(
+      err.response?.data?.detail || err.response?.data?.message || "Impossible de clôturer cette annonce pour le moment."
+    );
+  }
+}
+
+/**
  * DELETE /listings/:id — suppression définitive.
  * Implémentation explicite (plutôt que le simple alias `listingsApi.remove`)
  * car le client générique ne connaît pas notre tableau `mockListings` : sans

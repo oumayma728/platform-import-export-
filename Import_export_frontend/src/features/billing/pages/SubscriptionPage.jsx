@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AsyncState from "../../../components/organisms/AsyncState";
 import SectionCard from "../../../components/molecules/SectionCard";
@@ -16,19 +16,39 @@ export default function SubscriptionPage() {
   const [error, setError] = useState(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const isMountedRef = useRef(false);
 
-  function load() {
+  async function load() {
     setIsLoading(true);
-    Promise.all([getSubscription(), getPaymentMethods()])
-      .then(([subscriptionData, methodsData]) => {
-        setSubscription(subscriptionData);
-        setPaymentMethods(methodsData);
-      })
-      .catch((err) => setError(err.message || "Erreur lors du chargement"))
-      .finally(() => setIsLoading(false));
+    try {
+      const [subscriptionData, methodsData] = await Promise.all([getSubscription(), getPaymentMethods()]);
+      if (!isMountedRef.current) return;
+      setSubscription(subscriptionData);
+      setPaymentMethods(methodsData);
+      setError(null);
+    } catch (err) {
+      if (isMountedRef.current) setError(err.message || "Erreur lors du chargement");
+    } finally {
+      if (isMountedRef.current) setIsLoading(false);
+    }
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    isMountedRef.current = true;
+    load();
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleBillingUpdated = () => {
+      if (isMountedRef.current) load();
+    };
+
+    window.addEventListener("billing-updated", handleBillingUpdated);
+    return () => window.removeEventListener("billing-updated", handleBillingUpdated);
+  }, []);
 
   async function handleCancel() {
     setIsCanceling(true);
@@ -148,8 +168,14 @@ export default function SubscriptionPage() {
                 }}
               >
                 <p style={{ margin: 0, color: colors.danger, fontWeight: 600 }}>
-                  Confirmer la résiliation ? Vous garderez l'accès {subscription.planTitle} jusqu'au{" "}
-                  {subscription.renewalDate}, puis votre compte repassera au plan Gratuit.
+                  {subscription.planId === "pay-per-use" ? (
+                    "Confirmer la désactivation ? Elle est immédiate : votre compte repassera tout de suite au plan Gratuit."
+                  ) : (
+                    <>
+                      Confirmer la résiliation ? Vous garderez l'accès {subscription.planTitle} jusqu'au{" "}
+                      {subscription.renewalDate}, puis votre compte repassera au plan Gratuit.
+                    </>
+                  )}
                 </p>
                 <div style={{ display: "flex", gap: spacing.sm, marginTop: spacing.sm }}>
                   <Button variant="danger" onClick={handleCancel} disabled={isCanceling}>

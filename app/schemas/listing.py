@@ -7,11 +7,13 @@ def _valider_code_pays(value: Optional[str]) -> Optional[str]:
     if value is None:
         return value
     value = value.strip().upper()
-    if len(value) != 2 or not value.isalpha():
-        raise ValueError(
-            "Le pays doit être fourni au format ISO 3166-1 alpha-2 (ex: TN, FR, US)."
-        )
-    return value
+    # Accepte soit un code ISO alpha-2, soit un nom de pays ajouté au référentiel.
+    # Les pays connus sont convertis en ISO par _country_to_iso avant ce validateur.
+    if len(value) == 2 and value.isalpha():
+        return value
+    if 2 <= len(value) <= 100:
+        return value
+    raise ValueError("Pays invalide")
 
 
 def _country_to_iso(value: Optional[str]) -> Optional[str]:
@@ -24,7 +26,9 @@ def _country_to_iso(value: Optional[str]) -> Optional[str]:
         "CHINE": "CN", "INDE": "IN", "ETATS-UNIS": "US", "CANADA": "CA",
     }
     normalized = value.strip().upper().replace("É", "E").replace("È", "E").replace("À", "A").replace("Ç", "C")
-    return mapping.get(normalized, normalized[:2] if len(normalized) >= 2 and normalized.isalpha() else value.strip().upper())
+    # Pour un pays non présent dans le mapping, on conserve son nom.
+    # Cela permet les valeurs ajoutées dynamiquement depuis le frontend.
+    return mapping.get(normalized, value.strip())
 
 
 class ListingCreate(BaseModel):

@@ -212,12 +212,20 @@ def conversation_dict(
                 else None
             ),
             "role": counterpart_role,
+            "email": (other_user.email if other_user else None),
+            "phone": (other_user.telephone if other_user else None),
         },
 
         "messages": [
             serialize_message(message)
             for message in messages
         ],
+
+        # Nombre de messages RECUS et non lus pour l'utilisateur courant.
+        "unreadCount": sum(
+            1 for message in messages
+            if message.expediteur_id != current_user_id and not bool(message.lu)
+        ),
 
         # Dates
         "created_at": (
@@ -255,12 +263,10 @@ def create_conversation(
     db: Session,
 ):
     """
-    Crée une nouvelle conversation.
+    Crée (ou réutilise) une conversation persistée.
 
-    Important :
-    - une conversation existante ne consomme PAS de quota ;
-    - une nouvelle conversation consomme 1 chat ;
-    - la 51e nouvelle conversation est bloquée selon le quota ;
+    IMPORTANT : une conversation vide ne consomme plus de quota. Le crédit
+    n'est consommé qu'au moment où le premier message/document est envoyé.
     """
 
     if destinataire_id == user_id:
@@ -268,10 +274,6 @@ def create_conversation(
             status_code=400,
             detail="Impossible de créer une conversation avec soi-même",
         )
-
-    # -----------------------------------------------------------------------
-    # 1. Chercher d'abord une conversation existante
-    # -----------------------------------------------------------------------
 
     existing = (
         db.query(Conversation)
@@ -284,84 +286,7 @@ def create_conversation(
     )
 
     if existing:
-        # Réouverture : aucune consommation supplémentaire
-        return conversation_dict(
-            existing,
-            user_id,
-            db,
-        )
-
-    # -----------------------------------------------------------------------
-    # 2. Vérifier le quota uniquement pour un NOUVEAU chat
-    # -----------------------------------------------------------------------
-
-    quota = (
-        db.query(UserQuota)
-        .filter(
-            UserQuota.user_id == user_id
-        )
-        .first()
-    )
-
-    if not quota:
-        quota = UserQuota(
-            user_id=user_id
-        )
-        db.add(quota)
-        db.flush()
-
-    chats_gratuits = quota.chats_gratuits or 50
-    chats_utilises = quota.chats_utilises or 0
-
-    # Statuts autorisant le dépassement de quota
-    statuts_payants = {
-        "ABONNE",
-        "PAIEMENT_USAGE",
-    }
-
-    if (
-        quota.statut not in statuts_payants
-        and chats_utilises >= chats_gratuits
-    ):
-        quota.statut = "LIMITE_ATTEINTE"
-        db.commit()
-
-        emetteur = db.get(
-            User,
-            user_id,
-        )
-
-        if emetteur:
-            try:
-                create_notification(
-                    db,
-                    user_id,
-                    "EMAIL",
-                    emetteur.email,
-                    (
-                        "Vous avez atteint votre limite de "
-                        "50 chats gratuits. Passez à "
-                        "l'abonnement ou au paiement à l'usage "
-                        "pour continuer."
-                    ),
-                    sujet="Limite de chats gratuits atteinte",
-                )
-            except Exception:
-                # Une erreur de notification ne doit pas empêcher
-                # le refus du nouveau chat.
-                pass
-
-        raise HTTPException(
-            status_code=402,
-            detail=(
-                "Limite de 50 nouveaux chats atteinte. "
-                "Un paiement ou abonnement est requis."
-            ),
-        )
-
-    # -----------------------------------------------------------------------
-    # 3. Création
-    # -----------------------------------------------------------------------
+        return conversation_dict(existing, user_id, db)
 
     conversation = Conversation(
         initiateur_id=user_id,
@@ -369,20 +294,85 @@ def create_conversation(
         listing_id=listing_id,
     )
 
-    quota.chats_utilises = chats_utilises + 1
-
-    if quota.chats_utilises >= chats_gratuits:
-        quota.statut = "LIMITE_ATTEINTE"
-
     db.add(conversation)
     db.commit()
     db.refresh(conversation)
 
-    return conversation_dict(
-        conversation,
-        user_id,
-        db,
+    return conversation_dict(conversation, user_id, db)
+
+
+def _consume_message_quota(user_id: int, db: Session):
+    """Consomme 1 message gratuit pour CHAQUE message réellement envoyé.
+
+    Règles :
+    - GRATUIT : 50 messages offerts, chaque message/document consomme 1 crédit.
+    - PAIEMENT_USAGE : aucun quota de messages gratuits n'est consommé ici ;
+      la facturation se fait à la conversation.
+    - ABONNE / PREMIUM : messages illimités.
+
+    Le quota appartient à l'EXPÉDITEUR du message, pas forcément à l'initiateur
+    de la conversation.
+    """
+    quota = (
+        db.query(UserQuota)
+        .filter(UserQuota.user_id == user_id)
+        .first()
     )
+
+    if not quota:
+        quota = UserQuota(
+            user_id=user_id,
+            messages_utilises=0,
+            messages_gratuits=50,
+            statut="GRATUIT",
+            is_premium=False,
+            depense_usage=0.0,
+        )
+        db.add(quota)
+        db.flush()
+
+    statut = str(quota.statut or "GRATUIT").upper()
+
+    # Premium / abonnement : illimité
+    if quota.is_premium or statut in {"ABONNE", "PREMIUM"}:
+        return quota
+
+    # Paiement à l'usage : pas de quota par message.
+    if statut in {"PAIEMENT_USAGE", "PAY_PER_USE", "PAY-PER-USE", "USAGE"}:
+        quota.messages_utilises = (quota.messages_utilises or 0) + 1
+        db.flush()
+        return quota
+
+    messages_gratuits = (
+        quota.messages_gratuits
+        if quota.messages_gratuits is not None
+        else 50
+    )
+    messages_utilises = (
+        quota.messages_utilises
+        if quota.messages_utilises is not None
+        else 0
+    )
+
+    # Le 51e message est bloqué. Le 50e est encore autorisé.
+    if messages_utilises >= messages_gratuits:
+        quota.statut = "LIMITE_ATTEINTE"
+        db.flush()
+        raise HTTPException(
+            status_code=402,
+            detail=(
+                "Limite de 50 messages gratuits atteinte. "
+                "Choisissez le paiement à l'usage ou l'offre Premium pour continuer."
+            ),
+        )
+
+    quota.messages_utilises = messages_utilises + 1
+
+    if quota.messages_utilises >= messages_gratuits:
+        quota.statut = "LIMITE_ATTEINTE"
+
+    db.flush()
+    return quota
 
 
 # ---------------------------------------------------------------------------
@@ -482,6 +472,9 @@ def add_message(
                 detail="Le message ne peut pas être vide",
             )
 
+    # Le crédit n'est consommé qu'au premier message réel.
+    _consume_message_quota(user_id, db)
+
     # -----------------------------------------------------------------------
     # Création du message
     # -----------------------------------------------------------------------
@@ -520,20 +513,21 @@ def add_message(
 
     if destinataire:
         try:
+            # Notification interne persistée. Elle alimente le compteur
+            # Messagerie (N) via GET /api/notifications/me.
             create_notification(
                 db,
                 destinataire_id,
-                "EMAIL",
-                destinataire.email,
+                "IN_APP",
+                str(destinataire_id),
                 (
                     "Vous avez reçu un nouveau message "
-                    "dans une conversation."
+                    f"dans la conversation #{conversation.id}."
                 ),
-                sujet="Nouveau message",
+                sujet=f"MESSAGE_CONVERSATION:{conversation.id}",
             )
         except Exception:
-            # L'échec de l'email ne doit pas annuler
-            # l'envoi du message.
+            # Une notification ne doit jamais annuler l'envoi du message.
             pass
 
     return {
@@ -544,6 +538,7 @@ def add_message(
         "contenu": msg.contenu,
         "document_url": msg.document_url,
         "created_at": msg.created_at,
+        "lu": bool(msg.lu),
 
         # Frontend
         "conversationId": msg.conversation_id,
@@ -595,6 +590,45 @@ def get_messages(
         serialize_message(message)
         for message in messages
     ]
+
+
+# ---------------------------------------------------------------------------
+# Marquer les messages reçus comme lus
+# ---------------------------------------------------------------------------
+
+def mark_conversation_read(
+    conversation_id: int,
+    user_id: int,
+    db: Session,
+):
+    conversation = get_conversation(
+        conversation_id,
+        user_id,
+        db,
+    )
+
+    unread_messages = (
+        db.query(Message)
+        .filter(
+            Message.conversation_id == conversation.id,
+            Message.expediteur_id != user_id,
+            Message.lu.is_(False),
+        )
+        .all()
+    )
+
+    count = len(unread_messages)
+    for message in unread_messages:
+        message.lu = True
+
+    if count:
+        db.commit()
+
+    return {
+        "conversation_id": conversation.id,
+        "marked_read": count,
+        "unreadCount": 0,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -654,6 +688,7 @@ def upload_document(
     type_fichier: str,
     taille: int,
     db: Session,
+    contenu: str | None = None,
 ):
     from app.models.conversations import DocumentMessage
 
@@ -663,9 +698,13 @@ def upload_document(
         db,
     )
 
+    # Un document seul compte lui aussi comme premier message réel.
+    _consume_message_quota(user_id, db)
+
     msg = Message(
         conversation_id=conversation.id,
         expediteur_id=user_id,
+        contenu=(contenu.strip() if contenu and contenu.strip() else None),
         document_url=url,
     )
 
@@ -688,6 +727,23 @@ def upload_document(
 
     db.commit()
     db.refresh(doc)
+
+    destinataire_id = (
+        conversation.destinataire_id
+        if user_id == conversation.initiateur_id
+        else conversation.initiateur_id
+    )
+    try:
+        create_notification(
+            db,
+            destinataire_id,
+            "IN_APP",
+            str(destinataire_id),
+            f"Vous avez reçu un nouveau document dans la conversation #{conversation.id}.",
+            sujet=f"MESSAGE_CONVERSATION:{conversation.id}",
+        )
+    except Exception:
+        pass
 
     return {
         "message": "Document envoyé",

@@ -31,6 +31,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const MatchingPage = lazy(() => import("./pages/MatchingPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 export default function App() {
   return (
@@ -38,11 +39,13 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<Spinner label="Chargement de la page..." />}>
           <Routes>
+            
             {/* RootLayout affiche le header visiteur (non connecte) ou la sidebar utilisateur (connecte) */}
             <Route element={<RootLayout />}>
               <Route path="/" element={<LandingPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route
                 path="/matching"
                 element={
