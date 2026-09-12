@@ -63,11 +63,11 @@ export class MessagingController {
     return this.messagingService.createConversation(user.id, dto);
   }
 
-  @Post('conversations/checkout')
+  @Post('conversations/create-checkout-session')
   @ApiOperation({
     summary: 'Create a $2 Checkout session for one conversation',
     description:
-      'Available after the 50 free-conversation quota is reached. Conversation access is granted only after Stripe confirms payment.',
+      'Available after the 50 free-conversation quota is reached. Conversation access is granted only after Stripe confirms payment. After payment, Stripe redirects to frontend pages configured from FRONTEND_URL: /billing/conversation-success?session_id={CHECKOUT_SESSION_ID} for success and /billing/conversation-cancel for cancel/failed checkout. The frontend must implement those pages; the backend confirms the payment through the Stripe webhook.',
   })
   @ApiResponse({
     status: 201,

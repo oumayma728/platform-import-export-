@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { createHash } from 'crypto';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { UsersRepository } from '../../users/users.repository';
@@ -131,6 +132,7 @@ export class StripeService {
     planId: string,
     priceId: string,
     billingAccountId: string,
+    checkoutAttemptId: string,
   ): Promise<Stripe.Checkout.Session> {
     if (!priceId || !priceId.startsWith('price_')) {
       throw new BadRequestException(
@@ -143,8 +145,18 @@ export class StripeService {
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
 
-    // Stable idempotency key based on user, plan, and customer
-    const idempotencyKey = `checkout:${userId}:${planId}:${customerId}`;
+    if (!checkoutAttemptId || checkoutAttemptId.trim().length > 255) {
+      throw new BadRequestException(
+        'A valid Idempotency-Key header is required for subscription checkout',
+      ); 
+    }
+
+    // A client-generated key identifies one checkout attempt. Hashing keeps
+    // Stripe's key short and prevents internal IDs from being sent to Stripe.
+    // The same attempt key is safe to retry; a new click must use a new key.
+    const idempotencyKey = `subscription-checkout:${createHash('sha256')
+      .update(`${userId}:${planId}:${customerId}:${checkoutAttemptId.trim()}`)
+      .digest('hex')}`;
 
     const session = await this.stripe.checkout.sessions.create(
       {

@@ -197,17 +197,36 @@ describe('StripeWebhookService', () => {
   });
 
   describe('invoice.paid', () => {
-    it('should authoritatively create local subscription, record transaction, and set ABONNE', async () => {
+    it('should handle 2026 Dahlia API format (parent.subscription_details) correctly', async () => {
       const mockInvoice = {
         id: 'in_123',
         customer: 'cus_123',
-        subscription: 'sub_123',
         amount_paid: 2900,
+        currency: 'usd',
+        parent: {
+          subscription_details: {
+            subscription: 'sub_123',
+            metadata: {
+              billingAccountId: 'ba-123',
+              planId: 'plan-monthly',
+              userId: 'user-123',
+            },
+          },
+          type: 'subscription_details',
+        },
         lines: {
           data: [
             {
-              price: { id: 'price_monthly' },
+              pricing: {
+                price_details: { price: 'price_monthly', product: 'prod_1' },
+                type: 'price_details',
+              },
               period: { start: 1777408000, end: 1780000000 },
+              metadata: {
+                billingAccountId: 'ba-123',
+                planId: 'plan-monthly',
+                userId: 'user-123',
+              },
             },
           ],
         },
@@ -247,6 +266,8 @@ describe('StripeWebhookService', () => {
       );
 
       expect(result).toEqual({ received: true });
+      // Subscription pre-fetched using parent.subscription_details.subscription
+      expect(stripeService.getSubscription).toHaveBeenCalledWith('sub_123');
       expect(billingRepo.createPaymentTransaction).toHaveBeenCalledWith(
         expect.objectContaining({
           billingAccountId: 'ba-123',
@@ -260,6 +281,10 @@ describe('StripeWebhookService', () => {
         }),
         expect.anything(),
       );
+      // Price resolved from pricing.price_details.price
+      expect(
+        billingRepo.findSubscriptionPlanByStripePriceId,
+      ).toHaveBeenCalledWith('price_monthly', expect.anything());
       expect(billingRepo.upsertSubscription).toHaveBeenCalledWith(
         expect.objectContaining({
           billingAccountId: 'ba-123',
@@ -277,6 +302,163 @@ describe('StripeWebhookService', () => {
         expect.anything(),
       );
     });
+
+    it('should handle legacy invoice format (top-level subscription field) for backward compatibility', async () => {
+      const mockInvoice = {
+        id: 'in_legacy',
+        customer: 'cus_legacy',
+        subscription: 'sub_legacy',
+        amount_paid: 2900,
+        currency: 'usd',
+        lines: {
+          data: [
+            {
+              price: { id: 'price_monthly' },
+              period: { start: 1777408000, end: 1780000000 },
+            },
+          ],
+        },
+      } as any;
+      const mockEvent = {
+        id: 'evt_legacy',
+        type: 'invoice.paid',
+        data: { object: mockInvoice },
+      } as any;
+
+      stripeService.constructEventFromPayload.mockReturnValue(mockEvent);
+      stripeService.getSubscription.mockResolvedValue({
+        id: 'sub_legacy',
+        items: {
+          data: [
+            {
+              current_period_start: 1777408000,
+              current_period_end: 1780000000,
+              price: { id: 'price_monthly' },
+            },
+          ],
+        },
+      } as any);
+      billingRepo.isWebhookEventProcessed.mockResolvedValue(false);
+      billingRepo.recordWebhookEvent.mockResolvedValue(true);
+      billingRepo.findSubscriptionByStripeId.mockResolvedValue(null);
+      billingRepo.findBillingAccountByStripeCustomerId.mockResolvedValue({
+        id: 'ba-legacy',
+      } as any);
+      billingRepo.findSubscriptionPlanByStripePriceId.mockResolvedValue({
+        id: 'plan-monthly',
+      } as any);
+      billingRepo.findPaymentTransactionByStripeEventId.mockResolvedValue(null);
+
+      const result = await service.handleWebhookEvent(
+        Buffer.from('{}'),
+        'sig_123',
+      );
+
+      expect(result).toEqual({ received: true });
+      // Subscription pre-fetched using legacy top-level subscription
+      expect(stripeService.getSubscription).toHaveBeenCalledWith('sub_legacy');
+      expect(billingRepo.upsertSubscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stripeSubscriptionId: 'sub_legacy',
+          status: SubscriptionStatus.ACTIF,
+        }),
+        expect.anything(),
+      );
+    });
+
+    it('should resolve BillingAccount via invoice metadata when customer lookup fails', async () => {
+      const mockInvoice = {
+        id: 'in_meta',
+        customer: 'cus_unknown',
+        amount_paid: 2900,
+        currency: 'usd',
+        parent: {
+          subscription_details: {
+            subscription: 'sub_meta',
+            metadata: {
+              billingAccountId: 'ba-from-meta',
+              planId: 'plan-monthly',
+              userId: 'user-meta',
+            },
+          },
+          type: 'subscription_details',
+        },
+        lines: {
+          data: [
+            {
+              pricing: {
+                price_details: { price: 'price_monthly', product: 'prod_1' },
+                type: 'price_details',
+              },
+              period: { start: 1777408000, end: 1780000000 },
+              metadata: {},
+            },
+          ],
+        },
+      } as any;
+      const mockEvent = {
+        id: 'evt_meta',
+        type: 'invoice.paid',
+        data: { object: mockInvoice },
+      } as any;
+
+      stripeService.constructEventFromPayload.mockReturnValue(mockEvent);
+      stripeService.getSubscription.mockResolvedValue({
+        id: 'sub_meta',
+        items: {
+          data: [
+            {
+              current_period_start: 1777408000,
+              current_period_end: 1780000000,
+            },
+          ],
+        },
+      } as any);
+      billingRepo.isWebhookEventProcessed.mockResolvedValue(false);
+      billingRepo.recordWebhookEvent.mockResolvedValue(true);
+      billingRepo.findSubscriptionByStripeId.mockResolvedValue(null);
+      // Customer lookup returns nothing
+      billingRepo.findBillingAccountByStripeCustomerId.mockResolvedValue(null);
+      // Metadata billingAccountId lookup succeeds
+      billingRepo.findBillingAccountById.mockResolvedValue({
+        id: 'ba-from-meta',
+        stripeCustomerId: null,
+      } as any);
+      billingRepo.findSubscriptionPlanByStripePriceId.mockResolvedValue({
+        id: 'plan-monthly',
+      } as any);
+      billingRepo.findPaymentTransactionByStripeEventId.mockResolvedValue(null);
+
+      const result = await service.handleWebhookEvent(
+        Buffer.from('{}'),
+        'sig_123',
+      );
+
+      expect(result).toEqual({ received: true });
+      // BillingAccount resolved via metadata
+      expect(billingRepo.findBillingAccountById).toHaveBeenCalledWith(
+        'ba-from-meta',
+        expect.anything(),
+      );
+      // Customer ID linked during invoice.paid
+      expect(billingRepo.setStripeCustomerIdByAccountId).toHaveBeenCalledWith(
+        'ba-from-meta',
+        'cus_unknown',
+        expect.anything(),
+      );
+      expect(billingRepo.upsertSubscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          billingAccountId: 'ba-from-meta',
+          stripeSubscriptionId: 'sub_meta',
+        }),
+        expect.anything(),
+      );
+      expect(billingRepo.updateBillingAccountStatusById).toHaveBeenCalledWith(
+        'ba-from-meta',
+        BillingStatus.ABONNE,
+        expect.anything(),
+      );
+    });
   });
 
   describe('invoice.payment_failed', () => {
@@ -284,8 +466,14 @@ describe('StripeWebhookService', () => {
       const mockInvoice = {
         id: 'in_fail_123',
         customer: 'cus_123',
-        subscription: 'sub_123',
         amount_due: 2900,
+        parent: {
+          subscription_details: {
+            subscription: 'sub_123',
+            metadata: { billingAccountId: 'ba-123' },
+          },
+          type: 'subscription_details',
+        },
       } as any;
       const mockEvent = {
         id: 'evt_inv_failed',
@@ -442,6 +630,7 @@ describe('StripeWebhookService', () => {
         {
           status: SubscriptionStatus.ANNULE,
           canceledAt: expect.any(Date),
+          cancelAtPeriodEnd: false,
         },
         expect.anything(),
       );

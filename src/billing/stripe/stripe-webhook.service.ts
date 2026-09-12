@@ -68,10 +68,7 @@ export class StripeWebhookService {
       }
     } else if (event.type === 'invoice.paid') {
       const invoice = event.data.object as Stripe.Invoice;
-      const subId =
-        typeof (invoice as any).subscription === 'string'
-          ? (invoice as any).subscription
-          : (invoice as any).subscription?.id;
+      const subId = this.extractInvoiceSubscriptionId(invoice);
       if (subId) {
         try {
           subscriptionDetails = await this.stripeService.getSubscription(subId);
@@ -232,10 +229,8 @@ export class StripeWebhookService {
     tx: Prisma.TransactionClient,
   ) {
     const customerId = this.getStripeObjectId(invoice.customer);
-    const stripeSubscriptionId =
-      typeof (invoice as any).subscription === 'string'
-        ? (invoice as any).subscription
-        : (invoice as any).subscription?.id;
+    const stripeSubscriptionId = this.extractInvoiceSubscriptionId(invoice);
+    const invoiceMetadata = this.extractInvoiceMetadata(invoice);
 
     let billingAccount;
     let existingSub: Awaited<
@@ -260,9 +255,32 @@ export class StripeWebhookService {
         );
     }
 
+    if (!billingAccount && invoiceMetadata?.billingAccountId) {
+      billingAccount = await this.billingRepo.findBillingAccountById(
+        invoiceMetadata.billingAccountId,
+        tx,
+      );
+    }
+
+    if (!billingAccount && invoiceMetadata?.userId) {
+      billingAccount = await this.billingRepo.findByUserId(
+        invoiceMetadata.userId,
+        tx,
+      );
+    }
+
     if (!billingAccount) {
       throw new Error(
         `BillingAccount not found for invoice.paid event ${eventId} (customer: ${customerId}, subscription: ${stripeSubscriptionId}). Will retry.`,
+      );
+    }
+
+    // Link Stripe customer ID if not already set
+    if (customerId && !billingAccount.stripeCustomerId) {
+      await this.billingRepo.setStripeCustomerIdByAccountId(
+        billingAccount.id,
+        customerId,
+        tx,
       );
     }
 
@@ -270,8 +288,7 @@ export class StripeWebhookService {
     let planId = existingSub?.planId;
     if (!planId) {
       const priceId =
-        (invoice.lines?.data?.[0] as any)?.pricing?.price?.id ||
-        (invoice.lines?.data?.[0] as any)?.price?.id ||
+        this.extractInvoicePriceId(invoice) ||
         subscriptionDetails?.items?.data?.[0]?.price?.id;
       if (priceId) {
         const plan = await this.billingRepo.findSubscriptionPlanByStripePriceId(
@@ -279,6 +296,9 @@ export class StripeWebhookService {
           tx,
         );
         if (plan) planId = plan.id;
+      }
+      if (!planId && invoiceMetadata?.planId) {
+        planId = invoiceMetadata.planId;
       }
       if (!planId && subscriptionDetails?.metadata?.planId) {
         planId = subscriptionDetails.metadata.planId;
@@ -387,10 +407,8 @@ export class StripeWebhookService {
     tx: Prisma.TransactionClient,
   ) {
     const customerId = this.getStripeObjectId(invoice.customer);
-    const stripeSubscriptionId =
-      typeof (invoice as any).subscription === 'string'
-        ? (invoice as any).subscription
-        : (invoice as any).subscription?.id;
+    const stripeSubscriptionId = this.extractInvoiceSubscriptionId(invoice);
+    const invoiceMetadata = this.extractInvoiceMetadata(invoice);
 
     let billingAccount;
     if (stripeSubscriptionId) {
@@ -406,6 +424,18 @@ export class StripeWebhookService {
           customerId,
           tx,
         );
+    }
+    if (!billingAccount && invoiceMetadata?.billingAccountId) {
+      billingAccount = await this.billingRepo.findBillingAccountById(
+        invoiceMetadata.billingAccountId,
+        tx,
+      );
+    }
+    if (!billingAccount && invoiceMetadata?.userId) {
+      billingAccount = await this.billingRepo.findByUserId(
+        invoiceMetadata.userId,
+        tx,
+      );
     }
 
     if (!billingAccount) {
@@ -525,6 +555,7 @@ export class StripeWebhookService {
         ...(periodEnd && { currentPeriodEnd: periodEnd }),
         canceledAt,
         ...(planId && { planId }),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
       },
       tx,
     );
@@ -588,6 +619,7 @@ export class StripeWebhookService {
       {
         status: SubscriptionStatus.ANNULE,
         canceledAt,
+        cancelAtPeriodEnd: false,
       },
       tx,
     );
@@ -687,7 +719,7 @@ export class StripeWebhookService {
           {
             amount: paymentIntent.amount_received / 100,
             currency: paymentIntent.currency?.toUpperCase() ?? 'USD',
-            type: 'Conversation à l\'usage',
+            type: "Conversation à l'usage",
             paymentIntentId: paymentIntent.id,
           },
         )
@@ -700,16 +732,19 @@ export class StripeWebhookService {
   ): SubscriptionStatus {
     switch (stripeStatus) {
       case 'active':
+      case 'trialing':
         return SubscriptionStatus.ACTIF;
       case 'canceled':
         return SubscriptionStatus.ANNULE;
       case 'past_due':
         return SubscriptionStatus.IMPAYE;
+      case 'incomplete':
       case 'unpaid':
       case 'incomplete_expired':
+      case 'paused':
         return SubscriptionStatus.EXPIRE;
       default:
-        return SubscriptionStatus.ACTIF;
+        return SubscriptionStatus.EXPIRE;
     }
   }
 
@@ -742,6 +777,10 @@ export class StripeWebhookService {
     if (typeof lineEnd === 'number') {
       return new Date(lineEnd * 1000);
     }
+    const topEnd = invoice.period_end;
+    if (typeof topEnd === 'number') {
+      return new Date(topEnd * 1000);
+    }
     return null;
   }
 
@@ -750,7 +789,80 @@ export class StripeWebhookService {
     if (typeof lineStart === 'number') {
       return new Date(lineStart * 1000);
     }
+    const topStart = invoice.period_start;
+    if (typeof topStart === 'number') {
+      return new Date(topStart * 1000);
+    }
     return null;
+  }
+
+  private extractInvoiceSubscriptionId(
+    invoice: Stripe.Invoice,
+  ): string | undefined {
+    // 1. Stripe 2025/2026+ (Dahlia and newer API versions): parent.subscription_details.subscription
+    const parentSub = (invoice as any).parent?.subscription_details?.subscription;
+    if (parentSub) {
+      return typeof parentSub === 'string' ? parentSub : parentSub.id;
+    }
+
+    // 2. Legacy top-level subscription field
+    const legacySub = (invoice as any).subscription;
+    if (legacySub) {
+      return typeof legacySub === 'string' ? legacySub : legacySub.id;
+    }
+
+    // 3. Fallback: Line items subscription reference
+    const lineSub = (invoice.lines?.data?.[0] as any)?.subscription;
+    if (lineSub) {
+      return typeof lineSub === 'string' ? lineSub : lineSub.id;
+    }
+
+    const subItemSub = (invoice.lines?.data?.[0] as any)?.parent
+      ?.subscription_item_details?.subscription;
+    if (subItemSub) {
+      return typeof subItemSub === 'string' ? subItemSub : subItemSub.id;
+    }
+
+    return undefined;
+  }
+
+  private extractInvoicePriceId(invoice: Stripe.Invoice): string | undefined {
+    const firstLine = invoice.lines?.data?.[0] as any;
+    if (!firstLine) return undefined;
+
+    // 1. Stripe 2025/2026+ API: line.pricing.price_details.price
+    const pricingPrice = firstLine.pricing?.price_details?.price;
+    if (pricingPrice) {
+      return typeof pricingPrice === 'string' ? pricingPrice : pricingPrice.id;
+    }
+
+    // 2. Pricing.price fallback
+    const legacyPricing = firstLine.pricing?.price;
+    if (legacyPricing) {
+      return typeof legacyPricing === 'string'
+        ? legacyPricing
+        : legacyPricing.id;
+    }
+
+    // 3. Legacy top-level line.price
+    const linePrice = firstLine.price;
+    if (linePrice) {
+      return typeof linePrice === 'string' ? linePrice : linePrice.id;
+    }
+
+    return undefined;
+  }
+
+  private extractInvoiceMetadata(
+    invoice: Stripe.Invoice,
+  ): Stripe.Metadata | undefined {
+    return (
+      (invoice as any).parent?.subscription_details?.metadata ||
+      (invoice as any).subscription_details?.metadata ||
+      invoice.lines?.data?.[0]?.metadata ||
+      invoice.metadata ||
+      undefined
+    );
   }
 
   private getStripeObjectId(

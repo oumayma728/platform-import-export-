@@ -225,4 +225,64 @@ describe('StripeService', () => {
       );
     });
   });
+
+  describe('createCheckoutSession', () => {
+    it('uses the same Stripe idempotency key for retries of one checkout attempt', async () => {
+      jest.spyOn(service, 'getOrCreateCustomer').mockResolvedValue('cus_123');
+      const createSpy = jest
+        .spyOn((service as any).stripe.checkout.sessions, 'create')
+        .mockResolvedValue({
+          id: 'cs_123',
+          url: 'https://checkout.stripe.com/pay/cs_123',
+        } as any);
+
+      await service.createCheckoutSession(
+        'user-1',
+        'plan-1',
+        'price_123',
+        'ba-1',
+        'attempt-1',
+      );
+      await service.createCheckoutSession(
+        'user-1',
+        'plan-1',
+        'price_123',
+        'ba-1',
+        'attempt-1',
+      );
+
+      const firstKey = createSpy.mock.calls[0][1].idempotencyKey;
+      const retryKey = createSpy.mock.calls[1][1].idempotencyKey;
+      expect(retryKey).toBe(firstKey);
+    });
+
+    it('uses a different Stripe idempotency key for a new checkout attempt', async () => {
+      jest.spyOn(service, 'getOrCreateCustomer').mockResolvedValue('cus_123');
+      const createSpy = jest
+        .spyOn((service as any).stripe.checkout.sessions, 'create')
+        .mockResolvedValue({
+          id: 'cs_123',
+          url: 'https://checkout.stripe.com/pay/cs_123',
+        } as any);
+
+      await service.createCheckoutSession(
+        'user-1',
+        'plan-1',
+        'price_123',
+        'ba-1',
+        'attempt-1',
+      );
+      await service.createCheckoutSession(
+        'user-1',
+        'plan-1',
+        'price_123',
+        'ba-1',
+        'attempt-2',
+      );
+
+      expect(createSpy.mock.calls[1][1].idempotencyKey).not.toBe(
+        createSpy.mock.calls[0][1].idempotencyKey,
+      );
+    });
+  });
 });

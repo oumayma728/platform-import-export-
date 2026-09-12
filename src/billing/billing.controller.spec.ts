@@ -67,11 +67,13 @@ describe('BillingController', () => {
       const result = await controller.createCheckoutSession(
         { id: 'user-1' } as any,
         'plan-1',
+        'checkout-attempt-1',
       );
       expect(result).toEqual(mockResponse);
       expect(billingService.startSubscriptionCheckout).toHaveBeenCalledWith(
         'user-1',
         'plan-1',
+        'checkout-attempt-1',
       );
     });
   });

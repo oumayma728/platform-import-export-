@@ -29,6 +29,7 @@ describe('BillingService', () => {
             createBillingAccount: jest.fn(),
             ensureBillingAccount: jest.fn(),
             updateSubscriptionStatus: jest.fn(),
+            updateBillingAccountStatusById: jest.fn(),
           },
         },
         {
@@ -37,6 +38,7 @@ describe('BillingService', () => {
             createCheckoutSession: jest.fn(),
             createConversationCheckoutSession: jest.fn(),
             cancelSubscriptionAtPeriodEnd: jest.fn(),
+            cancelSubscriptionImmediately: jest.fn(),
           },
         },
         {
@@ -97,6 +99,7 @@ describe('BillingService', () => {
       const result = await service.startSubscriptionCheckout(
         'user-1',
         'plan-1',
+        'checkout-attempt-1',
       );
 
       expect(result).toEqual({
@@ -108,6 +111,7 @@ describe('BillingService', () => {
         'plan-1',
         'price_123',
         'ba-1',
+        'checkout-attempt-1',
       );
     });
 
@@ -124,7 +128,11 @@ describe('BillingService', () => {
       billingRepo.ensureBillingAccount.mockResolvedValue(activeAccount);
 
       await expect(
-        service.startSubscriptionCheckout('user-1', 'plan-1'),
+        service.startSubscriptionCheckout(
+          'user-1',
+          'plan-1',
+          'checkout-attempt-1',
+        ),
       ).rejects.toThrow('User already has an active subscription');
       expect(stripeService.createCheckoutSession).not.toHaveBeenCalled();
     });
@@ -149,6 +157,7 @@ describe('BillingService', () => {
       const result = await service.startSubscriptionCheckout(
         'user-1',
         'plan-1',
+        'checkout-attempt-1',
       );
 
       expect(result).toEqual({
@@ -162,7 +171,11 @@ describe('BillingService', () => {
       billingRepo.findActiveSubscriptionPlanById.mockResolvedValue(null);
 
       await expect(
-        service.startSubscriptionCheckout('user-1', 'invalid-plan'),
+        service.startSubscriptionCheckout(
+          'user-1',
+          'invalid-plan',
+          'checkout-attempt-1',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -265,14 +278,12 @@ describe('BillingService', () => {
   });
 
   describe('cancelSubscription', () => {
-    it('should schedule cancellation at period end and retain active access', async () => {
-      const futureSeconds = Math.floor(
-        (Date.now() + 15 * 24 * 60 * 60 * 1000) / 1000,
-      );
-      const futureDate = new Date(futureSeconds * 1000);
+    it('should cancel subscription immediately and update status in DB', async () => {
+      const futureDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
       const mockSub = {
         stripeSubscriptionId: 'sub_123',
-        status: 'ACTIF',
+        status: SubscriptionStatus.ACTIF,
+        cancelAtPeriodEnd: false,
         currentPeriodEnd: futureDate,
       };
       const mockAccount = {
@@ -282,28 +293,54 @@ describe('BillingService', () => {
       } as any;
 
       billingRepo.findByUserId.mockResolvedValue(mockAccount);
-      stripeService.cancelSubscriptionAtPeriodEnd.mockResolvedValue({
+      stripeService.cancelSubscriptionImmediately.mockResolvedValue({
         id: 'sub_123',
-        items: {
-          data: [{ current_period_end: futureSeconds }],
-        },
+        status: 'canceled',
       } as any);
 
       const result = await service.cancelSubscription('user-1');
 
-      expect(result.cancelAtPeriodEnd).toBe(true);
-      expect(result.currentPeriodEnd).toEqual(futureDate);
-      expect(stripeService.cancelSubscriptionAtPeriodEnd).toHaveBeenCalledWith(
+      expect(result.message).toBe('Subscription canceled successfully.');
+      expect(result.cancelAtPeriodEnd).toBe(false);
+      expect(stripeService.cancelSubscriptionImmediately).toHaveBeenCalledWith(
         'sub_123',
       );
       expect(billingRepo.updateSubscriptionStatus).toHaveBeenCalledWith(
         'sub_123',
         {
-          status: 'ACTIF',
+          status: SubscriptionStatus.ANNULE,
           canceledAt: expect.any(Date),
-          currentPeriodEnd: futureDate,
+          cancelAtPeriodEnd: false,
         },
       );
+      expect(
+        billingRepo.updateBillingAccountStatusById,
+      ).toHaveBeenCalledWith('ba-1', BillingStatus.ABONNEMENT_EXPIRE);
+    });
+
+    it('should return immediately without extra DB queries if already canceled', async () => {
+      const mockSub = {
+        stripeSubscriptionId: 'sub_123',
+        status: SubscriptionStatus.ANNULE,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: new Date(),
+      };
+      const mockAccount = {
+        id: 'ba-1',
+        userId: 'user-1',
+        subscription: mockSub,
+      } as any;
+
+      billingRepo.findByUserId.mockResolvedValue(mockAccount);
+
+      const result = await service.cancelSubscription('user-1');
+
+      expect(result.message).toBe('Subscription is already canceled.');
+      expect(stripeService.cancelSubscriptionImmediately).not.toHaveBeenCalled();
+      expect(billingRepo.updateSubscriptionStatus).not.toHaveBeenCalled();
+      expect(
+        billingRepo.updateBillingAccountStatusById,
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if no subscription exists for user', async () => {

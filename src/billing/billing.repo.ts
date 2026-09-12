@@ -299,6 +299,7 @@ export class BillingRepository {
       currentPeriodEnd?: Date;
       canceledAt?: Date | null;
       planId?: string;
+      cancelAtPeriodEnd?: boolean;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -315,6 +316,9 @@ export class BillingRepository {
           currentPeriodEnd: data.currentPeriodEnd,
         }),
         ...(data.canceledAt !== undefined && { canceledAt: data.canceledAt }),
+        ...(data.cancelAtPeriodEnd !== undefined && {
+          cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        }),
       },
     });
   }

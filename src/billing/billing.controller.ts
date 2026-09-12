@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -72,11 +73,17 @@ export class BillingController {
   @ApiOperation({
     summary: 'Create Checkout Session',
     description:
-      'Creates a new Stripe checkout session for the authenticated user and returns the redirect URL.',
+      'Creates a new Stripe checkout session for the authenticated user and returns the redirect URL. After payment, Stripe redirects to frontend pages configured from FRONTEND_URL: /billing/success?session_id={CHECKOUT_SESSION_ID} for success and the frontend home page for cancel/failed checkout. The frontend must implement those pages; the backend confirms the payment through the Stripe webhook.',
   })
   @ApiOkResponse({
     description: 'Checkout session created successfully.',
     type: CreateCheckoutSessionResponseDto,
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description:
+      'A new UUID for each user checkout attempt. Reuse the same UUID only when retrying that exact request after a timeout or network error.',
   })
   @ApiBadRequestResponse({
     description: 'Invalid subscription plan or parameters.',
@@ -84,13 +91,18 @@ export class BillingController {
   @ApiUnauthorizedResponse({
     description: 'The provided credentials are invalid.',
   })
-  @Post('/subscription/:id/checkout')
+  @Post('/subscription/:id/create-checkout-session')
   @HttpCode(HttpStatus.OK)
   async createCheckoutSession(
     @CurrentUser() user: AuthRequest['user'],
     @Param('id') id: string,
+    @Headers('idempotency-key') idempotencyKey: string,
   ): Promise<CreateCheckoutSessionResponseDto> {
-    return this.billingService.startSubscriptionCheckout(user.id, id);
+    return this.billingService.startSubscriptionCheckout(
+      user.id,
+      id,
+      idempotencyKey,
+    );
   }
 
   @ApiOperation({

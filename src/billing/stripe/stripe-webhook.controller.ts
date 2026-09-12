@@ -1,1 +1,0 @@
-// Receives events sent by Stripe after payments/subscriptions

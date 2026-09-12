@@ -78,7 +78,14 @@ export class BillingService {
   async startSubscriptionCheckout(
     userId: string,
     planId: string,
+    checkoutAttemptId: string,
   ): Promise<CreateCheckoutSessionResponseDto> {
+    if (!checkoutAttemptId || checkoutAttemptId.trim().length > 255) {
+      throw new BadRequestException(
+        'A valid Idempotency-Key header is required for subscription checkout',
+      );
+    }
+
     const plan = await this.billingRepo.findActiveSubscriptionPlanById(planId);
     if (!plan) {
       throw new BadRequestException('Active subscription plan not found');
@@ -99,6 +106,7 @@ export class BillingService {
       plan.id,
       plan.stripePriceId,
       billingAccount.id,
+      checkoutAttemptId.trim(),
     );
 
     if (!session.url) {
@@ -109,7 +117,7 @@ export class BillingService {
 
     return {
       sessionId: session.id,
-      checkoutUrl: session.url,
+      checkoutUrl: session.url, // the stripe checkout URL
     };
   }
 
@@ -147,8 +155,9 @@ export class BillingService {
   }
 
   /**
-   * Schedule subscription cancellation for an authenticated user at the end of their paid period.
-   * Retains active access until the period expires.
+   * Cancel subscription for an authenticated user.
+   * Cancels immediately on Stripe, marks subscription as ANNULE, and updates billing account.
+   * If already canceled, returns the existing cancellation state without extra operations.
    */
   async cancelSubscription(
     userId: string,
@@ -161,30 +170,58 @@ export class BillingService {
     const subRecord = billingAccount.subscription;
     const stripeSubId = subRecord.stripeSubscriptionId;
 
-    // Request Stripe to cancel subscription at current period end
-    const stripeSub =
-      await this.stripeService.cancelSubscriptionAtPeriodEnd(stripeSubId);
+    // If already canceled, return early without extra DB queries or Stripe calls
+    if (
+      subRecord.status === SubscriptionStatus.ANNULE ||
+      subRecord.status === SubscriptionStatus.EXPIRE
+    ) {
+      return {
+        message: 'Subscription is already canceled.',
+        cancelAtPeriodEnd: subRecord.cancelAtPeriodEnd,
+        currentPeriodEnd: subRecord.currentPeriodEnd,
+      };
+    }
 
-    const periodEnd = stripeSub.items?.data?.[0]?.current_period_end
-      ? new Date(stripeSub.items.data[0].current_period_end * 1000)
-      : subRecord.currentPeriodEnd;
+    // Cancel immediately on Stripe
+    try {
+      await this.stripeService.cancelSubscriptionImmediately(stripeSubId);
+    } catch (error: any) {
+      if (
+        error?.code === 'resource_missing' ||
+        error?.message?.includes('already canceled') ||
+        error?.message?.includes('No such subscription')
+      ) {
+        this.logger.warn(
+          `Stripe subscription ${stripeSubId} already canceled or missing: ${error.message}`,
+        );
+      } else {
+        throw error;
+      }
+    }
 
-    // Record cancellation timestamp without immediately revoking paid access
+    const canceledAt = new Date();
+
+    // Mark subscription as ANNULE in DB
     await this.billingRepo.updateSubscriptionStatus(stripeSubId, {
-      status: subRecord.status,
-      canceledAt: new Date(),
-      currentPeriodEnd: periodEnd,
+      status: SubscriptionStatus.ANNULE,
+      canceledAt,
+      cancelAtPeriodEnd: false,
     });
 
+    // Mark billing account as ABONNEMENT_EXPIRE in DB
+    await this.billingRepo.updateBillingAccountStatusById(
+      billingAccount.id,
+      BillingStatus.ABONNEMENT_EXPIRE,
+    );
+
     this.logger.log(
-      `Subscription ${stripeSubId} for user ${userId} scheduled for cancellation at period end (${periodEnd?.toISOString()}).`,
+      `Subscription ${stripeSubId} for user ${userId} canceled immediately.`,
     );
 
     return {
-      message:
-        'Subscription cancellation scheduled at the end of the billing period.',
-      cancelAtPeriodEnd: true,
-      currentPeriodEnd: periodEnd,
+      message: 'Subscription canceled successfully.',
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: subRecord.currentPeriodEnd,
     };
   }
 }
