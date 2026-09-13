@@ -86,3 +86,6 @@ Configure the `baseUrl` variable with the staging backend URL.
 - Notifications
 - Currency conversion
 - Logistics estimation
+
+## class Diagram
+<img width="1791" height="1231" alt="import-export" src="https://github.com/user-attachments/assets/19d97bc1-2146-4b85-ad1f-ab756436b5f8" />
