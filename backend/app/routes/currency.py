@@ -22,3 +22,11 @@ def convert_currency(
         "to": to_currency,
         "converted_amount": converted_amount
     }
+
+@router.get("/list")
+def list_currencies() -> Dict[str, Any]:
+    currencies = currency_service.get_supported_currencies()
+    return {
+        "currencies": currencies
+    }
+

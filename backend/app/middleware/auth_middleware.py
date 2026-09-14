@@ -1,6 +1,6 @@
 from typing import Generator
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import jwt
 from pydantic import ValidationError
@@ -8,11 +8,11 @@ from app.config.config import settings
 from app.config.database import get_db
 from app.models.models import User
 
-security_scheme = HTTPBearer()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/swagger-login")
 
-def get_current_user(db: Session = Depends(get_db), token: HTTPAuthorizationCredentials = Depends(security_scheme)) -> User:
+def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
     try:
-        payload = jwt.decode(token.credentials, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
@@ -23,11 +23,11 @@ def get_current_user(db: Session = Depends(get_db), token: HTTPAuthorizationCred
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
 
-def get_current_user_optional(db: Session = Depends(get_db), token: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))) -> User | None:
+def get_current_user_optional(db: Session = Depends(get_db), token: str = Depends(OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/swagger-login", auto_error=False))) -> User | None:
     if not token:
         return None
     try:
-        payload = jwt.decode(token.credentials, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("sub")
         if user_id:
             return db.query(User).filter(User.id == user_id).first()

@@ -35,3 +35,14 @@ yarn-error.log*
 
 # Misc
 .nx/cache
+
+# Python and Testing files
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+uploads/
+static/
+find_chat.py
+fix.py
+test_ws.py

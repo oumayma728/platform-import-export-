@@ -27,3 +27,12 @@ def get_my_notifications(
         }
         for log in logs
     ]
+
+@router.post("/retry")
+def retry_failed_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.services.notification_service import notification_service
+    retried = notification_service.retry_failed_notifications(db)
+    return {"message": f"{retried} notifications réessayées avec succès."}

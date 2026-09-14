@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSoc
 from sqlalchemy.orm import Session
 from typing import List
 import uuid
+import os
+import shutil
 
-from app.config.database import get_db
+from app.config.database import get_db, SessionLocal
 from app.schemas.messaging import ConversationOut, ConversationCreate, MessageOut, ConversationUpdateStatus, DocumentMessageOut
 from app.services import messaging_service
 from app.middleware.auth_middleware import get_current_user
@@ -53,9 +55,8 @@ def update_status(
     return messaging_service.update_conversation_status(db, conversation_id, status_update.statut, current_user.company.id)
 
 @router.post("/messages/{conversation_id}/documents", response_model=DocumentMessageOut)
-def upload_document(
+async def upload_document(
     conversation_id: str,
-    message_id: str = Query(..., description="ID of the message to attach the document to"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -73,16 +74,47 @@ def upload_document(
             detail=f"Type de fichier non autorisé. Seuls les PDF, JPEG, PNG, DOCX et PPTX sont acceptés."
         )
 
-    fake_url = f"https://cdn.plateforme-import-export.com/documents/{uuid.uuid4()}-{file.filename}"
+    upload_dir = os.path.join(os.getcwd(), "uploads", "documents")
+    os.makedirs(upload_dir, exist_ok=True)
     
-    doc = messaging_service.add_document_to_message(
-        db=db,
-        message_id=message_id,
-        file_url=fake_url,
-        file_name=file.filename,
-        file_type=file.content_type or "application/octet-stream"
-    )
-    return doc
+    unique_filename = f"{uuid.uuid4()}-{file.filename}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    file_url = f"/documents/{unique_filename}"
+    try:
+        # Create a message to hold the document
+        new_msg = messaging_service.add_message(db, conversation_id, current_user.id, f"📎 Pièce jointe : {file.filename}")
+        
+        doc = messaging_service.add_document_to_message(
+            db=db,
+            message_id=new_msg.id,
+            file_url=file_url,
+            file_name=file.filename,
+            file_type=file.content_type or "application/octet-stream"
+        )
+        
+        # Broadcast the new message via WebSocket
+        message_data = {
+            "id": new_msg.id,
+            "conversation_id": new_msg.conversation_id,
+            "sender_id": new_msg.sender_id,
+            "contenu": new_msg.contenu,
+            "date_envoi": new_msg.date_envoi.isoformat() if new_msg.date_envoi else "",
+            "document": {
+                "file_name": doc.file_name,
+                "file_url": doc.file_url
+            }
+        }
+        await manager.broadcast_to_conversation(message_data, conversation_id)
+        
+        return doc
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @ws_router.websocket("/ws/{conversation_id}")
 async def websocket_endpoint(
@@ -104,16 +136,16 @@ async def websocket_endpoint(
         while True:
             data = await websocket.receive_text()
             
-            db = next(get_db())
-            new_msg = messaging_service.add_message(db, conversation_id, user_id, data)
-            
-            message_data = {
-                "id": new_msg.id,
-                "conversation_id": new_msg.conversation_id,
-                "sender_id": new_msg.sender_id,
-                "contenu": new_msg.contenu,
-                "date_envoi": new_msg.date_envoi.isoformat()
-            }
+            with SessionLocal() as db:
+                new_msg = messaging_service.add_message(db, conversation_id, user_id, data)
+                
+                message_data = {
+                    "id": new_msg.id,
+                    "conversation_id": new_msg.conversation_id,
+                    "sender_id": new_msg.sender_id,
+                    "contenu": new_msg.contenu,
+                    "date_envoi": new_msg.date_envoi.isoformat()
+                }
             await manager.broadcast_to_conversation(message_data, conversation_id)
             
     except WebSocketDisconnect:

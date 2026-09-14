@@ -44,6 +44,7 @@ class ListingUpdate(BaseModel):
     delai_livraison: Optional[str] = None
     certification: Optional[str] = None
     documents_urls: Optional[List[str]] = None
+    statut: Optional[StatutListing] = None
 
 class ListingOut(ListingBase):
     id: str

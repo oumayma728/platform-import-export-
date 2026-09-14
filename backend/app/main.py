@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 from app.config.config import settings
 from app.routes.api import api_router
 from app.config.database import engine, Base
@@ -27,6 +29,14 @@ from app.routes.messaging import ws_router
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(ws_router)
+
+upload_dir = os.path.join(os.getcwd(), "uploads", "documents")
+os.makedirs(upload_dir, exist_ok=True)
+app.mount("/documents", StaticFiles(directory=upload_dir), name="documents")
+
+static_dir = os.path.join(os.getcwd(), "static")
+if os.path.exists(static_dir):
+    app.mount("/test-ui", StaticFiles(directory=static_dir, html=True), name="test-ui")
 
 @app.get("/")
 def root():

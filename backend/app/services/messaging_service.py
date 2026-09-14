@@ -33,6 +33,12 @@ def create_conversation(db: Session, listing_id: str, initiator_company_id: str)
         
         if initiator_company.quota.chats_gratuits_restants == 0:
             initiator_company.billing.statut_facturation = StatutFacturation.LIMITE_ATTEINTE
+            from app.services.notification_service import notification_service
+            notification_service.send_email(
+                db, initiator_company.user.id, initiator_company.user.email,
+                "Quota de conversations gratuites atteint",
+                "Vous avez atteint votre limite de 50 conversations gratuites. Veuillez souscrire à un abonnement ou acheter un pack pour continuer à échanger."
+            )
 
     db_conv = Conversation(
         listing_id=listing_id,

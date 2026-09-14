@@ -42,5 +42,31 @@ class CurrencyService:
             
         rate = self.get_exchange_rate(from_currency, to_currency)
         return round(amount * rate, 2)
+        
+    def get_supported_currencies(self) -> list:
+        cache_key = "supported_currencies"
+        cached_currencies = get_cached_value(cache_key)
+        
+        if cached_currencies:
+            return json.loads(cached_currencies)
+            
+        try:
+            url = f"{self.api_url}/USD"
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                rates = data.get("rates", {})
+                currencies = list(rates.keys())
+                currencies.sort()
+                set_cached_value(cache_key, json.dumps(currencies), ttl_seconds=86400) # Cache for 24 hours
+                return currencies
+        except Exception as e:
+            print(f"Erreur appel API de devise pour liste: {e}")
+            pass
+            
+        # Fallback list if API fails
+        fallback = ["USD", "EUR", "TND", "MAD", "DZD", "GBP", "CAD", "JPY", "CNY", "CHF", "AED", "SAR", "QAR"]
+        fallback.sort()
+        return fallback
 
 currency_service = CurrencyService()

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.routes import auth, listings, currency, billing, admin, messaging, webhooks, logistics, notifications
+from app.routes import auth, listings, currency, billing, admin, messaging, webhooks, logistics, notifications, companies
 
 api_router = APIRouter()
 
@@ -12,3 +12,4 @@ api_router.include_router(billing.router, prefix="/billing", tags=["facturation"
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 api_router.include_router(logistics.router, prefix="/logistics", tags=["logistics"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(companies.router, prefix="/companies", tags=["entreprises"])

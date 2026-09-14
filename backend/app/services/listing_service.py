@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from typing import Optional, List
 import json
 
-from app.models.models import Listing, User, StatutListing, StatutValidation, Role
+from app.models.models import Listing, User, StatutListing, StatutValidation, Role, TypeCompany, TypeListing
 from app.schemas.listing import ListingCreate, ListingUpdate
 
 def create_listing(db: Session, listing_in: ListingCreate, current_user: User) -> Listing:
@@ -12,6 +12,11 @@ def create_listing(db: Session, listing_in: ListingCreate, current_user: User) -
     
     if current_user.company.statut_validation != StatutValidation.VALIDE:
         raise HTTPException(status_code=403, detail="Votre profil est en attente de validation par l'Administrateur. Vous ne pouvez pas créer d'annonce.")
+        
+    if current_user.company.type == TypeCompany.EXPORTATEUR and listing_in.type != TypeListing.OFFRE:
+        raise HTTPException(status_code=400, detail="Un EXPORTATEUR ne peut créer que des annonces de type OFFRE.")
+    if current_user.company.type == TypeCompany.IMPORTATEUR and listing_in.type != TypeListing.DEMANDE:
+        raise HTTPException(status_code=400, detail="Un IMPORTATEUR ne peut créer que des annonces de type DEMANDE.")
     
     docs_json = json.dumps(listing_in.documents_urls) if listing_in.documents_urls else ""
     
@@ -65,6 +70,14 @@ def update_listing(db: Session, id: str, listing_in: ListingUpdate, current_user
         raise HTTPException(status_code=403, detail="Non autorisé à modifier ce listing")
 
     update_data = listing_in.model_dump(exclude_unset=True)
+    
+    if 'statut' in update_data:
+        new_statut = update_data['statut']
+        if listing.type == TypeListing.OFFRE and new_statut == StatutListing.POURVUE:
+            raise HTTPException(status_code=400, detail="Le statut POURVUE n'est pas valide pour une OFFRE. Utilisez CLOTUREE.")
+        if listing.type == TypeListing.DEMANDE and new_statut == StatutListing.CLOTUREE:
+            raise HTTPException(status_code=400, detail="Le statut CLOTUREE n'est pas valide pour une DEMANDE. Utilisez POURVUE.")
+
     if 'documents_urls' in update_data:
         update_data['documents_urls'] = json.dumps(update_data['documents_urls'])
         

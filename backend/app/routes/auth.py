@@ -15,6 +15,11 @@ def register(user_in: UserCreate, db: Session = Depends(auth_middleware.get_db))
 def login(user_login: UserLogin, db: Session = Depends(auth_middleware.get_db)):
     return auth_service.login_user_oauth2(db, user_login.email, user_login.password)
 
+from fastapi.security import OAuth2PasswordRequestForm
+@router.post("/swagger-login", response_model=Token, description="Route pour le bouton Authorize de Swagger UI", include_in_schema=False)
+def swagger_login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(auth_middleware.get_db)):
+    return auth_service.login_user_oauth2(db, form_data.username, form_data.password)
+
 @router.get("/profile", response_model=UserOut)
 def get_profile(current_user: User = Depends(auth_middleware.get_current_user)):
     return current_user

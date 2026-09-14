@@ -79,6 +79,7 @@ class StatutListing(str, enum.Enum):
     ACTIVE = "ACTIVE"
     SUSPENDUE = "SUSPENDUE"
     CLOTUREE = "CLOTUREE"
+    POURVUE = "POURVUE"
 
 class Listing(Base):
     __tablename__ = "listings"
@@ -159,6 +160,8 @@ class NotificationLog(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     type = Column(Enum(NotificationType), nullable=False)
     target = Column(String, nullable=False)
+    subject = Column(String, nullable=True)
+    content = Column(String, nullable=True)
     status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING)
     error_message = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
