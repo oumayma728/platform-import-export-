@@ -102,6 +102,20 @@ def delete_listing(
 
 
 @router.patch(
+    "/{id}/status", 
+    response_model=ListingOut,
+    summary="Mettre à jour le statut d'un listing",
+    description="Permet de changer le statut d'un listing (ACTIVE, SUSPENDUE, CLOTUREE, POURVUE)."
+)
+def update_listing_status(
+    id: str, 
+    statut: str,
+    db: Session = Depends(auth_middleware.get_db), 
+    current_user: User = Depends(auth_middleware.get_current_user)
+):
+    return listing_service.update_listing_status(db, id, statut, current_user)
+
+@router.patch(
     "/{id}/close", 
     response_model=ListingOut,
     summary="Clôturer un listing",

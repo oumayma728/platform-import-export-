@@ -119,6 +119,32 @@ def close_listing(db: Session, id: str, current_user: User) -> Listing:
     db.refresh(listing)
     return listing
 
+def update_listing_status(db: Session, id: str, statut: str, current_user: User) -> Listing:
+    if not current_user.company and current_user.role != Role.ADMIN:
+        raise HTTPException(status_code=401, detail="Vous n'avez pas de company associée.")
+    
+    listing = db.query(Listing).filter(Listing.id == id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing introuvable")
+        
+    if current_user.role != Role.ADMIN and (not current_user.company or listing.company_id != current_user.company.id):
+        raise HTTPException(status_code=403, detail="Non autorisé à modifier ce listing")
+
+    try:
+        new_statut = StatutListing(statut)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Statut invalide")
+
+    if listing.type == TypeListing.OFFRE and new_statut == StatutListing.POURVUE:
+        raise HTTPException(status_code=400, detail="Le statut POURVUE n'est pas valide pour une OFFRE. Utilisez CLOTUREE.")
+    if listing.type == TypeListing.DEMANDE and new_statut == StatutListing.CLOTUREE:
+        raise HTTPException(status_code=400, detail="Le statut CLOTUREE n'est pas valide pour une DEMANDE. Utilisez POURVUE.")
+
+    listing.statut = new_statut
+    db.commit()
+    db.refresh(listing)
+    return listing
+
 def search_listings(
     db: Session,
     pays: Optional[str] = None,
