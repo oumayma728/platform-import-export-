@@ -27,3 +27,6 @@ Thumbs.db
 
 # Coverage
 backend/.coverage
+
+# UI de test (fichiers locaux de test)
+backend/static/
