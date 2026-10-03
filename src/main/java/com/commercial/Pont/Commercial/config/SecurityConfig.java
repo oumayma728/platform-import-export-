@@ -4,6 +4,7 @@ import com.commercial.Pont.Commercial.security.CustomUserDetailsService;
 import com.commercial.Pont.Commercial.security.JwtAuthenticationFilter;
 import com.commercial.Pont.Commercial.security.OAuth2LoginFailureHandler;
 import com.commercial.Pont.Commercial.security.OAuth2LoginSuccessHandler;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -145,6 +146,32 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler)
                         .failureHandler(oAuth2FailureHandler)
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+
+                            response.getWriter().write("""
+            {
+                "status": 401,
+                "message": "Authentification requise"
+            }
+        """);
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.setCharacterEncoding("UTF-8");
+
+                            response.getWriter().write("""
+            {
+                "status": 403,
+                "message": "Accès refusé"
+            }
+        """);
+                        })
                 )
                 // JWT Filter
                 .addFilterBefore(

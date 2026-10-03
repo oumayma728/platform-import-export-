@@ -29,6 +29,9 @@ public class JwtAuthenticationFilter
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        System.out.println("========== JWT FILTER ==========");
+        System.out.println("URI : " + request.getRequestURI());
+        System.out.println("METHOD : " + request.getMethod());
 
         final String authHeader =
                 request.getHeader("Authorization");
@@ -87,11 +90,14 @@ public class JwtAuthenticationFilter
                      * Tous les utilisateurs possédant un JWT valide
                      * sont considérés comme authentifiés.
                      */
+                    System.out.println("USER : " + userDetails.getUsername());
+                    System.out.println("AUTHORITIES : " + userDetails.getAuthorities());
+
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
-                                    Collections.emptyList()
+                                    userDetails.getAuthorities()
                             );
 
                     authentication.setDetails(

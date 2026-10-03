@@ -5,6 +5,7 @@ import com.commercial.Pont.Commercial.repositories.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -14,6 +15,7 @@ public class CustomUserDetailsService
     private final UtilisateurRepository utilisateurRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
 
@@ -24,6 +26,10 @@ public class CustomUserDetailsService
                                         "Utilisateur non trouvé"
                                 )
                         );
+        utilisateur.getRoles().forEach(
+                roleUtilisateur ->
+                        roleUtilisateur.getRole().getCode()
+        );
 
         return new CustomUserDetails(utilisateur);
     }

@@ -20,6 +20,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -85,6 +88,39 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
                                         "Utilisateur connecté non trouvé."
                                 )
                         );
+
+
+        // =========================
+        // 2. Vérification rôle / type
+        // =========================
+
+        boolean isImportateur =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(a ->
+                                a.getAuthority().equals("ROLE_IMPORTATEUR")
+                        );
+
+        boolean isExportateur =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(a ->
+                                a.getAuthority().equals("ROLE_EXPORTATEUR")
+                        );
+
+        AnnouncementType type = annonceRequestDto.getType();
+
+        if (isImportateur && type != AnnouncementType.DEMANDE) {
+            throw new IllegalStateException(
+                    "Un importateur peut créer uniquement une annonce de type DEMANDE."
+            );
+        }
+
+        if (isExportateur && type != AnnouncementType.OFFRE) {
+            throw new IllegalStateException(
+                    "Un exportateur peut créer uniquement une annonce de type OFFRE."
+            );
+        }
 
 
         // =========================
@@ -222,12 +258,15 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
     // =========================
     // UPDATE
     // =========================
-
     @Override
     public AnnonceResponseDto update(
             UUID annonceId,
             AnnonceRequestDto annonceRequestDto
     ) {
+
+        // =========================
+        // 1. Récupérer l'annonce
+        // =========================
 
         Annonce existingAnnonce =
                 annonceRepository.findById(annonceId)
@@ -238,8 +277,92 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
                                 )
                         );
 
+        // =========================
+        // 2. Vérifier les droits
+        // =========================
 
-        // Informations principales
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        boolean isAdmin =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(a ->
+                                a.getAuthority().equals("ROLE_ADMIN")
+                        );
+
+        if (!isAdmin) {
+
+            String currentEmail =
+                    authentication.getName();
+
+            // Vérifier que l'annonce appartient
+            // à l'utilisateur connecté
+
+            if (existingAnnonce.getUtilisateur() == null
+                    || !existingAnnonce.getUtilisateur()
+                    .getEmail()
+                    .equalsIgnoreCase(currentEmail)) {
+
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Vous ne pouvez modifier que vos propres annonces."
+                );
+            }
+
+            // =========================
+            // 3. Vérifier le type
+            // =========================
+
+            boolean isImportateur =
+                    authentication.getAuthorities()
+                            .stream()
+                            .anyMatch(a ->
+                                    a.getAuthority().equals("ROLE_IMPORTATEUR")
+                            );
+
+            boolean isExportateur =
+                    authentication.getAuthorities()
+                            .stream()
+                            .anyMatch(a ->
+                                    a.getAuthority().equals("ROLE_EXPORTATEUR")
+                            );
+
+            if (isImportateur
+                    && existingAnnonce.getType() != AnnouncementType.DEMANDE) {
+
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Un importateur peut modifier uniquement ses demandes."
+                );
+            }
+
+            if (isExportateur
+                    && existingAnnonce.getType() != AnnouncementType.OFFRE) {
+
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Un exportateur peut modifier uniquement ses offres."
+                );
+            }
+
+            // =========================
+            // 4. Empêcher le changement
+            // de type par l'utilisateur
+            // =========================
+
+            if (annonceRequestDto.getType() != null
+                    && annonceRequestDto.getType()
+                    != existingAnnonce.getType()) {
+
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Vous ne pouvez pas changer le type de votre annonce."
+                );
+            }
+        }
+
+        // =========================
+        // 5. Mise à jour
+        // =========================
 
         existingAnnonce.setTitre(
                 annonceRequestDto.getTitre()
@@ -251,10 +374,6 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
 
         existingAnnonce.setDescription(
                 annonceRequestDto.getDescription()
-        );
-
-        existingAnnonce.setType(
-                annonceRequestDto.getType()
         );
 
         existingAnnonce.setPrix(
@@ -277,10 +396,6 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
                 annonceRequestDto.getDateLimite()
         );
 
-        existingAnnonce.setStatut(
-                annonceRequestDto.getStatut()
-        );
-
         existingAnnonce.setDureeLivraison(
                 annonceRequestDto.getDureeLivraison()
         );
@@ -293,13 +408,24 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
                 annonceRequestDto.getPublishedAt()
         );
 
+        // Le type n'est modifiable que par ADMIN
+        if (isAdmin) {
+            existingAnnonce.setType(
+                    annonceRequestDto.getType()
+            );
 
-        // Mise à jour automatique
+            existingAnnonce.setStatut(
+                    annonceRequestDto.getStatut()
+            );
+        }
 
         existingAnnonce.setUpdatedAt(
                 LocalDateTime.now()
         );
 
+        // =========================
+        // 6. Sauvegarder
+        // =========================
 
         Annonce updatedAnnonce =
                 annonceRepository.save(existingAnnonce);
@@ -359,17 +485,97 @@ public class AnnonceServiceImpl implements AnnonceServiceInterface {
             UUID annonceId
     ) {
 
-        if (!annonceRepository.existsById(annonceId)) {
+        // =========================
+        // 1. Récupérer l'annonce
+        // =========================
 
-            throw new EntityNotFoundException(
-                    "Annonce non trouvée avec l'id : "
-                            + annonceId
+        Annonce annonce =
+                annonceRepository.findById(annonceId)
+                        .orElseThrow(() ->
+                                new EntityNotFoundException(
+                                        "Annonce non trouvée avec l'id : "
+                                                + annonceId
+                                )
+                        );
+
+        // =========================
+        // 2. Authentification
+        // =========================
+
+        Authentication authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        boolean isAdmin =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(a ->
+                                a.getAuthority().equals("ROLE_ADMIN")
+                        );
+
+        // ADMIN → suppression autorisée
+        if (isAdmin) {
+            annonceRepository.delete(annonce);
+            return;
+        }
+
+        // =========================
+        // 3. Vérifier propriétaire
+        // =========================
+
+        String currentEmail =
+                authentication.getName();
+
+        if (annonce.getUtilisateur() == null
+                || !annonce.getUtilisateur()
+                .getEmail()
+                .equalsIgnoreCase(currentEmail)) {
+
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Vous ne pouvez supprimer que vos propres annonces."
             );
         }
 
-        annonceRepository.deleteById(
-                annonceId
-        );
+        // =========================
+        // 4. Vérifier le type
+        // =========================
+
+        boolean isImportateur =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(a ->
+                                a.getAuthority().equals("ROLE_IMPORTATEUR")
+                        );
+
+        boolean isExportateur =
+                authentication.getAuthorities()
+                        .stream()
+                        .anyMatch(a ->
+                                a.getAuthority().equals("ROLE_EXPORTATEUR")
+                        );
+
+        if (isImportateur
+                && annonce.getType() != AnnouncementType.DEMANDE) {
+
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Un importateur peut supprimer uniquement ses demandes."
+            );
+        }
+
+        if (isExportateur
+                && annonce.getType() != AnnouncementType.OFFRE) {
+
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Un exportateur peut supprimer uniquement ses offres."
+            );
+        }
+
+        // =========================
+        // 5. Suppression
+        // =========================
+
+        annonceRepository.delete(annonce);
     }
 
 

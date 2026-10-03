@@ -101,22 +101,18 @@ public class AuthController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<TextResponseDto> register(
-            @Parameter(
-                    description = "Informations du nouvel utilisateur",
-                    required = true
-            )
             @Valid @RequestPart("utilisateur") UtilisateurRequestDto request,
-
-            @Parameter(
-                    description = "Photo de profil optionnelle"
-            )
             @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {
 
-        authService.register(
-                request,
-                photo
-        );
+        System.out.println(">>>>>>>>>>>>>>>> CONTROLLER REGISTER <<<<<<<<<<<<<<<<");
+        System.out.println("EMAIL = " + request.getEmail());
+        System.out.println("PHOTO = " +
+                (photo != null ? photo.getOriginalFilename() : "null"));
+
+        authService.register(request, photo);
+
+        System.out.println(">>>>>>>>>>>>>>>> REGISTER FINISHED <<<<<<<<<<<<<<<<");
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

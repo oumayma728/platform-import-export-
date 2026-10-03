@@ -29,115 +29,258 @@ public class DataInitializer implements CommandLineRunner {
     private final FacturationRepository facturationRepository;
     private final PasswordEncoder passwordEncoder;
 
-
     @Override
     @Transactional
     public void run(String... args) {
 
         LocalDateTime now = LocalDateTime.now();
 
-
         // =====================================================
-        // 1. LOCATIONS
+        // 1. LOCATIONS - MAROC
         // =====================================================
 
-        Location rabat =
-                locationRepository
-                        .findByVilleAndPays("Rabat", "Maroc")
-                        .orElseGet(() ->
-                                locationRepository.save(
-                                        Location.builder()
-                                                .pays("Maroc")
-                                                .ville("Rabat")
-                                                .codePostal("10000")
-                                                .adresse("Rabat")
-                                                .region("Rabat-Salé-Kénitra")
-                                                .build()
-                                )
-                        );
+        Location rabat = createLocation(
+                "Rabat",
+                "Maroc",
+                "10000",
+                "Rabat",
+                "Rabat-Salé-Kénitra"
+        );
 
+        Location agadir = createLocation(
+                "Agadir",
+                "Maroc",
+                "80000",
+                "Agadir",
+                "Souss-Massa"
+        );
 
-        Location agadir =
-                locationRepository
-                        .findByVilleAndPays("Agadir", "Maroc")
-                        .orElseGet(() ->
-                                locationRepository.save(
-                                        Location.builder()
-                                                .pays("Maroc")
-                                                .ville("Agadir")
-                                                .codePostal("80000")
-                                                .adresse("Agadir")
-                                                .region("Souss-Massa")
-                                                .build()
-                                )
-                        );
-
-
-        Location casablanca =
-                locationRepository
-                        .findByVilleAndPays("Casablanca", "Maroc")
-                        .orElseGet(() ->
-                                locationRepository.save(
-                                        Location.builder()
-                                                .pays("Maroc")
-                                                .ville("Casablanca")
-                                                .codePostal("20000")
-                                                .adresse("Casablanca")
-                                                .region("Casablanca-Settat")
-                                                .build()
-                                )
-                        );
-
-
-        Location tunis =
-                locationRepository
-                        .findByVilleAndPays("Tunis", "Tunisie")
-                        .orElseGet(() ->
-                                locationRepository.save(
-                                        Location.builder()
-                                                .pays("Tunisie")
-                                                .ville("Tunis")
-                                                .codePostal("1000")
-                                                .adresse("Tunis")
-                                                .region("Tunis")
-                                                .build()
-                                )
-                        );
-
-
-        Location bizert =
-                locationRepository
-                        .findByVilleAndPays("Bizerte", "Tunisie")
-                        .orElseGet(() ->
-                                locationRepository.save(
-                                        Location.builder()
-                                                .pays("Tunisie")
-                                                .ville("Bizerte")
-                                                .codePostal("7000")
-                                                .adresse("Bizerte")
-                                                .region("Bizerte")
-                                                .build()
-                                )
-                        );
+        Location casablanca = createLocation(
+                "Casablanca",
+                "Maroc",
+                "20000",
+                "Casablanca",
+                "Casablanca-Settat"
+        );
 
 
         // =====================================================
-        // 2. ENTREPRISE
+        // 2. LOCATIONS - TUNISIE
+        // =====================================================
+
+        Location tunis = createLocation(
+                "Tunis",
+                "Tunisie",
+                "1000",
+                "Tunis",
+                "Tunis"
+        );
+
+        Location ariana = createLocation(
+                "Ariana",
+                "Tunisie",
+                "2080",
+                "Ariana",
+                "Ariana"
+        );
+
+        Location benArous = createLocation(
+                "Ben Arous",
+                "Tunisie",
+                "2013",
+                "Ben Arous",
+                "Ben Arous"
+        );
+
+        Location manouba = createLocation(
+                "Manouba",
+                "Tunisie",
+                "2010",
+                "Manouba",
+                "Manouba"
+        );
+
+        Location nabeul = createLocation(
+                "Nabeul",
+                "Tunisie",
+                "8000",
+                "Nabeul",
+                "Nabeul"
+        );
+
+        Location zaghouan = createLocation(
+                "Zaghouan",
+                "Tunisie",
+                "1100",
+                "Zaghouan",
+                "Zaghouan"
+        );
+
+        Location bizerte = createLocation(
+                "Bizerte",
+                "Tunisie",
+                "7000",
+                "Bizerte",
+                "Bizerte"
+        );
+
+        Location beja = createLocation(
+                "Béja",
+                "Tunisie",
+                "9000",
+                "Béja",
+                "Béja"
+        );
+
+        Location jendouba = createLocation(
+                "Jendouba",
+                "Tunisie",
+                "8100",
+                "Jendouba",
+                "Jendouba"
+        );
+
+        Location kef = createLocation(
+                "Le Kef",
+                "Tunisie",
+                "7100",
+                "Le Kef",
+                "Le Kef"
+        );
+
+        Location siliana = createLocation(
+                "Siliana",
+                "Tunisie",
+                "6100",
+                "Siliana",
+                "Siliana"
+        );
+
+        Location kairouan = createLocation(
+                "Kairouan",
+                "Tunisie",
+                "3100",
+                "Kairouan",
+                "Kairouan"
+        );
+
+        Location kasserine = createLocation(
+                "Kasserine",
+                "Tunisie",
+                "1200",
+                "Kasserine",
+                "Kasserine"
+        );
+
+        Location sidiBouzid = createLocation(
+                "Sidi Bouzid",
+                "Tunisie",
+                "9100",
+                "Sidi Bouzid",
+                "Sidi Bouzid"
+        );
+
+        Location sousse = createLocation(
+                "Sousse",
+                "Tunisie",
+                "4000",
+                "Sousse",
+                "Sousse"
+        );
+
+        Location monastir = createLocation(
+                "Monastir",
+                "Tunisie",
+                "5000",
+                "Monastir",
+                "Monastir"
+        );
+
+        Location mahdia = createLocation(
+                "Mahdia",
+                "Tunisie",
+                "5100",
+                "Mahdia",
+                "Mahdia"
+        );
+
+        Location sfax = createLocation(
+                "Sfax",
+                "Tunisie",
+                "3000",
+                "Sfax",
+                "Sfax"
+        );
+
+        Location gabes = createLocation(
+                "Gabès",
+                "Tunisie",
+                "6000",
+                "Gabès",
+                "Gabès"
+        );
+
+        Location medenine = createLocation(
+                "Medenine",
+                "Tunisie",
+                "4100",
+                "Medenine",
+                "Medenine"
+        );
+
+        Location tataouine = createLocation(
+                "Tataouine",
+                "Tunisie",
+                "3200",
+                "Tataouine",
+                "Tataouine"
+        );
+
+        Location gafsa = createLocation(
+                "Gafsa",
+                "Tunisie",
+                "2100",
+                "Gafsa",
+                "Gafsa"
+        );
+
+        Location tozeur = createLocation(
+                "Tozeur",
+                "Tunisie",
+                "2200",
+                "Tozeur",
+                "Tozeur"
+        );
+
+        Location kebili = createLocation(
+                "Kébili",
+                "Tunisie",
+                "4200",
+                "Kébili",
+                "Kébili"
+        );
+
+
+        // =====================================================
+        // 3. ENTREPRISE
+        // =====================================================
+        // Une seule entreprise dans les données initiales :
+        // 3LM Solutions
         // =====================================================
 
         Entreprise entreprise =
                 entrepriseRepository
-                        .findByNom("3 LM Solutions")
+                        .findByNom("3LM Solutions")
                         .orElseGet(() ->
                                 entrepriseRepository.save(
                                         Entreprise.builder()
-                                                .nom("3 LM Solutions")
+                                                .nom("3LM Solutions")
                                                 .description(
                                                         "Entreprise spécialisée dans les solutions "
                                                                 + "technologiques et commerciales."
                                                 )
                                                 .secteurActivite("Technologie")
-                                                .location(bizert)
+                                                .location(bizerte)
                                                 .createdAt(now)
                                                 .updatedAt(now)
                                                 .build()
@@ -146,48 +289,124 @@ public class DataInitializer implements CommandLineRunner {
 
 
         // =====================================================
-        // 3. INCOTERMS
+        // 4. INCOTERMS 2020
         // =====================================================
-
-        createIncoterm(
-                "FOB",
-                "Free On Board",
-                "Le vendeur livre la marchandise à bord du navire.",
-                now
-        );
-
-        createIncoterm(
-                "CIF",
-                "Cost, Insurance and Freight",
-                "Coût, assurance et fret.",
-                now
-        );
+        // Les 11 Incoterms actuellement utilisés dans
+        // les Incoterms® 2020.
+        // =====================================================
 
         createIncoterm(
                 "EXW",
                 "Ex Works",
-                "La marchandise est mise à disposition chez le vendeur.",
+                "Le vendeur met la marchandise à disposition dans ses locaux. "
+                        + "L'acheteur prend en charge les principaux coûts et risques "
+                        + "à partir de ce point.",
+                now
+        );
+
+        createIncoterm(
+                "FCA",
+                "Free Carrier",
+                "Le vendeur remet la marchandise au transporteur ou à une autre "
+                        + "personne désignée par l'acheteur au lieu convenu.",
+                now
+        );
+
+        createIncoterm(
+                "CPT",
+                "Carriage Paid To",
+                "Le vendeur paie le transport jusqu'au lieu de destination convenu, "
+                        + "mais le risque est transféré à l'acheteur lors de la remise "
+                        + "au transporteur.",
+                now
+        );
+
+        createIncoterm(
+                "CIP",
+                "Carriage and Insurance Paid To",
+                "Le vendeur paie le transport et souscrit une assurance couvrant "
+                        + "la marchandise jusqu'au lieu de destination convenu.",
                 now
         );
 
         createIncoterm(
                 "DAP",
                 "Delivered At Place",
-                "La marchandise est livrée au lieu convenu.",
+                "Le vendeur livre la marchandise au lieu de destination convenu, "
+                        + "prête à être déchargée.",
+                now
+        );
+
+        createIncoterm(
+                "DPU",
+                "Delivered at Place Unloaded",
+                "Le vendeur livre et décharge la marchandise au lieu de destination "
+                        + "convenu.",
                 now
         );
 
         createIncoterm(
                 "DDP",
                 "Delivered Duty Paid",
-                "Livraison avec droits et taxes acquittés.",
+                "Le vendeur prend en charge la livraison, les formalités douanières "
+                        + "à l'importation ainsi que les droits et taxes.",
+                now
+        );
+
+        createIncoterm(
+                "FAS",
+                "Free Alongside Ship",
+                "Le vendeur livre la marchandise le long du navire au port "
+                        + "d'embarquement convenu.",
+                now
+        );
+
+        createIncoterm(
+                "FOB",
+                "Free On Board",
+                "Le vendeur livre la marchandise à bord du navire au port "
+                        + "d'embarquement convenu.",
+                now
+        );
+
+        createIncoterm(
+                "CFR",
+                "Cost and Freight",
+                "Le vendeur paie les coûts et le fret nécessaires pour acheminer "
+                        + "la marchandise jusqu'au port de destination.",
+                now
+        );
+
+        createIncoterm(
+                "CIF",
+                "Cost, Insurance and Freight",
+                "Le vendeur paie les coûts, le fret et l'assurance jusqu'au port "
+                        + "de destination convenu.",
                 now
         );
 
 
         // =====================================================
-        // 4. ROLES
+        // 5. ROLES
         // =====================================================
+
+
+        Role roleAdmin =
+                roleRepository
+                        .findByCode("ADMIN")
+                        .orElseGet(() ->
+                                roleRepository.save(
+                                        Role.builder()
+                                                .code("ADMIN")
+                                                .nom("Administrateur")
+                                                .description(
+                                                        "Administrateur de la plateforme."
+                                                )
+                                                .createdAt(now)
+                                                .updatedAt(now)
+                                                .build()
+                                )
+                        );
 
         Role roleImportateur =
                 roleRepository
@@ -205,7 +424,6 @@ public class DataInitializer implements CommandLineRunner {
                                                 .build()
                                 )
                         );
-
 
         Role roleExportateur =
                 roleRepository
@@ -226,26 +444,33 @@ public class DataInitializer implements CommandLineRunner {
 
 
         // =====================================================
-        // 5. UTILISATEUR
+        // 6. UTILISATEUR ADMIN
+        // =====================================================
+        // Login :
+        // Email    : admin@3lmsolutions.com
+        // Password : admin
+        //
+        // Entreprise : 3LM Solutions
+        // Roles      : IMPORTATEUR + EXPORTATEUR
         // =====================================================
 
         Utilisateur utilisateur =
                 utilisateurRepository
-                        .findByEmail("jabbourjamal27@gmail.com")
+                        .findByEmail("admin@3lmsolutions.com")
                         .orElseGet(() -> {
 
                             String encodedPassword =
-                                    passwordEncoder.encode("jabbour");
+                                    passwordEncoder.encode("admin");
 
                             Utilisateur nouvelUtilisateur =
                                     utilisateurRepository.save(
                                             Utilisateur.builder()
-                                                    .email("jabbourjamal27@gmail.com")
+                                                    .email("admin@3lmsolutions.com")
                                                     .passwordHash(encodedPassword)
-                                                    .nom("Jabbour")
-                                                    .prenom("Jamal")
-                                                    .telephone("0607781703")
-                                                    .fonction("Développeur")
+                                                    .nom("Admin")
+                                                    .prenom("3LM")
+                                                    .telephone("0698347865")
+                                                    .fonction("Administrateur")
                                                     .validationStatus(
                                                             ValidationStatus.VALIDE
                                                     )
@@ -260,6 +485,7 @@ public class DataInitializer implements CommandLineRunner {
                                                     .build()
                                     );
 
+
                             // =========================================
                             // FACTURATION INITIALE GRATUITE
                             // =========================================
@@ -267,7 +493,8 @@ public class DataInitializer implements CommandLineRunner {
                             Facturation facturationInitiale =
                                     Facturation.builder()
                                             .numeroFacture(
-                                                    "FACT-"+ nouvelUtilisateur.getNom() +"-"+ System.currentTimeMillis()
+                                                    "FACT-ADMIN-"
+                                                            + System.currentTimeMillis()
                                             )
                                             .tva(20)
                                             .statut(FacturationStatus.GRATUIT)
@@ -284,20 +511,19 @@ public class DataInitializer implements CommandLineRunner {
                             return nouvelUtilisateur;
                         });
 
-        // =====================================================
-        // 6. ROLE UTILISATEUR
-        // =====================================================
+
+
 
         if (!roleUtilisateurRepository
                 .existsByUtilisateurAndRole(
                         utilisateur,
-                        roleImportateur
+                        roleAdmin
                 )) {
 
             roleUtilisateurRepository.save(
                     RoleUtilisateur.builder()
                             .utilisateur(utilisateur)
-                            .role(roleImportateur)
+                            .role(roleAdmin)
                             .createdAt(now)
                             .build()
             );
@@ -305,25 +531,81 @@ public class DataInitializer implements CommandLineRunner {
 
 
         // =====================================================
-        // FIN
+        // 9. INFORMATIONS DE DEMARRAGE
         // =====================================================
 
         System.out.println(
-                "=============================================="
+                "=================================================="
         );
 
         System.out.println(
-                "Initialisation des données terminée."
+                "      INITIALISATION DES DONNEES TERMINEE"
         );
 
         System.out.println(
-                "=============================================="
+                "=================================================="
+        );
+
+        System.out.println(
+                "Entreprise : 3LM Solutions"
+        );
+
+        System.out.println(
+                "Utilisateur : admin@3lmsolutions.com"
+        );
+
+        System.out.println(
+                "Mot de passe : admin"
+        );
+
+        System.out.println(
+                "Roles : Admin + importateur + exportateur"
+        );
+
+        System.out.println(
+                "Villes tunisiennes : 24"
+        );
+
+        System.out.println(
+                "Incoterms : 11"
+        );
+
+        System.out.println(
+                "=================================================="
         );
     }
 
 
     // =========================================================
-    // MÉTHODE POUR CRÉER UN INCOTERM S'IL N'EXISTE PAS
+    // METHODE POUR CREER UNE LOCATION
+    // =========================================================
+
+    private Location createLocation(
+            String ville,
+            String pays,
+            String codePostal,
+            String adresse,
+            String region
+    ) {
+
+        return locationRepository
+                .findByVilleAndPays(ville, pays)
+                .orElseGet(() ->
+                        locationRepository.save(
+                                Location.builder()
+                                        .pays(pays)
+                                        .ville(ville)
+                                        .codePostal(codePostal)
+                                        .adresse(adresse)
+                                        .region(region)
+                                        .build()
+                        )
+                );
+    }
+
+
+    // =========================================================
+    // METHODE POUR CREER UN INCOTERM
     // =========================================================
 
     private void createIncoterm(

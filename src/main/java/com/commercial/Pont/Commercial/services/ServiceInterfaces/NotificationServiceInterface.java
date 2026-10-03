@@ -5,6 +5,7 @@ import com.commercial.Pont.Commercial.dtos.responseDtos.NotificationResponseDto;
 import com.commercial.Pont.Commercial.enums.NotificationType;
 import com.commercial.Pont.Commercial.models.Utilisateur;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -14,22 +15,25 @@ public interface NotificationServiceInterface {
     // ==========================================
     // CRUD EXISTANT
     // ==========================================
-
+    @PreAuthorize("hasRole('ADMIN')")
     NotificationResponseDto create(
             NotificationRequestDto requestDto
     );
 
+    @PreAuthorize("hasRole('ADMIN')")
     NotificationResponseDto update(
             UUID notificationId,
             NotificationRequestDto requestDto
     );
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'IMPORTATEUR', 'EXPORTATEUR')")
     NotificationResponseDto getById(
             UUID notificationId
     );
-
+    @PreAuthorize("hasAnyRole('ADMIN', 'IMPORTATEUR', 'EXPORTATEUR')")
     List<NotificationResponseDto> getAll();
 
+    @PreAuthorize("hasRole('ADMIN')")
     void delete(
             UUID notificationId
     );
@@ -91,6 +95,7 @@ public interface NotificationServiceInterface {
 
     void retryNotificationsEchouees();
 
+    @PreAuthorize("hasAnyRole('IMPORTATEUR', 'EXPORTATEUR')")
     void markAsRead(
             UUID notificationId,
             Authentication authentication
